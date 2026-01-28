@@ -21,13 +21,19 @@
 | --- | --- | --- |
 | id | Number | 主键 |
 | merchant_id | Number | 商户用户ID |
-| name | String | 酒店名称 |
+| name | String | 酒店名称（中文） |
+| name_en | String | 酒店名称（英文） |
 | address | String | 地址 |
 | city | String | 城市 |
 | star_rating | Number | 星级 1-5 |
+| opening_time | Date | 开业时间 |
 | description | String | 描述 |
 | facilities | Array[String] | 设施标签 |
 | images | Array[String] | 图片URL |
+| nearby_attractions | Array[String] | 附近景点 |
+| nearby_transport | Array[String] | 交通信息 |
+| nearby_malls | Array[String] | 商场信息 |
+| promotions | Array[Object] | 优惠信息 |
 | status | Enum('pending','approved','rejected','offline') | 状态 |
 | reject_reason | String | 驳回原因 |
 | created_at | Date | 创建时间 |
@@ -96,12 +102,20 @@
 ```json
 {
   "name": "易宿酒店",
+  "name_en": "EaseStay Hotel",
   "address": "示例路 1 号",
   "city": "上海",
   "star_rating": 4,
+  "opening_time": "2016-05-01",
   "description": "市中心酒店",
   "facilities": ["Wifi", "Parking"],
   "images": ["https://img/1.jpg"],
+  "nearby_attractions": ["城市公园", "博物馆"],
+  "nearby_transport": ["地铁 2 号线", "机场大巴"],
+  "nearby_malls": ["国际广场"],
+  "promotions": [
+    { "type": "festival", "title": "节日 8 折", "value": 0.8 }
+  ],
   "roomTypes": [
     { "name": "豪华大床房", "price": 399, "stock": 10 }
   ]
@@ -159,8 +173,11 @@ city, keyword, checkIn, checkOut, sort, page, pageSize
     {
       "id": 1,
       "name": "易宿酒店",
+      "name_en": "EaseStay Hotel",
       "city": "上海",
       "star_rating": 4,
+      "address": "示例路 1 号",
+      "opening_time": "2016-05-01",
       "lowestPrice": 399
     }
   ]
@@ -173,6 +190,17 @@ city, keyword, checkIn, checkOut, sort, page, pageSize
 {
   "id": 1,
   "name": "易宿酒店",
+  "name_en": "EaseStay Hotel",
+  "address": "示例路 1 号",
+  "city": "上海",
+  "star_rating": 4,
+  "opening_time": "2016-05-01",
+  "nearby_attractions": ["城市公园", "博物馆"],
+  "nearby_transport": ["地铁 2 号线", "机场大巴"],
+  "nearby_malls": ["国际广场"],
+  "promotions": [
+    { "type": "festival", "title": "节日 8 折", "value": 0.8 }
+  ],
   "roomTypes": [
     { "id": 2, "name": "标准间", "price": 299 },
     { "id": 1, "name": "豪华大床房", "price": 399 }
