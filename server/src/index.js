@@ -1,0 +1,7 @@
+const app = require('./app')
+
+const PORT = process.env.PORT || 4100
+
+app.listen(PORT, () => {
+  console.log(`Yisu server running on port ${PORT}`)
+})
