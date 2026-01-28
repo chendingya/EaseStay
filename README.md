@@ -1,15 +1,17 @@
-# 易宿酒店预订平台
+# 易宿酒店预订平台（EaseStay）
 
 ## 启动方式
-- 使用 PowerShell 执行根目录脚本：
+- 使用 PowerShell 执行根目录脚本（会自动启动三端并打开页面）：
   - `./start.ps1`
 - 或手动：
   - 根目录安装依赖：`npm install`
   - 安装移动端依赖：`npm install --prefix mobile`
-  - 启动 H5：`npm run dev`
-  - 移动端 H5 地址：`http://localhost:10086/`
+  - 安装管理端依赖：`npm install --prefix admin`
+  - 安装服务端依赖：`npm install --prefix server`
+  - 启动三端：`npm run dev:all`
 
 ## 端口说明
+- 移动端 H5 地址：`http://localhost:10086/`
 - 管理端开发地址：`http://127.0.0.1:4101/`
 - 服务端地址：`http://127.0.0.1:4100/`
 
