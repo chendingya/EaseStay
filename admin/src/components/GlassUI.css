@@ -30,25 +30,23 @@
   transform: translateY(-10px) scale(0.95);
 }
 
-/* 玻璃消息主体 - 苹果风格 */
+/* 玻璃消息主体 - Glassmorphism 标准样式 */
 .glass-message {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 20px;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 
-    0 4px 16px rgba(0, 0, 0, 0.08),
-    0 0 0 1px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  font-size: 14px;
+  padding: 14px 24px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-size: 15px;
   color: #1d1d1f;
-  min-width: 200px;
-  max-width: 400px;
+  min-width: 220px;
+  max-width: 420px;
+  font-weight: 500;
 }
 
 .glass-message-icon {
@@ -71,50 +69,205 @@
   line-height: 1.5;
 }
 
-/* 玻璃卡片组件 - 苹果风格 */
-.glass-card-component {
-  background: rgba(255, 255, 255, 0.72) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-  border-radius: 16px !important;
-  border: 1px solid rgba(255, 255, 255, 0.4) !important;
-  box-shadow: 
-    0 4px 24px rgba(0, 0, 0, 0.06),
-    0 0 0 1px rgba(0, 0, 0, 0.03),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+/* ===== 玻璃卡片 - Glassmorphism ===== */
+.glass-card {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   overflow: hidden;
 }
 
-.glass-card-component .ant-card-head {
-  background: rgba(255, 255, 255, 0.5);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+.glass-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.glass-card-component .ant-card-body {
+.glass-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1d1d1f;
+}
+
+.glass-card-extra {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.glass-card-body {
+  padding: 24px;
+}
+
+/* ===== 玻璃按钮 - Glassmorphism ===== */
+.glass-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: #1d1d1f;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.glass-btn:hover:not(.glass-btn-disabled) {
+  background: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+.glass-btn:active:not(.glass-btn-disabled) {
+  transform: translateY(0);
+}
+
+/* 主要按钮 */
+.glass-btn-primary {
+  color: #fff;
+  background: linear-gradient(135deg, #007aff 0%, #0056b3 100%);
+  border: 1px solid rgba(0, 122, 255, 0.3);
+  box-shadow: 
+    0 2px 8px rgba(0, 122, 255, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.glass-btn-primary:hover:not(.glass-btn-disabled) {
+  background: linear-gradient(135deg, #0088ff 0%, #0066cc 100%);
+  box-shadow: 
+    0 4px 12px rgba(0, 122, 255, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* 链接按钮 */
+.glass-btn-link {
+  color: #007aff;
   background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 4px 8px;
 }
 
-/* 深色模式支持 */
+.glass-btn-link:hover:not(.glass-btn-disabled) {
+  background: rgba(0, 122, 255, 0.08);
+  box-shadow: none;
+  transform: none;
+}
+
+/* 危险按钮 */
+.glass-btn-danger {
+  color: #ff3b30;
+  border-color: rgba(255, 59, 48, 0.2);
+}
+
+.glass-btn-danger:hover:not(.glass-btn-disabled) {
+  background: rgba(255, 59, 48, 0.1);
+  border-color: rgba(255, 59, 48, 0.3);
+}
+
+.glass-btn-primary.glass-btn-danger {
+  color: #fff;
+  background: linear-gradient(135deg, #ff3b30 0%, #d32f2f 100%);
+  border: 1px solid rgba(255, 59, 48, 0.3);
+  box-shadow: 
+    0 2px 8px rgba(255, 59, 48, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* 尺寸 */
+.glass-btn-sm {
+  padding: 4px 10px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+
+.glass-btn-lg {
+  padding: 12px 24px;
+  font-size: 16px;
+  border-radius: 10px;
+}
+
+/* 块级按钮 */
+.glass-btn-block {
+  display: flex;
+  width: 100%;
+}
+
+/* 禁用状态 */
+.glass-btn-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 加载状态 */
+.glass-btn-loading {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.glass-btn-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 深色模式 - Glassmorphism */
 @media (prefers-color-scheme: dark) {
-  .glass-message {
-    background: rgba(44, 44, 46, 0.72);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #f5f5f7;
-    box-shadow: 
-      0 4px 16px rgba(0, 0, 0, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  .glass-card {
+    background: rgba(30, 30, 30, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
   }
 
-  .glass-card-component {
-    background: rgba(44, 44, 46, 0.72) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    box-shadow: 
-      0 4px 24px rgba(0, 0, 0, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
-  }
-
-  .glass-card-component .ant-card-head {
+  .glass-card-header {
     background: rgba(255, 255, 255, 0.05);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .glass-card-title {
+    color: #f5f5f7;
+  }
+
+  .glass-btn {
+    color: #f5f5f7;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+  }
+
+  .glass-btn:hover:not(.glass-btn-disabled) {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .glass-btn-link {
+    color: #0a84ff;
+    background: transparent;
+  }
+
+  .glass-btn-danger {
+    color: #ff453a;
+  }
+
+  .glass-message {
+    background: rgba(30, 30, 30, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #f5f5f7;
   }
 }

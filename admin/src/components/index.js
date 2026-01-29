@@ -1,1 +1,1 @@
-export { GlassCard, glassMessage, message } from './GlassUI'
+export { GlassCard, GlassButton, glassMessage } from './GlassUI'

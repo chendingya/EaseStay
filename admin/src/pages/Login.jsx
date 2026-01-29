@@ -1,7 +1,7 @@
-import { Button, ConfigProvider, Form, Input, Select, Tabs, Typography, theme } from 'antd'
+import { ConfigProvider, Form, Input, Select, Tabs, Typography, theme } from 'antd'
 import { LockOutlined, MobileOutlined, UserOutlined } from '@ant-design/icons'
 import { useEffect, useState } from 'react'
-import { glassMessage as message } from '../components/GlassUI'
+import { GlassButton, glassMessage as message } from '../components/GlassUI'
 import './Login.css'
 
 const apiBase = 'http://127.0.0.1:4100'
@@ -106,21 +106,18 @@ export default function Login({ onLoggedIn }) {
         <div className="pro-login-shell">
           <div className="pro-login-card" style={{ borderColor: token.colorBorderSecondary }}>
           <div className="pro-login-title">
-            <img
-              alt="logo"
-              src="https://gw.alipayobjects.com/zos/bmw-prod/3f9b6d2b-1b1c-4c45-9f06-1b7c98e65a0f.svg"
-              className="pro-login-logo"
-            />
+            <div className="pro-login-logo">
+              <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="48" height="48" rx="12" fill="#1677ff"/>
+                <path d="M24 8L8 18v20l16 10 16-10V18L24 8z" fill="#fff" fillOpacity="0.9"/>
+                <path d="M24 14l-10 6v12l10 6 10-6V20l-10-6z" fill="#1677ff"/>
+                <circle cx="24" cy="26" r="4" fill="#fff"/>
+              </svg>
+            </div>
             <div>
               <Typography.Title level={4} style={{ marginBottom: 0, color: '#0f172a' }}>易宿酒店平台</Typography.Title>
               <Typography.Text style={{ color: '#475569' }}>一站式酒店管理与预订协同平台</Typography.Text>
             </div>
-          </div>
-
-          <div className="pro-login-activity">
-            <div className="pro-login-activity-title">易宿 · 经营增长季</div>
-            <div className="pro-login-activity-subtitle">专属补贴 + 智能推荐，提升转化与入住率</div>
-            <Button size="large" className="pro-login-activity-btn">去看看</Button>
           </div>
 
           <Form
@@ -194,14 +191,14 @@ export default function Login({ onLoggedIn }) {
                     prefix={<MobileOutlined style={{ color: token.colorText }} />}
                     placeholder="请输入验证码"
                     addonAfter={(
-                      <Button
+                      <GlassButton
                         type="link"
                         onClick={handleSendCode}
                         disabled={seconds > 0}
                         loading={sending}
                       >
                         {seconds > 0 ? `${seconds}s` : '获取验证码'}
-                      </Button>
+                      </GlassButton>
                     )}
                   />
                 </Form.Item>
@@ -219,12 +216,19 @@ export default function Login({ onLoggedIn }) {
               </>
             )}
 
-            <Button type="primary" htmlType="submit" size="large" block>
+            <GlassButton type="primary" htmlType="submit" size="large" block>
               {activeTab === 'register' ? '注册并登录' : '登录'}
-            </Button>
+            </GlassButton>
             </Form>
 
           <div style={{ height: 4 }} />
+          </div>
+
+          {/* 活动提示条 - 位于登录卡片底部 */}
+          <div className="pro-login-activity-bar">
+            <span className="pro-login-activity-icon">🎉</span>
+            <span className="pro-login-activity-text">易宿 · 经营增长季：专属补贴 + 智能推荐，提升转化与入住率</span>
+            <GlassButton type="link" size="small" className="pro-login-activity-link">了解详情 →</GlassButton>
           </div>
         </div>
       </div>
