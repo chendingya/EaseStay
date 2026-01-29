@@ -5,8 +5,8 @@ const {
   getMerchantHotel
 } = require('../services/hotelService')
 
-const create = (req, res) => {
-  const result = createHotel({ merchantId: req.user.id, payload: req.body })
+const create = async (req, res) => {
+  const result = await createHotel({ merchantId: req.user.id, payload: req.body })
   if (!result.ok) {
     res.status(result.status).json({ message: result.message })
     return
@@ -14,8 +14,8 @@ const create = (req, res) => {
   res.status(result.status).json(result.data)
 }
 
-const update = (req, res) => {
-  const result = updateHotel({
+const update = async (req, res) => {
+  const result = await updateHotel({
     merchantId: req.user.id,
     hotelId: Number(req.params.id),
     payload: req.body
@@ -27,16 +27,16 @@ const update = (req, res) => {
   res.status(result.status).json(result.data)
 }
 
-const list = (req, res) => {
-  const result = listMerchantHotels({
+const list = async (req, res) => {
+  const result = await listMerchantHotels({
     merchantId: req.user.id,
     status: req.query.status
   })
   res.status(result.status).json(result.data)
 }
 
-const detail = (req, res) => {
-  const result = getMerchantHotel({
+const detail = async (req, res) => {
+  const result = await getMerchantHotel({
     merchantId: req.user.id,
     hotelId: Number(req.params.id)
   })

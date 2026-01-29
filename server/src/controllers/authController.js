@@ -1,9 +1,9 @@
 const { register, login } = require('../services/authService')
 const { sendCode } = require('../services/smsService')
 
-const sendSmsCode = (req, res) => {
+const sendSmsCode = async (req, res) => {
   const { username } = req.body || {}
-  const result = sendCode({ username })
+  const result = await sendCode({ username })
   if (!result.ok) {
     res.status(400).json({ message: result.message })
     return

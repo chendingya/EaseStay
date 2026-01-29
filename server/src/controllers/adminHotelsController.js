@@ -1,12 +1,12 @@
 const { listAdminHotels, updateHotelStatus } = require('../services/hotelService')
 
-const list = (req, res) => {
-  const result = listAdminHotels({ status: req.query.status })
+const list = async (req, res) => {
+  const result = await listAdminHotels({ status: req.query.status })
   res.status(result.status).json(result.data)
 }
 
-const updateStatus = (req, res) => {
-  const result = updateHotelStatus({
+const updateStatus = async (req, res) => {
+  const result = await updateHotelStatus({
     hotelId: Number(req.params.id),
     status: req.body?.status,
     rejectReason: req.body?.rejectReason
