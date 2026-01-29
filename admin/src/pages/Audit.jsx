@@ -1,30 +1,149 @@
-import { Card, Table, Button, Space, Typography } from 'antd'
+import { Card, Table, Button, Space, Typography, Tag, Select, Modal, Form, Input, message } from 'antd'
+import { useEffect, useState } from 'react'
 
-const dataSource = [
-  { key: 1, name: '易宿酒店', city: '上海', submittedAt: '2026-01-28' },
-  { key: 2, name: '青柠酒店', city: '北京', submittedAt: '2026-01-27' }
-]
+const apiBase = 'http://127.0.0.1:4100'
 
-const columns = [
-  { title: '酒店名称', dataIndex: 'name' },
-  { title: '城市', dataIndex: 'city' },
-  { title: '提交时间', dataIndex: 'submittedAt' },
-  {
-    title: '操作',
-    render: () => (
-      <Space>
-        <Button type="primary">通过</Button>
-        <Button danger>驳回</Button>
-      </Space>
-    )
-  }
-]
+const statusMap = {
+  pending: { color: 'orange', label: '待审核' },
+  approved: { color: 'green', label: '已上架' },
+  rejected: { color: 'red', label: '已驳回' },
+  offline: { color: 'default', label: '已下线' }
+}
 
 export default function Audit() {
+  const [loading, setLoading] = useState(false)
+  const [hotels, setHotels] = useState([])
+  const [statusFilter, setStatusFilter] = useState('pending')
+  const [rejecting, setRejecting] = useState(null)
+  const [rejectForm] = Form.useForm()
+
+  const fetchHotels = async (statusValue) => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    setLoading(true)
+    try {
+      const query = statusValue && statusValue !== 'all' ? `?status=${statusValue}` : ''
+      const response = await fetch(`${apiBase}/api/admin/hotels${query}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        message.error(data.message || '获取酒店列表失败')
+        return
+      }
+      setHotels(data)
+    } catch {
+      message.error('获取酒店列表失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchHotels(statusFilter)
+  }, [statusFilter])
+
+  const updateStatus = async (id, status, rejectReason) => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    setLoading(true)
+    try {
+      const response = await fetch(`${apiBase}/api/admin/hotels/${id}/status`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status, rejectReason })
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        message.error(data.message || '操作失败')
+        return
+      }
+      message.success('操作成功')
+      fetchHotels(statusFilter)
+    } catch {
+      message.error('操作失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const columns = [
+    { title: '酒店名称', dataIndex: 'name' },
+    { title: '城市', dataIndex: 'city' },
+    { title: '星级', dataIndex: 'star_rating' },
+    { title: '最低价', dataIndex: 'lowestPrice' },
+    { title: '提交时间', dataIndex: 'created_at' },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      render: (value) => {
+        const info = statusMap[value] || { color: 'default', label: value }
+        return <Tag color={info.color}>{info.label}</Tag>
+      }
+    },
+    {
+      title: '操作',
+      render: (_, record) => (
+        <Space>
+          {record.status === 'pending' ? (
+            <>
+              <Button type="primary" onClick={() => updateStatus(record.id, 'approved')}>通过</Button>
+              <Button danger onClick={() => {
+                setRejecting(record)
+                rejectForm.resetFields()
+              }}>驳回</Button>
+            </>
+          ) : null}
+          {record.status === 'approved' ? (
+            <Button onClick={() => updateStatus(record.id, 'offline')}>下线</Button>
+          ) : null}
+          {record.status === 'offline' ? (
+            <Button onClick={() => updateStatus(record.id, 'restore')}>恢复</Button>
+          ) : null}
+        </Space>
+      )
+    }
+  ]
+
   return (
-    <Card>
-      <Typography.Title level={5}>审核列表</Typography.Title>
-      <Table columns={columns} dataSource={dataSource} pagination={{ pageSize: 5 }} />
+    <Card
+      title={<Typography.Title level={5} style={{ margin: 0 }}>审核列表</Typography.Title>}
+      extra={(
+        <Select
+          value={statusFilter}
+          style={{ width: 160 }}
+          onChange={setStatusFilter}
+          options={[
+            { value: 'all', label: '全部状态' },
+            { value: 'pending', label: '待审核' },
+            { value: 'approved', label: '已上架' },
+            { value: 'rejected', label: '已驳回' },
+            { value: 'offline', label: '已下线' }
+          ]}
+        />
+      )}
+    >
+      <Table columns={columns} dataSource={hotels} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} />
+      <Modal
+        title="驳回原因"
+        open={!!rejecting}
+        onCancel={() => setRejecting(null)}
+        onOk={async () => {
+          const values = await rejectForm.validateFields()
+          updateStatus(rejecting.id, 'rejected', values.rejectReason)
+          setRejecting(null)
+        }}
+        okText="确认驳回"
+      >
+        <Form layout="vertical" form={rejectForm}>
+          <Form.Item name="rejectReason" label="原因" rules={[{ required: true }]}>
+            <Input.TextArea rows={3} placeholder="请输入驳回原因" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </Card>
   )
 }

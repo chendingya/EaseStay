@@ -1,23 +1,26 @@
 const express = require('express')
 const cors = require('cors')
-const authRoutes = require('./routes/auth')
-const merchantHotelRoutes = require('./routes/merchantHotels')
-const adminHotelRoutes = require('./routes/adminHotels')
-const publicHotelRoutes = require('./routes/publicHotels')
-const { authRequired, requireRole } = require('./middleware/auth')
+const path = require('path')
+const swaggerUi = require('swagger-ui-express')
+const swaggerJsdoc = require('swagger-jsdoc')
+const { apiRouter, statusRoutes } = require('./routes')
+const { health } = require('./controllers/statusController')
+const swaggerDefinition = require('./swaggerDefinition')
 
 const app = express()
 
 app.use(cors())
 app.use(express.json({ limit: '2mb' }))
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' })
+const swaggerSpec = swaggerJsdoc({
+  definition: swaggerDefinition,
+  apis: [path.join(__dirname, 'routes', '*.js')]
 })
 
-app.use('/api/auth', authRoutes)
-app.use('/api/merchant/hotels', authRequired, requireRole('merchant'), merchantHotelRoutes)
-app.use('/api/admin/hotels', authRequired, requireRole('admin'), adminHotelRoutes)
-app.use('/api/hotels', publicHotelRoutes)
+app.get('/health', health)
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
+app.use('/status', statusRoutes)
+app.use('/api', apiRouter)
 
 module.exports = app

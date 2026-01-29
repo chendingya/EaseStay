@@ -2,6 +2,7 @@ const store = {
   users: [],
   hotels: [],
   roomTypes: [],
+  smsCodes: {},
   sequences: {
     userId: 1,
     hotelId: 1,

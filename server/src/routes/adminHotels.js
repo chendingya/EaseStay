@@ -1,48 +1,54 @@
 const express = require('express')
-const store = require('../data/store')
+const { list, updateStatus } = require('../controllers/adminHotelsController')
 
 const router = express.Router()
 
-router.get('/', (req, res) => {
-  const { status } = req.query
-  const hotels = status
-    ? store.hotels.filter((hotel) => hotel.status === status)
-    : store.hotels
-  res.json(hotels)
-})
+/**
+ * @openapi
+ * /api/admin/hotels:
+ *   get:
+ *     tags:
+ *       - Admin
+ *     summary: 管理员酒店列表
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: status
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: ok
+ */
+router.get('/', list)
 
-router.patch('/:id/status', (req, res) => {
-  const hotelId = Number(req.params.id)
-  const { status, rejectReason } = req.body || {}
-  const hotel = store.hotels.find((item) => item.id === hotelId)
-  if (!hotel) {
-    res.status(404).json({ message: '酒店不存在' })
-    return
-  }
-
-  const allowed = ['approved', 'rejected', 'offline', 'restore']
-  if (!allowed.includes(status)) {
-    res.status(400).json({ message: 'status 不合法' })
-    return
-  }
-
-  if (status === 'rejected') {
-    if (!rejectReason) {
-      res.status(400).json({ message: 'rejectReason 为必填' })
-      return
-    }
-    hotel.status = 'rejected'
-    hotel.reject_reason = rejectReason
-  } else if (status === 'approved') {
-    hotel.status = 'approved'
-    hotel.reject_reason = ''
-  } else if (status === 'offline') {
-    hotel.status = 'offline'
-  } else if (status === 'restore') {
-    hotel.status = 'approved'
-  }
-
-  res.json(hotel)
-})
+/**
+ * @openapi
+ * /api/admin/hotels/{id}/status:
+ *   patch:
+ *     tags:
+ *       - Admin
+ *     summary: 更新酒店状态
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: number
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/AdminStatusUpdate'
+ *     responses:
+ *       200:
+ *         description: ok
+ */
+router.patch('/:id/status', updateStatus)
 
 module.exports = router

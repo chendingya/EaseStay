@@ -1,0 +1,144 @@
+.pro-login-page {
+  min-height: 100vh;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #f8fafc;
+  overflow: hidden;
+}
+
+.pro-login-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.pro-login-bg {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.35);
+  z-index: 1;
+}
+
+.pro-login-shell {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  z-index: 2;
+}
+
+.pro-login-card {
+  width: 460px;
+  padding: 28px 28px 24px;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(6px);
+  color: #0f172a;
+}
+
+.pro-login-title {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.pro-login-title .ant-typography {
+  color: #0f172a;
+}
+
+.pro-login-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+}
+
+.pro-login-activity {
+  margin-bottom: 20px;
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(4px);
+}
+
+.pro-login-activity-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #0f172a;
+}
+
+.pro-login-activity-subtitle {
+  font-size: 12px;
+  color: #475569;
+  margin-bottom: 12px;
+}
+
+.pro-login-activity-btn {
+  border-radius: 20px;
+  background: #ffffff;
+  color: #1677ff;
+  width: 120px;
+}
+
+.pro-login-extra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.pro-login-icons {
+  width: 100%;
+  justify-content: center;
+}
+
+.pro-login-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  width: 40px;
+  border: 1px solid #cbd5f5;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.pro-login-hint {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 12px;
+}
+
+.pro-login-card .ant-input,
+.pro-login-card .ant-input-password,
+.pro-login-card .ant-select-selector,
+.pro-login-card .ant-tabs-tab,
+.pro-login-card .ant-tabs-tab-btn {
+  color: #0f172a !important;
+}
+
+.pro-login-card .ant-input,
+.pro-login-card .ant-input-password,
+.pro-login-card .ant-select-selector {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+.pro-login-card .ant-input::placeholder,
+.pro-login-card input::placeholder {
+  color: #94a3b8 !important;
+}
+
+.pro-login-card .ant-btn-primary {
+  background: #1677ff;
+}
