@@ -1,4 +1,4 @@
-import { Card, Table, Space, Typography, Tag, Select, Modal, Form, Input } from 'antd'
+import { Card, Table, Space, Typography, Tag, Select } from 'antd'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { EyeOutlined, StarFilled } from '@ant-design/icons'
@@ -18,8 +18,6 @@ export default function Audit() {
   const [loading, setLoading] = useState(false)
   const [hotels, setHotels] = useState([])
   const [statusFilter, setStatusFilter] = useState('pending')
-  const [rejecting, setRejecting] = useState(null)
-  const [rejectForm] = Form.useForm()
 
   const fetchHotels = async (statusValue) => {
     const token = localStorage.getItem('token')
@@ -47,33 +45,6 @@ export default function Audit() {
     fetchHotels(statusFilter)
   }, [statusFilter])
 
-  const updateStatus = async (id, status, rejectReason) => {
-    const token = localStorage.getItem('token')
-    if (!token) return
-    setLoading(true)
-    try {
-      const response = await fetch(`${apiBase}/api/admin/hotels/${id}/status`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status, rejectReason })
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        message.error(data.message || '操作失败')
-        return
-      }
-      message.success('操作成功')
-      fetchHotels(statusFilter)
-    } catch {
-      message.error('操作失败')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const columns = [
     { title: '酒店名称', dataIndex: 'name', render: (text, record) => (
       <a onClick={() => navigate(`/audit/${record.id}`)}>{text}</a>
@@ -94,22 +65,9 @@ export default function Audit() {
       title: '操作',
       render: (_, record) => (
         <Space>
-          <GlassButton type="link" icon={<EyeOutlined />} onClick={() => navigate(`/audit/${record.id}`)}>查看</GlassButton>
-          {record.status === 'pending' ? (
-            <>
-              <GlassButton type="primary" size="small" onClick={() => updateStatus(record.id, 'approved')}>通过</GlassButton>
-              <GlassButton danger size="small" onClick={() => {
-                setRejecting(record)
-                rejectForm.resetFields()
-              }}>驳回</GlassButton>
-            </>
-          ) : null}
-          {record.status === 'approved' ? (
-            <GlassButton size="small" onClick={() => updateStatus(record.id, 'offline')}>下线</GlassButton>
-          ) : null}
-          {record.status === 'offline' ? (
-            <GlassButton size="small" onClick={() => updateStatus(record.id, 'restore')}>恢复</GlassButton>
-          ) : null}
+          <GlassButton type="link" icon={<EyeOutlined />} onClick={() => navigate(`/audit/${record.id}`)}>
+            {record.status === 'pending' ? '审核' : '查看'}
+          </GlassButton>
         </Space>
       )
     }
@@ -134,23 +92,6 @@ export default function Audit() {
       )}
     >
       <Table columns={columns} dataSource={hotels} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} />
-      <Modal
-        title="驳回原因"
-        open={!!rejecting}
-        onCancel={() => setRejecting(null)}
-        onOk={async () => {
-          const values = await rejectForm.validateFields()
-          updateStatus(rejecting.id, 'rejected', values.rejectReason)
-          setRejecting(null)
-        }}
-        okText="确认驳回"
-      >
-        <Form layout="vertical" form={rejectForm}>
-          <Form.Item name="rejectReason" label="原因" rules={[{ required: true }]}>
-            <Input.TextArea rows={3} placeholder="请输入驳回原因" />
-          </Form.Item>
-        </Form>
-      </Modal>
     </Card>
   )
 }

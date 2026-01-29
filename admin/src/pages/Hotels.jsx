@@ -245,7 +245,7 @@ export default function Hotels() {
               <GlassButton type="link" size="small" onClick={() => navigate(`/hotels/${record.id}`)}>查看</GlassButton>
               <Popconfirm
                 title="确定下线该酒店吗？"
-                description="下线后酒店将不再对外展示"
+                description="下线后酒店将不再对外展示，需联系管理员恢复"
                 onConfirm={() => handleUpdateStatus(record.id, 'offline')}
                 okText="确定"
                 cancelText="取消"
@@ -255,14 +255,9 @@ export default function Hotels() {
             </>
           )}
           {record.status === 'offline' && (
-            <Popconfirm
-              title="确定恢复上架该酒店吗？"
-              onConfirm={() => handleUpdateStatus(record.id, 'restore')}
-              okText="确定"
-              cancelText="取消"
-            >
-              <GlassButton type="link" size="small" icon={<CheckCircleOutlined />}>恢复上架</GlassButton>
-            </Popconfirm>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              已下线（联系管理员恢复）
+            </Typography.Text>
           )}
           <GlassButton type="link" size="small" onClick={() => navigate(`/hotels/edit/${record.id}`)}>编辑</GlassButton>
         </Space>

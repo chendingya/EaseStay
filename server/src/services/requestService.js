@@ -1,4 +1,5 @@
 const supabase = require('../config/supabase')
+const { sendNotification, NotificationTemplates } = require('./notificationService')
 
 // 创建申请
 const createRequest = async ({ merchantId, hotelId, type, name, data }) => {
@@ -155,25 +156,16 @@ const reviewRequest = async ({ requestId, action, rejectReason }) => {
     }
   }
 
-  // 发送通知给商家
-  const notificationTitle = action === 'approve'
-    ? `您的${getTypeLabel(request.type)}申请已通过`
-    : `您的${getTypeLabel(request.type)}申请被拒绝`
+  // 使用通知服务发送通知给商家
+  const typeLabel = getTypeLabel(request.type)
+  const notification = action === 'approve'
+    ? NotificationTemplates.requestApproved(typeLabel, request.name, request.hotel_id)
+    : NotificationTemplates.requestRejected(typeLabel, request.name, request.hotel_id, rejectReason)
 
-  const notificationContent = action === 'approve'
-    ? `「${request.name}」已添加成功`
-    : `「${request.name}」申请被拒绝${rejectReason ? `，原因：${rejectReason}` : ''}`
-
-  await supabase
-    .from('notifications')
-    .insert({
-      user_id: request.merchant_id,
-      title: notificationTitle,
-      content: notificationContent,
-      type: action === 'approve' ? 'success' : 'warning',
-      related_id: requestId,
-      related_type: 'request'
-    })
+  await sendNotification({
+    userId: request.merchant_id,
+    ...notification
+  })
 
   return { ok: true, message: action === 'approve' ? '已批准' : '已拒绝' }
 }
@@ -188,62 +180,9 @@ const getTypeLabel = (type) => {
   return labels[type] || type
 }
 
-// 获取用户通知
-const getUserNotifications = async ({ userId, unreadOnly }) => {
-  let query = supabase
-    .from('notifications')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(50)
-
-  if (unreadOnly) query = query.eq('is_read', false)
-
-  const { data, error } = await query
-
-  if (error) {
-    return { ok: false, status: 500, message: '获取通知失败' }
-  }
-
-  return { ok: true, data: data || [] }
-}
-
-// 标记通知已读
-const markNotificationRead = async ({ notificationId, userId }) => {
-  const { error } = await supabase
-    .from('notifications')
-    .update({ is_read: true })
-    .eq('id', notificationId)
-    .eq('user_id', userId)
-
-  if (error) {
-    return { ok: false, status: 500, message: '更新失败' }
-  }
-
-  return { ok: true, message: '已标记为已读' }
-}
-
-// 标记所有通知已读
-const markAllNotificationsRead = async ({ userId }) => {
-  const { error } = await supabase
-    .from('notifications')
-    .update({ is_read: true })
-    .eq('user_id', userId)
-    .eq('is_read', false)
-
-  if (error) {
-    return { ok: false, status: 500, message: '更新失败' }
-  }
-
-  return { ok: true, message: '已全部标记为已读' }
-}
-
 module.exports = {
   createRequest,
   getMerchantRequests,
   getPendingRequests,
-  reviewRequest,
-  getUserNotifications,
-  markNotificationRead,
-  markAllNotificationsRead
+  reviewRequest
 }

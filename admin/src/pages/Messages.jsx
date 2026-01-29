@@ -5,8 +5,7 @@ import {
   InfoCircleOutlined, WarningOutlined, DeleteOutlined
 } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components/GlassUI'
-
-const apiBase = 'http://127.0.0.1:4100'
+import { getNotifications, markAsRead as markNotificationAsRead, formatNotificationTime } from '../services/notificationService'
 
 const typeConfig = {
   success: { icon: <CheckCircleOutlined />, color: 'green', bg: '#f6ffed' },
@@ -22,19 +21,9 @@ export default function Messages() {
   const [unreadCount, setUnreadCount] = useState(0)
 
   const fetchNotifications = async (unreadOnly = false) => {
-    const token = localStorage.getItem('token')
-    if (!token) return
     setLoading(true)
     try {
-      const query = unreadOnly ? '?unreadOnly=true' : ''
-      const response = await fetch(`${apiBase}/api/requests/notifications${query}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        message.error(data.message || '获取消息失败')
-        return
-      }
+      const data = await getNotifications({ unreadOnly })
       setNotifications(data)
       setUnreadCount(data.filter(n => !n.is_read).length)
     } catch {
@@ -48,33 +37,19 @@ export default function Messages() {
     fetchNotifications(activeTab === 'unread')
   }, [activeTab])
 
-  const markAsRead = async (id) => {
-    const token = localStorage.getItem('token')
-    if (!token) return
-    try {
-      const response = await fetch(`${apiBase}/api/requests/notifications/${id}/read`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (response.ok) {
-        setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
-        setUnreadCount(prev => Math.max(0, prev - 1))
-      }
-    } catch {
-      // ignore
+  const handleMarkAsRead = async (id) => {
+    const success = await markNotificationAsRead(id)
+    if (success) {
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
+      setUnreadCount(prev => Math.max(0, prev - 1))
     }
   }
 
-  const markAllAsRead = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) return
+  const handleMarkAllAsRead = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${apiBase}/api/requests/notifications/read-all`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (response.ok) {
+      const success = await markNotificationAsRead()
+      if (success) {
         setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
         setUnreadCount(0)
         message.success('已全部标记为已读')
@@ -84,22 +59,6 @@ export default function Messages() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const formatTime = (dateStr) => {
-    if (!dateStr) return ''
-    const date = new Date(dateStr)
-    const now = new Date()
-    const diff = now - date
-    const minutes = Math.floor(diff / 60000)
-    const hours = Math.floor(diff / 3600000)
-    const days = Math.floor(diff / 86400000)
-
-    if (minutes < 1) return '刚刚'
-    if (minutes < 60) return `${minutes}分钟前`
-    if (hours < 24) return `${hours}小时前`
-    if (days < 7) return `${days}天前`
-    return date.toLocaleDateString()
   }
 
   const displayList = activeTab === 'unread' 
@@ -132,7 +91,7 @@ export default function Messages() {
           )}
         </Typography.Title>
         {unreadCount > 0 && (
-          <GlassButton onClick={markAllAsRead} loading={loading}>
+          <GlassButton onClick={handleMarkAllAsRead} loading={loading}>
             全部标记已读
           </GlassButton>
         )}
@@ -162,7 +121,7 @@ export default function Messages() {
                   border: `1px solid ${item.is_read ? '#f0f0f0' : 'transparent'}`,
                   transition: 'all 0.3s'
                 }}
-                onClick={() => !item.is_read && markAsRead(item.id)}
+                onClick={() => !item.is_read && handleMarkAsRead(item.id)}
               >
                 <List.Item.Meta
                   avatar={
@@ -196,7 +155,7 @@ export default function Messages() {
                   description={
                     <div>
                       <div style={{ color: '#666', marginBottom: 4 }}>{item.content}</div>
-                      <div style={{ color: '#999', fontSize: 12 }}>{formatTime(item.created_at)}</div>
+                      <div style={{ color: '#999', fontSize: 12 }}>{formatNotificationTime(item.created_at)}</div>
                     </div>
                   }
                 />

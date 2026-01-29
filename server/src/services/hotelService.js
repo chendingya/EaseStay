@@ -1,4 +1,5 @@
 const supabase = require('../config/supabase')
+const { sendNotification, NotificationTemplates } = require('./notificationService')
 
 const normalizeArray = (value) => (Array.isArray(value) ? value : [])
 
@@ -305,8 +306,12 @@ const updateHotelStatus = async ({ hotelId, status, rejectReason }) => {
     updates.reject_reason = ''
   } else if (status === 'offline') {
     updates.status = 'offline'
+    if (rejectReason) {
+      updates.reject_reason = rejectReason  // 存储下线原因
+    }
   } else if (status === 'restore') {
     updates.status = 'approved'
+    updates.reject_reason = ''
   }
 
   const { data: updatedHotel, error: updateError } = await supabase
@@ -320,35 +325,22 @@ const updateHotelStatus = async ({ hotelId, status, rejectReason }) => {
     return { ok: false, status: 500, message: '更新失败：' + updateError.message }
   }
 
-  // 发送通知给商家
-  const notificationTitle = status === 'approved'
-    ? '酒店审核通过'
-    : status === 'rejected'
-    ? '酒店审核未通过'
-    : status === 'offline'
-    ? '酒店已下线'
-    : '酒店已恢复上架'
+  // 使用通知服务发送通知给商家
+  let notification
+  if (status === 'approved') {
+    notification = NotificationTemplates.hotelApproved(hotel.name, hotelId)
+  } else if (status === 'rejected') {
+    notification = NotificationTemplates.hotelRejected(hotel.name, hotelId, rejectReason)
+  } else if (status === 'offline') {
+    notification = NotificationTemplates.hotelOffline(hotel.name, hotelId, rejectReason)
+  } else {
+    notification = NotificationTemplates.hotelRestored(hotel.name, hotelId)
+  }
 
-  const notificationContent = status === 'approved'
-    ? `您的酒店「${hotel.name}」已通过审核，现已上架`
-    : status === 'rejected'
-    ? `您的酒店「${hotel.name}」审核未通过，原因：${rejectReason}`
-    : status === 'offline'
-    ? `您的酒店「${hotel.name}」已被管理员下线`
-    : `您的酒店「${hotel.name}」已恢复上架`
-
-  const notificationType = status === 'approved' || status === 'restore' ? 'success' : 'warning'
-
-  await supabase
-    .from('notifications')
-    .insert({
-      user_id: hotel.merchant_id,
-      title: notificationTitle,
-      content: notificationContent,
-      type: notificationType,
-      related_id: hotelId,
-      related_type: 'hotel'
-    })
+  await sendNotification({
+    userId: hotel.merchant_id,
+    ...notification
+  })
 
   return { ok: true, status: 200, data: updatedHotel }
 }

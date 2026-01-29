@@ -31,7 +31,9 @@ export default function AuditDetail() {
   const [hotel, setHotel] = useState(null)
   const [pendingRequests, setPendingRequests] = useState([])
   const [rejecting, setRejecting] = useState(false)
+  const [offlineModal, setOfflineModal] = useState(false)
   const [rejectForm] = Form.useForm()
+  const [offlineForm] = Form.useForm()
   const [actionLoading, setActionLoading] = useState(false)
 
   const fetchHotel = async () => {
@@ -94,9 +96,16 @@ export default function AuditDetail() {
         message.error(data.message || '操作失败')
         return
       }
-      message.success(status === 'approved' ? '审核通过，已通知商户' : status === 'rejected' ? '已驳回，已通知商户' : '操作成功')
+      message.success(
+        status === 'approved' ? '审核通过，已通知商户' 
+        : status === 'rejected' ? '已驳回，已通知商户' 
+        : status === 'offline' ? '已下线，已通知商户'
+        : '操作成功'
+      )
       setRejecting(false)
+      setOfflineModal(false)
       rejectForm.resetFields()
+      offlineForm.resetFields()
       fetchHotel()
     } catch {
       message.error('操作失败')
@@ -108,6 +117,12 @@ export default function AuditDetail() {
   const handleReject = () => {
     rejectForm.validateFields().then(values => {
       updateStatus('rejected', values.reason)
+    })
+  }
+
+  const handleOffline = () => {
+    offlineForm.validateFields().then(values => {
+      updateStatus('offline', values.reason)
     })
   }
 
@@ -172,7 +187,7 @@ export default function AuditDetail() {
               </>
             )}
             {hotel.status === 'approved' && (
-              <GlassButton onClick={() => updateStatus('offline')} loading={actionLoading}>
+              <GlassButton danger onClick={() => setOfflineModal(true)}>
                 下线酒店
               </GlassButton>
             )}
@@ -265,7 +280,7 @@ export default function AuditDetail() {
             </Descriptions>
             {hotel.description && (
               <>
-                <Divider orientation="left" style={{ marginTop: 16 }}>酒店描述</Divider>
+                <Divider titlePlacement="left" style={{ marginTop: 16 }}>酒店描述</Divider>
                 <Typography.Paragraph style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
                   {hotel.description}
                 </Typography.Paragraph>
@@ -279,7 +294,7 @@ export default function AuditDetail() {
               <Table 
                 columns={roomColumns} 
                 dataSource={hotel.roomTypes} 
-                rowKey={(_, idx) => idx}
+                rowKey={(record) => record.name || record.id}
                 pagination={false}
                 size="small"
               />
@@ -396,6 +411,27 @@ export default function AuditDetail() {
             rules={[{ required: true, message: '请输入驳回原因' }]}
           >
             <Input.TextArea rows={3} placeholder="请输入驳回原因，将发送给商户" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 下线弹窗 */}
+      <Modal
+        title="下线酒店"
+        open={offlineModal}
+        onOk={handleOffline}
+        onCancel={() => { setOfflineModal(false); offlineForm.resetFields() }}
+        okText="确认下线"
+        okButtonProps={{ danger: true, loading: actionLoading }}
+      >
+        <p>确定要下线酒店「{hotel.name}」吗？下线后将通知商户。</p>
+        <Form form={offlineForm} layout="vertical">
+          <Form.Item
+            name="reason"
+            label="下线原因"
+            rules={[{ required: true, message: '请输入下线原因' }]}
+          >
+            <Input.TextArea rows={3} placeholder="请输入下线原因，将发送给商户" />
           </Form.Item>
         </Form>
       </Modal>
