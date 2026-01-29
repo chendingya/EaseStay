@@ -1,4 +1,4 @@
-import { Button, Checkbox, ConfigProvider, Form, Input, Select, Tabs, Typography, message, theme } from 'antd'
+import { Button, ConfigProvider, Form, Input, Select, Tabs, Typography, message, theme } from 'antd'
 import { LockOutlined, MobileOutlined, UserOutlined } from '@ant-design/icons'
 import { useEffect, useState } from 'react'
 import './Login.css'
@@ -217,11 +217,6 @@ export default function Login({ onLoggedIn }) {
                 <div className="pro-login-hint">验证码由后端模拟短信生成并返回前端。</div>
               </>
             )}
-
-            <div className="pro-login-extra">
-              <Checkbox>自动登录</Checkbox>
-              <a>忘记密码</a>
-            </div>
 
             <Button type="primary" htmlType="submit" size="large" block>
               {activeTab === 'register' ? '注册并登录' : '登录'}
