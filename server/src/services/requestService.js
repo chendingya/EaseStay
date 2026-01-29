@@ -46,8 +46,8 @@ const getMerchantRequests = async ({ merchantId, status, type }) => {
   return { ok: true, data: data || [] }
 }
 
-// 获取所有待审核申请（管理员）
-const getPendingRequests = async ({ type }) => {
+// 获取所有申请（管理员） - 默认只获取 pending，可通过 status 参数筛选
+const getPendingRequests = async ({ type, status }) => {
   let query = supabase
     .from('requests')
     .select(`
@@ -55,8 +55,14 @@ const getPendingRequests = async ({ type }) => {
       users:merchant_id (username),
       hotels:hotel_id (name)
     `)
-    .eq('status', 'pending')
     .order('created_at', { ascending: false })
+
+  // 默认只获取 pending 状态，如果传入 status=all 则获取全部
+  if (status && status !== 'all') {
+    query = query.eq('status', status)
+  } else if (!status) {
+    query = query.eq('status', 'pending')
+  }
 
   if (type) query = query.eq('type', type)
 

@@ -320,6 +320,36 @@ const updateHotelStatus = async ({ hotelId, status, rejectReason }) => {
     return { ok: false, status: 500, message: '更新失败：' + updateError.message }
   }
 
+  // 发送通知给商家
+  const notificationTitle = status === 'approved'
+    ? '酒店审核通过'
+    : status === 'rejected'
+    ? '酒店审核未通过'
+    : status === 'offline'
+    ? '酒店已下线'
+    : '酒店已恢复上架'
+
+  const notificationContent = status === 'approved'
+    ? `您的酒店「${hotel.name}」已通过审核，现已上架`
+    : status === 'rejected'
+    ? `您的酒店「${hotel.name}」审核未通过，原因：${rejectReason}`
+    : status === 'offline'
+    ? `您的酒店「${hotel.name}」已被管理员下线`
+    : `您的酒店「${hotel.name}」已恢复上架`
+
+  const notificationType = status === 'approved' || status === 'restore' ? 'success' : 'warning'
+
+  await supabase
+    .from('notifications')
+    .insert({
+      user_id: hotel.merchant_id,
+      title: notificationTitle,
+      content: notificationContent,
+      type: notificationType,
+      related_id: hotelId,
+      related_type: 'hotel'
+    })
+
   return { ok: true, status: 200, data: updatedHotel }
 }
 
@@ -406,12 +436,35 @@ const getPublicHotel = async ({ hotelId }) => {
   return { ok: true, status: 200, data: { ...hotel, roomTypes: roomTypes || [] } }
 }
 
+// 管理员获取酒店详情（可查看任意状态）
+const getAdminHotelDetail = async ({ hotelId }) => {
+  const { data: hotel, error } = await supabase
+    .from('hotels')
+    .select('*')
+    .eq('id', hotelId)
+    .single()
+
+  if (error || !hotel) {
+    return { ok: false, status: 404, message: '酒店不存在' }
+  }
+
+  // 获取房型
+  const { data: roomTypes } = await supabase
+    .from('room_types')
+    .select('*')
+    .eq('hotel_id', hotelId)
+    .order('price', { ascending: true })
+
+  return { ok: true, status: 200, data: { ...hotel, roomTypes: roomTypes || [] } }
+}
+
 module.exports = {
   createHotel,
   updateHotel,
   listMerchantHotels,
   getMerchantHotel,
   listAdminHotels,
+  getAdminHotelDetail,
   updateHotelStatus,
   listPublicHotels,
   getPublicHotel

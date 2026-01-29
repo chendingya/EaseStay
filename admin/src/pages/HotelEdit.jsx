@@ -18,7 +18,6 @@ function MapPicker({ onAddressChange, hotCities = [] }) {
   const [searchText, setSearchText] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [showResults, setShowResults] = useState(false)
-  const [selectedLocation, setSelectedLocation] = useState({ lat: 31.2304, lng: 121.4737 })
   const [searching, setSearching] = useState(false)
 
   // 通过后端 API 搜索地点
@@ -57,7 +56,6 @@ function MapPicker({ onAddressChange, hotCities = [] }) {
   }
 
   const handleSelectLocation = (location) => {
-    setSelectedLocation({ lat: location.lat, lng: location.lng })
     setShowResults(false)
     setSearchText(location.name)
     onAddressChange?.({ 
@@ -100,26 +98,6 @@ function MapPicker({ onAddressChange, hotCities = [] }) {
             ))}
           </div>
         )}
-
-        <div style={{
-          height: 180,
-          background: 'linear-gradient(135deg, #e6f4ff 0%, #bae0ff 100%)',
-          borderRadius: 8,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative'
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <EnvironmentOutlined style={{ fontSize: 32, color: '#1677ff' }} />
-            <div style={{ marginTop: 8, color: '#666' }}>
-              {selectedLocation.lat.toFixed(4)}, {selectedLocation.lng.toFixed(4)}
-            </div>
-          </div>
-          <div style={{ position: 'absolute', bottom: 8, right: 8, fontSize: 12, color: '#999' }}>
-            搜索地址后自动获取坐标
-          </div>
-        </div>
       </div>
     </Card>
   )
@@ -416,39 +394,112 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], onReques
 }
 
 // ========== 周边信息组件 ==========
-function NearbyInfoEditor({ attractions = [], transport = [], malls = [], onChangeAttractions, onChangeTransport, onChangeMalls }) {
+function NearbyInfoEditor({ attractions = [], transport = [], malls = [], onChangeAttractions, onChangeTransport, onChangeMalls, hotelLocation }) {
   const [searchText, setSearchText] = useState('')
   const [searchResults, setSearchResults] = useState([])
+  const [searching, setSearching] = useState(false)
+  const [searchType, setSearchType] = useState('all') // all, attraction, transport, mall
 
-  const handleSearch = () => {
+  // 通过高德 API 搜索周边
+  const handleSearch = async () => {
     if (!searchText.trim()) return
-    const mockResults = [
-      { name: `${searchText}景点A`, distance: '500m', type: 'attraction' },
-      { name: `${searchText}地铁站`, distance: '300m', type: 'transport' },
-      { name: `${searchText}购物中心`, distance: '800m', type: 'mall' }
-    ]
-    setSearchResults(mockResults)
+    
+    setSearching(true)
+    try {
+      // 根据类型设置搜索关键词
+      let keywords = searchText
+      if (searchType === 'attraction') keywords += ' 景点|公园|博物馆|名胜'
+      else if (searchType === 'transport') keywords += ' 地铁站|公交站|火车站|机场'
+      else if (searchType === 'mall') keywords += ' 商场|购物中心|超市|百货'
+      
+      const response = await fetch(`${apiBase}/api/map/search?keywords=${encodeURIComponent(keywords)}`)
+      const result = await response.json()
+      
+      if (result.success && result.data && result.data.length > 0) {
+        const results = result.data.map(poi => {
+          // 根据POI类型判断分类
+          let type = 'attraction'
+          const typeName = (poi.type || '').toLowerCase()
+          if (typeName.includes('交通') || typeName.includes('地铁') || typeName.includes('公交') || typeName.includes('站')) {
+            type = 'transport'
+          } else if (typeName.includes('购物') || typeName.includes('商场') || typeName.includes('超市') || typeName.includes('百货')) {
+            type = 'mall'
+          }
+          
+          return {
+            name: poi.name,
+            address: poi.address || '',
+            distance: poi.distance ? `${poi.distance}m` : '未知',
+            type: type
+          }
+        })
+        setSearchResults(results)
+      } else {
+        message.warning(result.message || '未找到相关地点')
+        setSearchResults([])
+      }
+    } catch (err) {
+      console.error('搜索失败:', err)
+      message.error('搜索失败，请重试')
+    } finally {
+      setSearching(false)
+    }
   }
 
   const handleAdd = (item) => {
-    const info = `${item.name}(${item.distance})`
+    const info = item.distance !== '未知' ? `${item.name}(${item.distance})` : item.name
     if (item.type === 'attraction' && !attractions.includes(info)) { onChangeAttractions?.([...attractions, info]); message.success('已添加景点') }
     else if (item.type === 'transport' && !transport.includes(info)) { onChangeTransport?.([...transport, info]); message.success('已添加交通信息') }
     else if (item.type === 'mall' && !malls.includes(info)) { onChangeMalls?.([...malls, info]); message.success('已添加商场信息') }
   }
 
+  const typeOptions = [
+    { value: 'all', label: '全部' },
+    { value: 'attraction', label: '景点' },
+    { value: 'transport', label: '交通' },
+    { value: 'mall', label: '商场' }
+  ]
+
+  const getTypeTag = (type) => {
+    if (type === 'attraction') return <Tag color="green">景点</Tag>
+    if (type === 'transport') return <Tag color="blue">交通</Tag>
+    if (type === 'mall') return <Tag color="orange">商场</Tag>
+    return <Tag>其他</Tag>
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 16 }}>
-      <Card size="small" title="搜索周边信息">
+      <Card size="small" title="搜索周边信息（高德地图）">
         <Row gutter={8}>
-          <Col flex="auto"><Input placeholder="搜索周边景点、交通、商场..." value={searchText} onChange={(e) => setSearchText(e.target.value)} onPressEnter={handleSearch} prefix={<SearchOutlined />} /></Col>
-          <Col><GlassButton onClick={handleSearch}>搜索</GlassButton></Col>
+          <Col flex="auto">
+            <Input 
+              placeholder="搜索周边景点、交通、商场..." 
+              value={searchText} 
+              onChange={(e) => setSearchText(e.target.value)} 
+              onPressEnter={handleSearch} 
+              prefix={<SearchOutlined />} 
+            />
+          </Col>
+          <Col>
+            <Select 
+              value={searchType} 
+              onChange={setSearchType} 
+              options={typeOptions}
+              style={{ width: 90 }}
+            />
+          </Col>
+          <Col><GlassButton onClick={handleSearch} loading={searching}>搜索</GlassButton></Col>
         </Row>
         {searchResults.length > 0 && (
-          <div style={{ marginTop: 12 }}>
+          <div style={{ marginTop: 12, maxHeight: 250, overflow: 'auto' }}>
             {searchResults.map((item, idx) => (
               <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
-                <div><span>{item.name}</span><Tag style={{ marginLeft: 8 }} color="blue">{item.distance}</Tag></div>
+                <div style={{ flex: 1 }}>
+                  <span>{item.name}</span>
+                  {getTypeTag(item.type)}
+                  {item.distance !== '未知' && <Tag style={{ marginLeft: 4 }}>{item.distance}</Tag>}
+                  {item.address && <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>{item.address}</div>}
+                </div>
                 <GlassButton type="link" size="small" onClick={() => handleAdd(item)}>添加</GlassButton>
               </div>
             ))}
@@ -617,9 +668,90 @@ export default function HotelEdit() {
   }, [id, navigate, form])
 
   const handleFormChange = () => setPreviewData(form.getFieldsValue())
-  const handleRequestFacility = (name) => setPendingFacilities([...pendingFacilities, { name, status: 'pending' }])
-  const handleRequestRoomType = (room) => setPendingRoomTypes([...pendingRoomTypes, { ...room, status: 'pending' }])
-  const handleRequestPromotion = (promo) => setPendingPromotions([...pendingPromotions, { ...promo, status: 'pending' }])
+  
+  // 提交设施申请到后端
+  const handleRequestFacility = async (name) => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    
+    try {
+      const response = await fetch(`${apiBase}/api/requests`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hotelId: id ? parseInt(id) : null,
+          type: 'facility',
+          name: name,
+          data: { description: '' }
+        })
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        message.error(data.message || '提交申请失败')
+        return
+      }
+      setPendingFacilities([...pendingFacilities, { name, status: 'pending' }])
+      message.success('设施申请已提交，等待管理员审核')
+    } catch {
+      message.error('提交申请失败')
+    }
+  }
+  
+  // 提交房型申请到后端
+  const handleRequestRoomType = async (room) => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    
+    try {
+      const response = await fetch(`${apiBase}/api/requests`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hotelId: id ? parseInt(id) : null,
+          type: 'room_type',
+          name: room.name,
+          data: { price: room.price, stock: room.stock }
+        })
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        message.error(data.message || '提交申请失败')
+        return
+      }
+      setPendingRoomTypes([...pendingRoomTypes, { ...room, status: 'pending' }])
+      message.success('房型申请已提交，等待管理员审核')
+    } catch {
+      message.error('提交申请失败')
+    }
+  }
+  
+  // 提交优惠申请到后端
+  const handleRequestPromotion = async (promo) => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    
+    try {
+      const response = await fetch(`${apiBase}/api/requests`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hotelId: id ? parseInt(id) : null,
+          type: 'promotion',
+          name: promo.title,
+          data: { type: promo.type, value: promo.value }
+        })
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        message.error(data.message || '提交申请失败')
+        return
+      }
+      setPendingPromotions([...pendingPromotions, { ...promo, status: 'pending' }])
+      message.success('优惠申请已提交，等待管理员审核')
+    } catch {
+      message.error('提交申请失败')
+    }
+  }
 
   const handleSubmit = async () => {
     const token = localStorage.getItem('token')

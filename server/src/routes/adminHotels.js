@@ -1,5 +1,5 @@
 const express = require('express')
-const { list, updateStatus } = require('../controllers/adminHotelsController')
+const { list, getDetail, updateStatus } = require('../controllers/adminHotelsController')
 
 const router = express.Router()
 
@@ -23,6 +23,27 @@ const router = express.Router()
  *         description: ok
  */
 router.get('/', list)
+
+/**
+ * @openapi
+ * /api/admin/hotels/{id}:
+ *   get:
+ *     tags:
+ *       - Admin
+ *     summary: 管理员获取酒店详情
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: number
+ *     responses:
+ *       200:
+ *         description: ok
+ */
+router.get('/:id', getDetail)
 
 /**
  * @openapi
