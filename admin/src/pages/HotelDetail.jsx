@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, Descriptions, Tag, Image, Space, Typography, Table, Button, Spin, Row, Col } from 'antd'
+import { Card, Descriptions, Tag, Image, Space, Typography, Table, Spin, Row, Col } from 'antd'
 import { StarFilled, EnvironmentOutlined, CalendarOutlined } from '@ant-design/icons'
-import { glassMessage as message } from '../components/GlassUI'
+import { GlassButton, glassMessage as message } from '../components/GlassUI'
 
 const apiBase = 'http://127.0.0.1:4100'
 
@@ -84,9 +84,9 @@ export default function HotelDetail() {
             <Typography.Text type="secondary">{hotel.name_en}</Typography.Text>
           )}
         </div>
-        <Button type="primary" onClick={() => navigate(`/hotels/edit/${hotel.id}`)}>
+        <GlassButton type="primary" onClick={() => navigate(`/hotels/edit/${hotel.id}`)}>
           编辑酒店
-        </Button>
+        </GlassButton>
       </div>
 
       {/* 头部大图 */}
@@ -169,7 +169,7 @@ export default function HotelDetail() {
           {/* 优惠信息 */}
           {hotel.promotions && hotel.promotions.length > 0 && (
             <Card title="优惠活动" size="small" style={{ marginBottom: 16 }}>
-              <Space direction="vertical" style={{ width: '100%' }}>
+              <Space style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
                 {hotel.promotions.map((promo, index) => (
                   <div key={index} style={{ padding: '8px 12px', background: '#fff7e6', borderRadius: 4 }}>
                     <Tag color="orange">{promo.type}</Tag>

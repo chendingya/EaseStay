@@ -48,6 +48,33 @@
 | stock | Number | 库存 |
 | created_at | Date | 创建时间 |
 
+### 2.4 Request（申请审核）
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | Number | 主键 |
+| merchant_id | Number | 商户用户ID |
+| hotel_id | Number | 关联酒店ID（可空） |
+| type | Enum('facility','room_type','promotion') | 申请类型 |
+| name | String | 申请名称 |
+| data | Object | 附加数据（价格、库存等） |
+| status | Enum('pending','approved','rejected') | 状态 |
+| reject_reason | String | 驳回原因 |
+| created_at | Date | 创建时间 |
+| updated_at | Date | 更新时间 |
+
+### 2.5 Notification（消息通知）
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | Number | 主键 |
+| user_id | Number | 用户ID |
+| title | String | 通知标题 |
+| content | String | 通知内容 |
+| type | Enum('info','success','warning','error') | 通知类型 |
+| is_read | Boolean | 是否已读 |
+| related_id | Number | 关联ID |
+| related_type | String | 关联类型 |
+| created_at | Date | 创建时间 |
+
 ## 3. 状态流转
 - pending：商户新建或更新后进入待审核
 - approved：管理员审核通过，可在 C 端展示
@@ -213,3 +240,98 @@ city, keyword, checkIn, checkOut, sort, page, pageSize
 - 商户端：酒店创建/更新后状态统一为 pending
 - 管理端：审核支持 approve/reject/offline/restore
 - 移动端：列表仅展示 approved 酒店，详情房型价格升序
+
+## 6. 申请审核模块 API
+### 6.1 商户提交申请
+#### POST /api/requests
+请求：
+```json
+{
+  "hotelId": 1,
+  "type": "facility",
+  "name": "私人泳池",
+  "data": {}
+}
+```
+响应：
+```json
+{
+  "id": 1,
+  "merchant_id": 2,
+  "type": "facility",
+  "name": "私人泳池",
+  "status": "pending"
+}
+```
+
+### 6.2 商户获取申请列表
+#### GET /api/requests
+Query：status、type（可选）
+响应：申请列表
+
+### 6.3 管理员获取待审核申请
+#### GET /api/admin/requests
+Query：type（可选）
+响应：待审核申请列表（含商户和酒店信息）
+
+### 6.4 管理员审核申请
+#### PUT /api/admin/requests/:id/review
+请求：
+```json
+{
+  "action": "approve"
+}
+```
+或
+```json
+{
+  "action": "reject",
+  "rejectReason": "不符合规范"
+}
+```
+响应：{ "message": "已批准" } 或 { "message": "已拒绝" }
+
+## 7. 通知消息模块 API
+### 7.1 获取用户通知
+#### GET /api/requests/notifications
+Query：unreadOnly（可选，true/false）
+响应：通知列表
+
+### 7.2 标记通知已读
+#### PUT /api/requests/notifications/:id/read
+响应：{ "message": "已标记为已读" }
+
+### 7.3 标记所有通知已读
+#### PUT /api/requests/notifications/read-all
+响应：{ "message": "已全部标记为已读" }
+
+## 8. 预设数据配置
+### 8.1 预设设施标签
+```
+免费WiFi, 免费停车, 游泳池, 健身房, 餐厅, 会议室,
+洗衣服务, 24小时前台, 行李寄存, 接机服务, 商务中心, SPA,
+儿童乐园, 宠物友好, 无烟客房, 残疾人设施, 电动车充电, 自助洗衣
+```
+
+### 8.2 预设房型模板
+| 房型名称 | 默认价格 |
+| --- | --- |
+| 标准双床房 | 299 |
+| 标准大床房 | 329 |
+| 豪华大床房 | 399 |
+| 豪华双床房 | 429 |
+| 商务套房 | 599 |
+| 行政套房 | 799 |
+| 总统套房 | 1299 |
+| 亲子房 | 499 |
+| 家庭房 | 569 |
+
+### 8.3 预设优惠类型
+| 类型代码 | 显示名称 |
+| --- | --- |
+| early_bird | 早鸟优惠 |
+| weekend | 周末特惠 |
+| long_stay | 连住优惠 |
+| member | 会员专享 |
+| festival | 节日优惠 |
+| package | 套餐优惠 |

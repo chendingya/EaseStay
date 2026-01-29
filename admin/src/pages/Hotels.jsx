@@ -1,8 +1,8 @@
-import { Card, Table, Tag, Button, Space, Typography, Input, Select, Modal, Upload, Alert, Row, Col } from 'antd'
+import { Card, Table, Tag, Space, Typography, Input, Select, Modal, Upload, Alert, Row, Col } from 'antd'
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SearchOutlined, UploadOutlined, DownloadOutlined, InboxOutlined } from '@ant-design/icons'
-import { glassMessage as message } from '../components/GlassUI'
+import { GlassButton, glassMessage as message } from '../components/GlassUI'
 
 const apiBase = 'http://127.0.0.1:4100'
 
@@ -216,9 +216,9 @@ export default function Hotels() {
       render: (_, record) => (
         <Space>
           {record.status === 'approved' && (
-            <Button type="link" size="small" onClick={() => navigate(`/hotels/${record.id}`)}>查看</Button>
+            <GlassButton type="link" size="small" onClick={() => navigate(`/hotels/${record.id}`)}>查看</GlassButton>
           )}
-          <Button type="link" size="small" onClick={() => navigate(`/hotels/edit/${record.id}`)}>编辑</Button>
+          <GlassButton type="link" size="small" onClick={() => navigate(`/hotels/edit/${record.id}`)}>编辑</GlassButton>
         </Space>
       )
     }
@@ -238,8 +238,8 @@ export default function Hotels() {
       title={<Typography.Title level={5} style={{ margin: 0 }}>酒店管理</Typography.Title>}
       extra={
         <Space>
-          <Button icon={<UploadOutlined />} onClick={() => setImportModalOpen(true)}>批量导入</Button>
-          <Button type="primary" onClick={() => navigate('/hotels/new')}>新增酒店</Button>
+          <GlassButton icon={<UploadOutlined />} onClick={() => setImportModalOpen(true)}>批量导入</GlassButton>
+          <GlassButton type="primary" onClick={() => navigate('/hotels/new')}>新增酒店</GlassButton>
         </Space>
       }
     >
@@ -302,16 +302,16 @@ export default function Hotels() {
         }}
         width={800}
         footer={[
-          <Button key="template" icon={<DownloadOutlined />} onClick={generateTemplate}>
+          <GlassButton key="template" icon={<DownloadOutlined />} onClick={generateTemplate}>
             下载模板
-          </Button>,
-          <Button key="cancel" onClick={() => {
+          </GlassButton>,
+          <GlassButton key="cancel" onClick={() => {
             setImportModalOpen(false)
             setImportData([])
           }}>
             取消
-          </Button>,
-          <Button
+          </GlassButton>,
+          <GlassButton
             key="import"
             type="primary"
             loading={importing}
@@ -319,7 +319,7 @@ export default function Hotels() {
             onClick={handleImport}
           >
             确认导入 ({importData.length})
-          </Button>
+          </GlassButton>
         ]}
       >
         <Alert

@@ -1,6 +1,6 @@
 import './App.css'
 import { Layout, Menu, Space, Typography, Tag, Button, Breadcrumb } from 'antd'
-import { HomeOutlined, SettingOutlined } from '@ant-design/icons'
+import { HomeOutlined, SettingOutlined, UserOutlined, TeamOutlined } from '@ant-design/icons'
 import { Routes, Route, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import Login from './pages/Login.jsx'
@@ -9,6 +9,8 @@ import HotelDetail from './pages/HotelDetail.jsx'
 import HotelEdit from './pages/HotelEdit.jsx'
 import Audit from './pages/Audit.jsx'
 import Dashboard from './pages/Dashboard.jsx'
+import Account from './pages/Account.jsx'
+import Merchants from './pages/Merchants.jsx'
 
 // 路由配置 - 用于生成面包屑
 const routeConfig = {
@@ -17,7 +19,9 @@ const routeConfig = {
   '/hotels/new': { title: '新增酒店', parent: '/hotels' },
   '/hotels/edit/:id': { title: '编辑酒店', parent: '/hotels' },
   '/hotels/:id': { title: '酒店详情', parent: '/hotels' },
-  '/audit': { title: '审核列表', icon: <SettingOutlined /> }
+  '/audit': { title: '审核列表', icon: <SettingOutlined /> },
+  '/account': { title: '账户管理', icon: <UserOutlined /> },
+  '/merchants': { title: '商户管理', icon: <TeamOutlined /> }
 }
 
 // 面包屑组件
@@ -95,7 +99,7 @@ function App() {
       else if (auth.role === 'merchant') navigate('/hotels')
       else navigate('/')
     }
-    if (auth.token && auth.role === 'merchant' && location.pathname.startsWith('/audit')) {
+    if (auth.token && auth.role === 'merchant' && (location.pathname.startsWith('/audit') || location.pathname.startsWith('/merchants'))) {
       navigate('/hotels')
     }
     if (auth.token && auth.role === 'admin' && location.pathname.startsWith('/hotels')) {
@@ -107,9 +111,12 @@ function App() {
     const items = [{ key: 'dashboard', icon: <HomeOutlined />, label: '工作台' }]
     if (auth.role === 'merchant') {
       items.push({ key: 'hotels', icon: <SettingOutlined />, label: '酒店管理' })
+      items.push({ key: 'account', icon: <UserOutlined />, label: '账户管理' })
     }
     if (auth.role === 'admin') {
       items.push({ key: 'audit', icon: <SettingOutlined />, label: '审核列表' })
+      items.push({ key: 'merchants', icon: <TeamOutlined />, label: '商户管理' })
+      items.push({ key: 'account', icon: <UserOutlined />, label: '账户管理' })
     }
     return items
   }, [auth.role])
@@ -118,7 +125,11 @@ function App() {
     ? 'hotels'
     : location.pathname.startsWith('/audit')
       ? 'audit'
-      : 'dashboard'
+      : location.pathname.startsWith('/merchants')
+        ? 'merchants'
+        : location.pathname.startsWith('/account')
+          ? 'account'
+          : 'dashboard'
 
   const handleLoggedIn = ({ token, role, username }) => {
     localStorage.setItem('token', token)
@@ -155,6 +166,8 @@ function App() {
           onClick={({ key }) => {
             if (key === 'hotels') navigate('/hotels')
             else if (key === 'audit') navigate('/audit')
+            else if (key === 'merchants') navigate('/merchants')
+            else if (key === 'account') navigate('/account')
             else navigate('/')
           }}
         />
@@ -176,6 +189,8 @@ function App() {
             <Route path="/hotels/edit/:id" element={<HotelEdit />} />
             <Route path="/hotels/:id" element={<HotelDetail />} />
             <Route path="/audit" element={<Audit />} />
+            <Route path="/account" element={<Account />} />
+            <Route path="/merchants" element={<Merchants />} />
           </Routes>
         </Layout.Content>
       </Layout>

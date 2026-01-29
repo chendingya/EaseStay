@@ -1,5 +1,28 @@
-const { verifyToken } = require('../utils/auth')
+/**
+ * 认证模块
+ * 包含密码加密、JWT 令牌处理和 Express 认证中间件
+ */
 
+const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken')
+
+// ========== JWT 配置 ==========
+const JWT_SECRET = process.env.JWT_SECRET || 'yisu_dev_secret'
+const JWT_EXPIRES_IN = '7d'
+
+// ========== 密码工具 ==========
+const hashPassword = async (password) => bcrypt.hash(password, 10)
+const verifyPassword = async (password, hash) => bcrypt.compare(password, hash)
+
+// ========== JWT 工具 ==========
+const signToken = (payload) => jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN })
+const verifyToken = (token) => jwt.verify(token, JWT_SECRET)
+
+// ========== Express 中间件 ==========
+
+/**
+ * 认证必需中间件 - 验证请求中的 Bearer Token
+ */
 const authRequired = (req, res, next) => {
   const header = req.headers.authorization || ''
   const token = header.startsWith('Bearer ') ? header.slice(7) : null
@@ -15,6 +38,9 @@ const authRequired = (req, res, next) => {
   }
 }
 
+/**
+ * 角色检查中间件 - 验证用户角色
+ */
 const requireRole = (role) => (req, res, next) => {
   if (!req.user || req.user.role !== role) {
     res.status(403).json({ message: '权限不足' })
@@ -24,6 +50,13 @@ const requireRole = (role) => (req, res, next) => {
 }
 
 module.exports = {
+  // 密码工具
+  hashPassword,
+  verifyPassword,
+  // JWT 工具
+  signToken,
+  verifyToken,
+  // Express 中间件
   authRequired,
   requireRole
 }

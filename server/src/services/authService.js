@@ -1,5 +1,5 @@
 const supabase = require('../config/supabase')
-const { hashPassword, verifyPassword, signToken } = require('../utils/auth')
+const { hashPassword, verifyPassword, signToken } = require('../middleware/auth')
 const { verifyCode } = require('./smsService')
 
 const register = async ({ username, password, role, code }) => {
