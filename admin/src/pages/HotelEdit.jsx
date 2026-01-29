@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Form, Input, InputNumber, Select, Button, Space, Typography, Divider,
-  Row, Col, Spin, Image, Tag, Table, Descriptions, Tabs, Breadcrumb
+  Row, Col, Spin, Image, Tag, Table, Descriptions, Tabs
 } from 'antd'
 import { EyeOutlined, EditOutlined, StarFilled, EnvironmentOutlined, CalendarOutlined } from '@ant-design/icons'
 import { GlassCard, glassMessage as message } from '../components/GlassUI'
@@ -402,12 +402,6 @@ export default function HotelEdit() {
 
   return (
     <>
-      {/* 面包屑导航 */}
-      <Breadcrumb style={{ marginBottom: 16 }} items={[
-        { title: <a onClick={() => navigate('/hotels')}>酒店管理</a> },
-        { title: isEditing ? '编辑酒店' : '新增酒店' }
-      ]} />
-
       {/* 页面标题和操作按钮 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography.Title level={4} style={{ margin: 0 }}>

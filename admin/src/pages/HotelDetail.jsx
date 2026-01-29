@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, Descriptions, Tag, Image, Space, Typography, Divider, Table, Button, Spin, Row, Col } from 'antd'
-import { LeftOutlined, StarFilled, EnvironmentOutlined, CalendarOutlined } from '@ant-design/icons'
+import { Card, Descriptions, Tag, Image, Space, Typography, Table, Button, Spin, Row, Col } from 'antd'
+import { StarFilled, EnvironmentOutlined, CalendarOutlined } from '@ant-design/icons'
 import { glassMessage as message } from '../components/GlassUI'
 
 const apiBase = 'http://127.0.0.1:4100'
@@ -70,48 +70,36 @@ export default function HotelDetail() {
   ]
 
   return (
-    <div style={{ padding: 24 }}>
-      <Button
-        type="link"
-        icon={<LeftOutlined />}
-        onClick={() => navigate('/hotels')}
-        style={{ marginBottom: 16, paddingLeft: 0 }}
-      >
-        返回列表
-      </Button>
+    <>
+      {/* 页面标题和操作按钮 */}
+      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            {hotel.name}
+            <Tag color={statusInfo.color} style={{ marginLeft: 12, verticalAlign: 'middle' }}>
+              {statusInfo.label}
+            </Tag>
+          </Typography.Title>
+          {hotel.name_en && (
+            <Typography.Text type="secondary">{hotel.name_en}</Typography.Text>
+          )}
+        </div>
+        <Button type="primary" onClick={() => navigate(`/hotels/edit/${hotel.id}`)}>
+          编辑酒店
+        </Button>
+      </div>
 
       {/* 头部大图 */}
       {hotel.images && hotel.images.length > 0 && (
         <Card bodyStyle={{ padding: 0 }} style={{ marginBottom: 24, overflow: 'hidden' }}>
-          <div style={{ position: 'relative' }}>
-            <Image
-              src={hotel.images[0]}
-              alt={hotel.name}
-              width="100%"
-              height={300}
-              style={{ objectFit: 'cover' }}
-              fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88P/BfwYACP4D/pHOlKYAAAAASUVORK5CYII="
-            />
-            <div style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
-              padding: '40px 24px 24px',
-              color: '#fff'
-            }}>
-              <Typography.Title level={2} style={{ color: '#fff', margin: 0 }}>
-                {hotel.name}
-                <Tag color={statusInfo.color} style={{ marginLeft: 12, verticalAlign: 'middle' }}>
-                  {statusInfo.label}
-                </Tag>
-              </Typography.Title>
-              {hotel.name_en && (
-                <Typography.Text style={{ color: 'rgba(255,255,255,0.85)' }}>{hotel.name_en}</Typography.Text>
-              )}
-            </div>
-          </div>
+          <Image
+            src={hotel.images[0]}
+            alt={hotel.name}
+            width="100%"
+            height={280}
+            style={{ objectFit: 'cover' }}
+            fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88P/BfwYACP4D/pHOlKYAAAAASUVORK5CYII="
+          />
         </Card>
       )}
 
@@ -130,10 +118,7 @@ export default function HotelDetail() {
               </Descriptions.Item>
             </Descriptions>
             {hotel.description && (
-              <>
-                <Divider />
-                <Typography.Paragraph>{hotel.description}</Typography.Paragraph>
-              </>
+              <Typography.Paragraph style={{ marginTop: 16, marginBottom: 0 }}>{hotel.description}</Typography.Paragraph>
             )}
           </Card>
 
@@ -231,13 +216,6 @@ export default function HotelDetail() {
           </Card>
         </Col>
       </Row>
-
-      {/* 操作按钮 */}
-      <div style={{ marginTop: 24, textAlign: 'center' }}>
-        <Button type="primary" size="large" onClick={() => navigate(`/hotels/edit/${hotel.id}`)}>
-          编辑酒店信息
-        </Button>
-      </div>
-    </div>
+    </>
   )
 }

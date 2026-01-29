@@ -1,7 +1,7 @@
 import './App.css'
-import { Layout, Menu, Space, Typography, Tag, Button } from 'antd'
+import { Layout, Menu, Space, Typography, Tag, Button, Breadcrumb } from 'antd'
 import { HomeOutlined, SettingOutlined } from '@ant-design/icons'
-import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
+import { Routes, Route, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import Login from './pages/Login.jsx'
 import Hotels from './pages/Hotels.jsx'
@@ -9,6 +9,73 @@ import HotelDetail from './pages/HotelDetail.jsx'
 import HotelEdit from './pages/HotelEdit.jsx'
 import Audit from './pages/Audit.jsx'
 import Dashboard from './pages/Dashboard.jsx'
+
+// 路由配置 - 用于生成面包屑
+const routeConfig = {
+  '/': { title: '工作台', icon: <HomeOutlined /> },
+  '/hotels': { title: '酒店管理', icon: <SettingOutlined /> },
+  '/hotels/new': { title: '新增酒店', parent: '/hotels' },
+  '/hotels/edit/:id': { title: '编辑酒店', parent: '/hotels' },
+  '/hotels/:id': { title: '酒店详情', parent: '/hotels' },
+  '/audit': { title: '审核列表', icon: <SettingOutlined /> }
+}
+
+// 面包屑组件
+function AppBreadcrumb() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  
+  const breadcrumbItems = useMemo(() => {
+    const path = location.pathname
+    
+    // 匹配当前路由
+    let matchedRoute = routeConfig[path]
+    
+    // 处理带参数的路由
+    if (!matchedRoute) {
+      if (path.match(/^\/hotels\/edit\/\d+$/)) {
+        matchedRoute = routeConfig['/hotels/edit/:id']
+      } else if (path.match(/^\/hotels\/\d+$/)) {
+        matchedRoute = routeConfig['/hotels/:id']
+      }
+    }
+    
+    if (!matchedRoute) return []
+    
+    const items = []
+    
+    // 始终添加首页
+    items.push({
+      title: <a onClick={() => navigate('/')} style={{ color: '#666' }}><HomeOutlined /> 首页</a>
+    })
+    
+    // 添加父级
+    if (matchedRoute.parent) {
+      const parentRoute = routeConfig[matchedRoute.parent]
+      if (parentRoute) {
+        items.push({
+          title: <a onClick={() => navigate(matchedRoute.parent)} style={{ color: '#666' }}>{parentRoute.title}</a>
+        })
+      }
+    }
+    
+    // 添加当前页
+    items.push({ title: <span style={{ color: '#1890ff', fontWeight: 500 }}>{matchedRoute.title}</span> })
+    
+    return items
+  }, [location.pathname, navigate])
+  
+  // 只有首页时不显示面包屑
+  if (breadcrumbItems.length <= 1) return null
+  
+  return (
+    <Breadcrumb 
+      style={{ marginBottom: 20, fontSize: 14 }} 
+      items={breadcrumbItems}
+      separator={<span style={{ color: '#999', margin: '0 4px' }}>/</span>}
+    />
+  )
+}
 
 function App() {
   const navigate = useNavigate()
@@ -101,6 +168,7 @@ function App() {
           </Space>
         </Layout.Header>
         <Layout.Content className="content">
+          <AppBreadcrumb />
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/hotels" element={<Hotels />} />
