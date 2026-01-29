@@ -60,7 +60,7 @@ export default function Dashboard() {
         <Typography.Title level={5}>快捷操作</Typography.Title>
         <Space>
           {role === 'merchant' ? (
-            <Button type="primary" onClick={() => navigate('/hotels')}>新增酒店</Button>
+            <Button type="primary" onClick={() => navigate('/hotels/new')}>新增酒店</Button>
           ) : null}
           {role === 'admin' ? (
             <Button type="primary" onClick={() => navigate('/audit')}>查看待审核</Button>

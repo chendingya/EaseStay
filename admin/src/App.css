@@ -30,6 +30,8 @@
 
 .content {
   padding: 24px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+  min-height: calc(100vh - 64px);
 }
 
 .card {
@@ -38,4 +40,32 @@
 
 .header-actions {
   margin-left: auto;
+}
+
+/* 卡片轻微悬浮效果 */
+.ant-card {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.ant-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* 表单行对齐样式 */
+.form-row-aligned {
+  display: flex;
+  align-items: flex-end;
+}
+
+.form-row-aligned .ant-form-item {
+  margin-bottom: 0;
+}
+
+.form-row-aligned .delete-btn-col {
+  padding-bottom: 0 !important;
+  display: flex;
+  align-items: center;
+  height: 32px;
+  margin-bottom: 0;
 }

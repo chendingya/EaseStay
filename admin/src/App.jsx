@@ -5,6 +5,8 @@ import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import Login from './pages/Login.jsx'
 import Hotels from './pages/Hotels.jsx'
+import HotelDetail from './pages/HotelDetail.jsx'
+import HotelEdit from './pages/HotelEdit.jsx'
 import Audit from './pages/Audit.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 
@@ -102,6 +104,9 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/hotels" element={<Hotels />} />
+            <Route path="/hotels/new" element={<HotelEdit />} />
+            <Route path="/hotels/edit/:id" element={<HotelEdit />} />
+            <Route path="/hotels/:id" element={<HotelDetail />} />
             <Route path="/audit" element={<Audit />} />
           </Routes>
         </Layout.Content>

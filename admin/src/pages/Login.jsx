@@ -1,6 +1,7 @@
-import { Button, ConfigProvider, Form, Input, Select, Tabs, Typography, message, theme } from 'antd'
+import { Button, ConfigProvider, Form, Input, Select, Tabs, Typography, theme } from 'antd'
 import { LockOutlined, MobileOutlined, UserOutlined } from '@ant-design/icons'
 import { useEffect, useState } from 'react'
+import { glassMessage as message } from '../components/GlassUI'
 import './Login.css'
 
 const apiBase = 'http://127.0.0.1:4100'

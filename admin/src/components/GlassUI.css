@@ -1,0 +1,120 @@
+/* 玻璃消息容器 */
+.glass-message-container {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+}
+
+/* 玻璃消息包装器 */
+.glass-message-wrapper {
+  opacity: 0;
+  transform: translateY(-20px) scale(0.95);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: auto;
+}
+
+.glass-message-wrapper.glass-message-enter {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.glass-message-wrapper.glass-message-leave {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+}
+
+/* 玻璃消息主体 - 苹果风格 */
+.glass-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  color: #1d1d1f;
+  min-width: 200px;
+  max-width: 400px;
+}
+
+.glass-message-icon {
+  font-size: 16px;
+  font-weight: 600;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--accent-color);
+  color: #fff !important;
+  font-size: 12px;
+}
+
+.glass-message-content {
+  flex: 1;
+  line-height: 1.5;
+}
+
+/* 玻璃卡片组件 - 苹果风格 */
+.glass-card-component {
+  background: rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+  overflow: hidden;
+}
+
+.glass-card-component .ant-card-head {
+  background: rgba(255, 255, 255, 0.5);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.glass-card-component .ant-card-body {
+  background: transparent;
+}
+
+/* 深色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .glass-message {
+    background: rgba(44, 44, 46, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f5f5f7;
+    box-shadow: 
+      0 4px 16px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .glass-card-component {
+    background: rgba(44, 44, 46, 0.72) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 
+      0 4px 24px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .glass-card-component .ant-card-head {
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}

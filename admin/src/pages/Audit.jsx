@@ -1,5 +1,6 @@
-import { Card, Table, Button, Space, Typography, Tag, Select, Modal, Form, Input, message } from 'antd'
+import { Card, Table, Button, Space, Typography, Tag, Select, Modal, Form, Input } from 'antd'
 import { useEffect, useState } from 'react'
+import { glassMessage as message } from '../components/GlassUI'
 
 const apiBase = 'http://127.0.0.1:4100'
 
