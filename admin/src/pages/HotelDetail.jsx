@@ -91,7 +91,7 @@ export default function HotelDetail() {
 
       {/* 头部大图 */}
       {hotel.images && hotel.images.length > 0 && (
-        <Card bodyStyle={{ padding: 0 }} style={{ marginBottom: 24, overflow: 'hidden' }}>
+        <Card styles={{ body: { padding: 0 } }} style={{ marginBottom: 24, overflow: 'hidden' }}>
           <Image
             src={hotel.images[0]}
             alt={hotel.name}

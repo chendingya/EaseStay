@@ -458,6 +458,49 @@ const getAdminHotelDetail = async ({ hotelId }) => {
   return { ok: true, status: 200, data: { ...hotel, roomTypes: roomTypes || [] } }
 }
 
+// 商户更新酒店状态（只能下线/恢复上架自己的酒店）
+const updateMerchantHotelStatus = async ({ hotelId, merchantId, action }) => {
+  // 首先验证该酒店属于该商户
+  const { data: hotel, error: findError } = await supabase
+    .from('hotels')
+    .select('*')
+    .eq('id', hotelId)
+    .eq('merchant_id', merchantId)
+    .single()
+
+  if (findError || !hotel) {
+    return { ok: false, status: 404, message: '酒店不存在或无权操作' }
+  }
+
+  // 商户只能下线已上架的酒店，或恢复已下线的酒店
+  if (action === 'offline') {
+    if (hotel.status !== 'approved') {
+      return { ok: false, status: 400, message: '只能下线已上架的酒店' }
+    }
+  } else if (action === 'restore') {
+    if (hotel.status !== 'offline') {
+      return { ok: false, status: 400, message: '只能恢复已下线的酒店' }
+    }
+  } else {
+    return { ok: false, status: 400, message: '无效的操作' }
+  }
+
+  const newStatus = action === 'offline' ? 'offline' : 'approved'
+
+  const { data: updatedHotel, error: updateError } = await supabase
+    .from('hotels')
+    .update({ status: newStatus })
+    .eq('id', hotelId)
+    .select()
+    .single()
+
+  if (updateError) {
+    return { ok: false, status: 500, message: '更新失败：' + updateError.message }
+  }
+
+  return { ok: true, status: 200, data: updatedHotel }
+}
+
 module.exports = {
   createHotel,
   updateHotel,
@@ -466,6 +509,7 @@ module.exports = {
   listAdminHotels,
   getAdminHotelDetail,
   updateHotelStatus,
+  updateMerchantHotelStatus,
   listPublicHotels,
   getPublicHotel
 }

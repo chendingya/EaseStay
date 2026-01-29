@@ -214,13 +214,13 @@ function FacilitySelector({ value = [], onChange, pendingRequests = [], onReques
       </div>
 
       {pendingRequests.length > 0 && (
-        <div>
+        <div style={{ padding: '8px 12px', background: '#fffbe6', borderRadius: 8, border: '1px solid #ffe58f' }}>
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>待审核设施：</Typography.Text>
           <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {pendingRequests.map((req, idx) => (
-              <Badge key={idx} count="审核中" size="small" style={{ backgroundColor: '#faad14' }}>
-                <Tag color="orange">{req.name}</Tag>
-              </Badge>
+              <Tag key={idx} color="orange" style={{ margin: 0 }}>
+                {req.name} - 审核中
+              </Tag>
             ))}
           </div>
         </div>
@@ -540,7 +540,7 @@ function HotelPreview({ data }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 16 }}>
-      <Card bodyStyle={{ padding: 0 }} style={{ overflow: 'hidden' }}>
+      <Card styles={{ body: { padding: 0 } }} style={{ overflow: 'hidden' }}>
         {data.images && data.images.length > 0 ? (
           <div style={{ position: 'relative' }}>
             <Image src={data.images[0]} alt={data.name} width="100%" height={200} style={{ objectFit: 'cover' }} fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88P/BfwYACP4D/pHOlKYAAAAASUVORK5CYII=" />

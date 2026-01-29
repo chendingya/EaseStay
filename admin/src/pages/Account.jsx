@@ -82,7 +82,7 @@ export default function Account() {
 
       <Card title="基本信息" loading={loading}>
         {user && (
-          <Descriptions column={1} labelStyle={{ width: 120 }}>
+          <Descriptions column={1} styles={{ label: { width: 120 } }}>
             <Descriptions.Item label={<><UserOutlined /> 用户名</>}>
               {user.username}
             </Descriptions.Item>
@@ -116,7 +116,7 @@ export default function Account() {
           form.resetFields()
         }}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item

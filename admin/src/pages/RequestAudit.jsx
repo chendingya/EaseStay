@@ -1,8 +1,9 @@
-import { Card, Table, Typography, Tag, Modal, Form, Input, Tabs, Descriptions, Empty } from 'antd'
+import { Card, Table, Typography, Tag, Modal, Form, Input, Tabs, Descriptions, Empty, Alert, Space } from 'antd'
 import { useEffect, useState } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { 
   CheckCircleOutlined, CloseCircleOutlined, ShopOutlined, 
-  AppstoreOutlined, HomeOutlined, GiftOutlined 
+  AppstoreOutlined, HomeOutlined, GiftOutlined, ArrowLeftOutlined
 } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components/GlassUI'
 
@@ -21,6 +22,10 @@ const statusMap = {
 }
 
 export default function RequestAudit() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const hotelIdFilter = searchParams.get('hotelId')
+  
   const [loading, setLoading] = useState(false)
   const [requests, setRequests] = useState([])
   const [activeTab, setActiveTab] = useState('all')
@@ -33,7 +38,11 @@ export default function RequestAudit() {
     if (!token) return
     setLoading(true)
     try {
-      const query = type && type !== 'all' ? `?type=${type}` : ''
+      const params = new URLSearchParams()
+      if (type && type !== 'all') params.append('type', type)
+      if (hotelIdFilter) params.append('hotelId', hotelIdFilter)
+      const query = params.toString() ? `?${params.toString()}` : ''
+      
       const response = await fetch(`${apiBase}/api/admin/requests${query}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -52,7 +61,7 @@ export default function RequestAudit() {
 
   useEffect(() => {
     fetchRequests(activeTab)
-  }, [activeTab])
+  }, [activeTab, hotelIdFilter])
 
   const handleReview = async (id, action, rejectReason) => {
     const token = localStorage.getItem('token')
@@ -209,9 +218,31 @@ export default function RequestAudit() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 24 }}>
-      <Typography.Title level={4} style={{ margin: 0 }}>
-        <ShopOutlined /> 申请审核
-      </Typography.Title>
+      <Space>
+        {hotelIdFilter && (
+          <GlassButton icon={<ArrowLeftOutlined />} onClick={() => navigate(`/audit/${hotelIdFilter}`)}>
+            返回酒店审核
+          </GlassButton>
+        )}
+        <Typography.Title level={4} style={{ margin: 0 }}>
+          <ShopOutlined /> 申请审核
+        </Typography.Title>
+      </Space>
+
+      {hotelIdFilter && (
+        <Alert
+          type="info"
+          showIcon
+          title={
+            <Space>
+              <span>当前仅显示该酒店的待审核申请</span>
+              <GlassButton size="small" onClick={() => setSearchParams({})}>
+                查看全部申请
+              </GlassButton>
+            </Space>
+          }
+        />
+      )}
 
       <Card>
         <Tabs 

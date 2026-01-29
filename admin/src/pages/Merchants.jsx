@@ -244,7 +244,7 @@ export default function Merchants() {
           form.resetFields()
         }}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item

@@ -1,5 +1,5 @@
 const express = require('express')
-const { create, update, list, detail } = require('../controllers/merchantHotelsController')
+const { create, update, list, detail, updateStatus } = require('../controllers/merchantHotelsController')
 
 const router = express.Router()
 
@@ -92,5 +92,36 @@ router.get('/:id', detail)
  *         description: ok
  */
 router.put('/:id', update)
+
+/**
+ * @openapi
+ * /api/merchant/hotels/{id}/status:
+ *   patch:
+ *     tags:
+ *       - Merchant
+ *     summary: 商户更新酒店状态（下线/恢复上架）
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: number
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum: [offline, restore]
+ *     responses:
+ *       200:
+ *         description: ok
+ */
+router.patch('/:id/status', updateStatus)
 
 module.exports = router

@@ -1,7 +1,7 @@
-import { Card, Table, Tag, Space, Typography, Input, Select, Modal, Upload, Alert, Row, Col } from 'antd'
+import { Card, Table, Tag, Space, Typography, Input, Select, Modal, Upload, Alert, Row, Col, Popconfirm } from 'antd'
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SearchOutlined, UploadOutlined, DownloadOutlined, InboxOutlined } from '@ant-design/icons'
+import { SearchOutlined, UploadOutlined, DownloadOutlined, InboxOutlined, StopOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components/GlassUI'
 
 const apiBase = 'http://127.0.0.1:4100'
@@ -127,6 +127,31 @@ export default function Hotels() {
     })
   }, [hotels, searchText, statusFilter, cityFilter])
 
+  // 商户更新酒店状态
+  const handleUpdateStatus = async (hotelId, action) => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    try {
+      const response = await fetch(`${apiBase}/api/merchant/hotels/${hotelId}/status`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action })
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        message.error(data.message || '操作失败')
+        return
+      }
+      message.success(action === 'offline' ? '酒店已下线' : '酒店已恢复上架')
+      fetchHotels()
+    } catch {
+      message.error('操作失败')
+    }
+  }
+
   // 处理文件上传
   const handleFileUpload = (file) => {
     const reader = new FileReader()
@@ -212,11 +237,32 @@ export default function Hotels() {
     },
     {
       title: '操作',
-      width: 120,
+      width: 180,
       render: (_, record) => (
-        <Space>
+        <Space size="small">
           {record.status === 'approved' && (
-            <GlassButton type="link" size="small" onClick={() => navigate(`/hotels/${record.id}`)}>查看</GlassButton>
+            <>
+              <GlassButton type="link" size="small" onClick={() => navigate(`/hotels/${record.id}`)}>查看</GlassButton>
+              <Popconfirm
+                title="确定下线该酒店吗？"
+                description="下线后酒店将不再对外展示"
+                onConfirm={() => handleUpdateStatus(record.id, 'offline')}
+                okText="确定"
+                cancelText="取消"
+              >
+                <GlassButton type="link" size="small" danger icon={<StopOutlined />}>下线</GlassButton>
+              </Popconfirm>
+            </>
+          )}
+          {record.status === 'offline' && (
+            <Popconfirm
+              title="确定恢复上架该酒店吗？"
+              onConfirm={() => handleUpdateStatus(record.id, 'restore')}
+              okText="确定"
+              cancelText="取消"
+            >
+              <GlassButton type="link" size="small" icon={<CheckCircleOutlined />}>恢复上架</GlassButton>
+            </Popconfirm>
           )}
           <GlassButton type="link" size="small" onClick={() => navigate(`/hotels/edit/${record.id}`)}>编辑</GlassButton>
         </Space>
@@ -326,7 +372,7 @@ export default function Hotels() {
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
-          message="导入说明"
+          title="导入说明"
           description={
             <div>
               <p style={{ margin: '4px 0' }}>1. 请先下载模板，按照模板格式填写酒店信息</p>

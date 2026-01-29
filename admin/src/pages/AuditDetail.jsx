@@ -1,10 +1,11 @@
-import { Card, Typography, Tag, Descriptions, Image, Table, Space, Row, Col, Divider, Form, Input, Modal, Spin, Empty } from 'antd'
+import { Card, Typography, Tag, Descriptions, Image, Table, Space, Row, Col, Divider, Form, Input, Modal, Spin, Empty, Alert, Badge } from 'antd'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { 
   StarFilled, EnvironmentOutlined, CalendarOutlined, CheckCircleOutlined, 
   CloseCircleOutlined, ArrowLeftOutlined, PictureOutlined, HomeOutlined,
-  GiftOutlined, AppstoreOutlined, CarOutlined, ShopOutlined, CompassOutlined
+  GiftOutlined, AppstoreOutlined, CarOutlined, ShopOutlined, CompassOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components/GlassUI'
 
@@ -17,11 +18,18 @@ const statusMap = {
   offline: { color: 'default', label: '已下线' }
 }
 
+const requestTypeMap = {
+  facility: '设施',
+  room_type: '房型',
+  promotion: '优惠'
+}
+
 export default function AuditDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [hotel, setHotel] = useState(null)
+  const [pendingRequests, setPendingRequests] = useState([])
   const [rejecting, setRejecting] = useState(false)
   const [rejectForm] = Form.useForm()
   const [actionLoading, setActionLoading] = useState(false)
@@ -47,8 +55,25 @@ export default function AuditDetail() {
     }
   }
 
+  const fetchPendingRequests = async () => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    try {
+      const response = await fetch(`${apiBase}/api/admin/requests?hotelId=${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const data = await response.json()
+      if (response.ok && Array.isArray(data)) {
+        setPendingRequests(data)
+      }
+    } catch {
+      // 忽略错误
+    }
+  }
+
   useEffect(() => {
     fetchHotel()
+    fetchPendingRequests()
   }, [id])
 
   const updateStatus = async (status, rejectReason) => {
@@ -168,6 +193,32 @@ export default function AuditDetail() {
             驳回原因：{hotel.reject_reason}
           </Typography.Text>
         </Card>
+      )}
+
+      {/* 待审核申请提醒 */}
+      {pendingRequests.length > 0 && (
+        <Alert
+          type="warning"
+          showIcon
+          icon={<ExclamationCircleOutlined />}
+          title={
+            <Space>
+              <span>该酒店有 <Badge count={pendingRequests.length} style={{ backgroundColor: '#faad14' }} /> 个待审核的申请</span>
+              <GlassButton size="small" onClick={() => navigate(`/requests?hotelId=${id}`)}>
+                前往审核
+              </GlassButton>
+            </Space>
+          }
+          description={
+            <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {pendingRequests.map((req, idx) => (
+                <Tag key={idx} color="orange">
+                  [{requestTypeMap[req.type] || req.type}] {req.name || req.title || req.content}
+                </Tag>
+              ))}
+            </div>
+          }
+        />
       )}
 
       <Row gutter={24}>

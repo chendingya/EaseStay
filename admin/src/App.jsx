@@ -47,6 +47,8 @@ function AppBreadcrumb() {
         matchedRoute = routeConfig['/hotels/edit/:id']
       } else if (path.match(/^\/hotels\/\d+$/)) {
         matchedRoute = routeConfig['/hotels/:id']
+      } else if (path.match(/^\/audit\/\d+$/)) {
+        matchedRoute = routeConfig['/audit/:id']
       }
     }
     
