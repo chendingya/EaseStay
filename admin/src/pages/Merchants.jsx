@@ -1,21 +1,15 @@
-import { Card, Table, Space, Typography, Tag, Modal, Form, Input, Drawer, Descriptions, List } from 'antd'
+import { Card, Table, Space, Typography, Tag, Modal, Form, Input } from 'antd'
 import { useEffect, useState } from 'react'
-import { UserOutlined, ShopOutlined, CalendarOutlined, EyeOutlined, KeyOutlined } from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
+import { UserOutlined, ShopOutlined, EyeOutlined, KeyOutlined } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components/GlassUI'
 
 const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:4100'
 
-const statusMap = {
-  pending: { color: 'orange', label: '待审核' },
-  approved: { color: 'green', label: '已上架' },
-  rejected: { color: 'red', label: '已驳回' },
-  offline: { color: 'default', label: '已下线' }
-}
-
 export default function Merchants() {
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [merchants, setMerchants] = useState([])
-  const [detailDrawer, setDetailDrawer] = useState(null)
   const [resetModal, setResetModal] = useState(null)
   const [form] = Form.useForm()
   const [resetting, setResetting] = useState(false)
@@ -39,25 +33,6 @@ export default function Merchants() {
       message.error('获取商户列表失败')
     } finally {
       setLoading(false)
-    }
-  }
-
-  const fetchMerchantDetail = async (id) => {
-    const token = localStorage.getItem('token')
-    if (!token) return
-
-    try {
-      const response = await fetch(`${apiBase}/api/user/merchants/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const data = await response.json()
-      if (response.ok) {
-        setDetailDrawer(data)
-      } else {
-        message.error(data.message || '获取商户详情失败')
-      }
-    } catch {
-      message.error('获取商户详情失败')
     }
   }
 
@@ -136,7 +111,7 @@ export default function Merchants() {
           <GlassButton
             type="link"
             icon={<EyeOutlined />}
-            onClick={() => fetchMerchantDetail(record.id)}
+            onClick={() => navigate(`/merchants/${record.id}`)}
           >
             查看
           </GlassButton>
@@ -171,69 +146,6 @@ export default function Merchants() {
           pagination={{ pageSize: 10 }}
         />
       </Card>
-
-      {/* 商户详情抽屉 */}
-      <Drawer
-        title={detailDrawer?.username || '商户详情'}
-        placement="right"
-        size="large"
-        onClose={() => setDetailDrawer(null)}
-        open={!!detailDrawer}
-      >
-        {detailDrawer && (
-          <Space style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 16 }}>
-            <Card title="基本信息">
-              <Descriptions column={1}>
-                <Descriptions.Item label={<><UserOutlined /> 账号</>}>
-                  {detailDrawer.username}
-                </Descriptions.Item>
-                <Descriptions.Item label={<><CalendarOutlined /> 注册时间</>}>
-                  {detailDrawer.created_at ? new Date(detailDrawer.created_at).toLocaleDateString('zh-CN') : '-'}
-                </Descriptions.Item>
-                <Descriptions.Item label={<><ShopOutlined /> 酒店数量</>}>
-                  {detailDrawer.hotels?.length || 0} 家
-                </Descriptions.Item>
-              </Descriptions>
-            </Card>
-
-            <Card title="酒店列表">
-              {detailDrawer.hotels && detailDrawer.hotels.length > 0 ? (
-                <List
-                  size="small"
-                  dataSource={detailDrawer.hotels}
-                  renderItem={(hotel) => (
-                    <List.Item>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                        <span>{hotel.name}</span>
-                        <Space>
-                          <Tag>{hotel.city}</Tag>
-                          <Tag color={statusMap[hotel.status]?.color}>
-                            {statusMap[hotel.status]?.label}
-                          </Tag>
-                        </Space>
-                      </div>
-                    </List.Item>
-                  )}
-                />
-              ) : (
-                <Typography.Text type="secondary">暂无酒店</Typography.Text>
-              )}
-            </Card>
-
-            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-              <GlassButton
-                icon={<KeyOutlined />}
-                onClick={() => {
-                  setResetModal(detailDrawer)
-                  form.resetFields()
-                }}
-              >
-                重置密码
-              </GlassButton>
-            </Space>
-          </Space>
-        )}
-      </Drawer>
 
       {/* 重置密码弹窗 */}
       <Modal

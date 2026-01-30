@@ -256,7 +256,7 @@ export default function Hotels() {
           )}
           {record.status === 'offline' && (
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              已下线（联系管理员恢复）
+              已下线（重新提交审核上线）
             </Typography.Text>
           )}
           <GlassButton type="link" size="small" onClick={() => navigate(`/hotels/edit/${record.id}`)}>编辑</GlassButton>

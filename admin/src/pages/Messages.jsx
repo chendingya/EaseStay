@@ -1,4 +1,4 @@
-import { Card, List, Typography, Tag, Empty, Badge, Tabs } from 'antd'
+import { Card, Typography, Tag, Empty, Badge, Tabs, Spin } from 'antd'
 import { useEffect, useState } from 'react'
 import { 
   BellOutlined, CheckCircleOutlined, CloseCircleOutlined, 
@@ -54,7 +54,7 @@ export default function Messages() {
         setUnreadCount(0)
         message.success('已全部标记为已读')
       }
-    } catch {
+    } catch (err) {
       message.error('操作失败')
     } finally {
       setLoading(false)
@@ -105,64 +105,66 @@ export default function Messages() {
           style={{ marginBottom: 16 }}
         />
 
-        <List
-          loading={loading}
-          dataSource={displayList}
-          locale={{ emptyText: <Empty description="暂无消息" /> }}
-          renderItem={(item) => {
-            const config = typeConfig[item.type] || typeConfig.info
-            return (
-              <List.Item
-                style={{ 
-                  background: item.is_read ? '#fff' : config.bg,
-                  marginBottom: 8,
-                  borderRadius: 8,
-                  padding: '12px 16px',
-                  border: `1px solid ${item.is_read ? '#f0f0f0' : 'transparent'}`,
-                  transition: 'all 0.3s'
-                }}
-                onClick={() => !item.is_read && handleMarkAsRead(item.id)}
-              >
-                <List.Item.Meta
-                  avatar={
-                    <div style={{ 
-                      width: 40, 
-                      height: 40, 
-                      borderRadius: '50%',
-                      background: config.bg,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 18,
-                      color: config.color === 'green' ? '#52c41a' 
-                           : config.color === 'orange' ? '#faad14'
-                           : config.color === 'red' ? '#ff4d4f'
-                           : '#1890ff'
-                    }}>
-                      {config.icon}
-                    </div>
-                  }
-                  title={
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: 40 }}>
+            <Spin />
+          </div>
+        ) : displayList.length === 0 ? (
+          <Empty description="暂无消息" />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {displayList.map((item) => {
+              const config = typeConfig[item.type] || typeConfig.info
+              return (
+                <div
+                  key={item.id}
+                  style={{ 
+                    background: item.is_read ? '#fff' : config.bg,
+                    borderRadius: 8,
+                    padding: '12px 16px',
+                    border: `1px solid ${item.is_read ? '#f0f0f0' : 'transparent'}`,
+                    transition: 'all 0.3s',
+                    cursor: item.is_read ? 'default' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 12
+                  }}
+                  onClick={() => !item.is_read && handleMarkAsRead(item.id)}
+                >
+                  <div style={{ 
+                    width: 40, 
+                    height: 40, 
+                    borderRadius: '50%',
+                    background: config.bg,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 18,
+                    flexShrink: 0,
+                    color: config.color === 'green' ? '#52c41a' 
+                         : config.color === 'orange' ? '#faad14'
+                         : config.color === 'red' ? '#ff4d4f'
+                         : '#1890ff'
+                  }}>
+                    {config.icon}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                       <span style={{ fontWeight: item.is_read ? 'normal' : 600 }}>
                         {item.title}
                       </span>
                       {!item.is_read && (
-                        <Tag color="blue" style={{ marginLeft: 8 }}>未读</Tag>
+                        <Tag color="blue">未读</Tag>
                       )}
                     </div>
-                  }
-                  description={
-                    <div>
-                      <div style={{ color: '#666', marginBottom: 4 }}>{item.content}</div>
-                      <div style={{ color: '#999', fontSize: 12 }}>{formatNotificationTime(item.created_at)}</div>
-                    </div>
-                  }
-                />
-              </List.Item>
-            )
-          }}
-        />
+                    <div style={{ color: '#666', marginBottom: 4 }}>{item.content}</div>
+                    <div style={{ color: '#999', fontSize: 12 }}>{formatNotificationTime(item.created_at)}</div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </Card>
     </div>
   )

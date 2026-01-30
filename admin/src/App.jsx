@@ -1,6 +1,6 @@
 import './App.css'
 import { Layout, Menu, Space, Typography, Tag, Button, Breadcrumb, Badge } from 'antd'
-import { HomeOutlined, SettingOutlined, UserOutlined, TeamOutlined, BellOutlined, FileSearchOutlined } from '@ant-design/icons'
+import { HomeOutlined, SettingOutlined, UserOutlined, TeamOutlined, BellOutlined, FileSearchOutlined, ShopOutlined } from '@ant-design/icons'
 import { Routes, Route, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import Login from './pages/Login.jsx'
@@ -14,20 +14,26 @@ import Account from './pages/Account.jsx'
 import Merchants from './pages/Merchants.jsx'
 import RequestAudit from './pages/RequestAudit.jsx'
 import Messages from './pages/Messages.jsx'
+import AdminHotels from './pages/AdminHotels.jsx'
+import AdminHotelDetail from './pages/AdminHotelDetail.jsx'
+import MerchantDetail from './pages/MerchantDetail.jsx'
 
 // 路由配置 - 用于生成面包屑
 const routeConfig = {
   '/': { title: '工作台', icon: <HomeOutlined /> },
-  '/hotels': { title: '酒店管理', icon: <SettingOutlined /> },
+  '/hotels': { title: '我的酒店', icon: <SettingOutlined /> },
   '/hotels/new': { title: '新增酒店', parent: '/hotels' },
   '/hotels/edit/:id': { title: '编辑酒店', parent: '/hotels' },
   '/hotels/:id': { title: '酒店详情', parent: '/hotels' },
+  '/admin-hotels': { title: '酒店管理', icon: <ShopOutlined /> },
+  '/admin-hotels/:id': { title: '酒店详情', parent: '/admin-hotels' },
   '/audit': { title: '酒店审核', icon: <SettingOutlined /> },
   '/audit/:id': { title: '审核详情', parent: '/audit' },
   '/requests': { title: '申请审核', icon: <FileSearchOutlined /> },
   '/messages': { title: '消息中心', icon: <BellOutlined /> },
   '/account': { title: '账户管理', icon: <UserOutlined /> },
-  '/merchants': { title: '商户管理', icon: <TeamOutlined /> }
+  '/merchants': { title: '商户管理', icon: <TeamOutlined /> },
+  '/merchants/:id': { title: '商户详情', parent: '/merchants' }
 }
 
 // 面包屑组件
@@ -49,6 +55,10 @@ function AppBreadcrumb() {
         matchedRoute = routeConfig['/hotels/:id']
       } else if (path.match(/^\/audit\/\d+$/)) {
         matchedRoute = routeConfig['/audit/:id']
+      } else if (path.match(/^\/admin-hotels\/\d+$/)) {
+        matchedRoute = routeConfig['/admin-hotels/:id']
+      } else if (path.match(/^\/merchants\/\d+$/)) {
+        matchedRoute = routeConfig['/merchants/:id']
       }
     }
     
@@ -107,22 +117,20 @@ function App() {
       else if (auth.role === 'merchant') navigate('/hotels')
       else navigate('/')
     }
-    if (auth.token && auth.role === 'merchant' && (location.pathname.startsWith('/audit') || location.pathname.startsWith('/requests') || location.pathname.startsWith('/merchants'))) {
+    if (auth.token && auth.role === 'merchant' && (location.pathname.startsWith('/audit') || location.pathname.startsWith('/requests') || location.pathname.startsWith('/merchants') || location.pathname.startsWith('/admin-hotels'))) {
       navigate('/hotels')
-    }
-    if (auth.token && auth.role === 'admin' && location.pathname.startsWith('/hotels')) {
-      navigate('/audit')
     }
   }, [auth, location.pathname, navigate])
 
   const menuItems = useMemo(() => {
     const items = [{ key: 'dashboard', icon: <HomeOutlined />, label: '工作台' }]
     if (auth.role === 'merchant') {
-      items.push({ key: 'hotels', icon: <SettingOutlined />, label: '酒店管理' })
+      items.push({ key: 'hotels', icon: <SettingOutlined />, label: '我的酒店' })
       items.push({ key: 'messages', icon: <BellOutlined />, label: '消息中心' })
       items.push({ key: 'account', icon: <UserOutlined />, label: '账户管理' })
     }
     if (auth.role === 'admin') {
+      items.push({ key: 'admin-hotels', icon: <ShopOutlined />, label: '酒店管理' })
       items.push({ key: 'audit', icon: <SettingOutlined />, label: '酒店审核' })
       items.push({ key: 'requests', icon: <FileSearchOutlined />, label: '申请审核' })
       items.push({ key: 'merchants', icon: <TeamOutlined />, label: '商户管理' })
@@ -131,19 +139,21 @@ function App() {
     return items
   }, [auth.role])
 
-  const selectedKey = location.pathname.startsWith('/hotels')
-    ? 'hotels'
-    : location.pathname.startsWith('/audit')
-      ? 'audit'
-      : location.pathname.startsWith('/requests')
-        ? 'requests'
-        : location.pathname.startsWith('/messages')
-          ? 'messages'
-          : location.pathname.startsWith('/merchants')
-            ? 'merchants'
-            : location.pathname.startsWith('/account')
-              ? 'account'
-              : 'dashboard'
+  const selectedKey = location.pathname.startsWith('/admin-hotels')
+    ? 'admin-hotels'
+    : location.pathname.startsWith('/hotels')
+      ? 'hotels'
+      : location.pathname.startsWith('/audit')
+        ? 'audit'
+        : location.pathname.startsWith('/requests')
+          ? 'requests'
+          : location.pathname.startsWith('/messages')
+            ? 'messages'
+            : location.pathname.startsWith('/merchants')
+              ? 'merchants'
+              : location.pathname.startsWith('/account')
+                ? 'account'
+                : 'dashboard'
 
   const handleLoggedIn = ({ token, role, username }) => {
     localStorage.setItem('token', token)
@@ -179,6 +189,7 @@ function App() {
           items={menuItems}
           onClick={({ key }) => {
             if (key === 'hotels') navigate('/hotels')
+            else if (key === 'admin-hotels') navigate('/admin-hotels')
             else if (key === 'audit') navigate('/audit')
             else if (key === 'requests') navigate('/requests')
             else if (key === 'messages') navigate('/messages')
@@ -204,12 +215,15 @@ function App() {
             <Route path="/hotels/new" element={<HotelEdit />} />
             <Route path="/hotels/edit/:id" element={<HotelEdit />} />
             <Route path="/hotels/:id" element={<HotelDetail />} />
+            <Route path="/admin-hotels" element={<AdminHotels />} />
+            <Route path="/admin-hotels/:id" element={<AdminHotelDetail />} />
             <Route path="/audit" element={<Audit />} />
             <Route path="/audit/:id" element={<AuditDetail />} />
             <Route path="/requests" element={<RequestAudit />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/account" element={<Account />} />
             <Route path="/merchants" element={<Merchants />} />
+            <Route path="/merchants/:id" element={<MerchantDetail />} />
           </Routes>
         </Layout.Content>
       </Layout>

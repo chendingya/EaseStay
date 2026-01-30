@@ -1,4 +1,4 @@
-const { supabase } = require('../config/supabase')
+const supabase = require('../config/supabase')
 
 /**
  * 通知服务 - 封装所有通知相关操作
