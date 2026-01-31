@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Card, Descriptions, Tag, Image, Space, Typography, Table, Spin, Row, Col, Modal, Input } from 'antd'
 import { StarFilled, EnvironmentOutlined, CalendarOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
-import { GlassButton, glassMessage as message } from '../components/GlassUI'
-
-const apiBase = 'http://127.0.0.1:4100'
+import { GlassButton, glassMessage as message } from '../components'
+import { api } from '../services/request'
 
 const statusMap = {
   pending: { color: 'orange', label: '待审核' },
@@ -19,31 +18,23 @@ export default function AdminHotelDetail() {
   const [hotel, setHotel] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  const fetchHotel = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) return
+  const fetchHotel = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${apiBase}/api/admin/hotels/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        message.error(data.message || '获取酒店详情失败')
-        navigate('/admin-hotels')
-        return
-      }
+      const data = await api.get(`/api/admin/hotels/${id}`)
       setHotel(data)
-    } catch {
-      message.error('获取酒店详情失败')
+    } catch (error) {
+      if (error?.response?.status) {
+        navigate('/admin-hotels')
+      }
     } finally {
       setLoading(false)
     }
-  }
+  }, [id, navigate])
 
   useEffect(() => {
     fetchHotel()
-  }, [id])
+  }, [fetchHotel])
 
   // 下架酒店
   const handleOffline = () => {
@@ -71,24 +62,12 @@ export default function AdminHotelDetail() {
           return Promise.reject()
         }
         try {
-          const token = localStorage.getItem('token')
-          const response = await fetch(`${apiBase}/api/admin/hotels/${id}/offline`, {
-            method: 'PUT',
-            headers: { 
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ reason })
-          })
-          const data = await response.json()
-          if (!response.ok) {
-            message.error(data.message || '下架失败')
-            return
-          }
+          await api.put(`/api/admin/hotels/${id}/offline`, { reason })
           message.success('酒店已下架')
           fetchHotel()
-        } catch {
-          message.error('下架失败')
+        } catch (error) {
+          console.error('下架酒店失败:', error)
+          message.error('下架失败，请重试')
         }
       }
     })
@@ -104,20 +83,12 @@ export default function AdminHotelDetail() {
       cancelText: '取消',
       async onOk() {
         try {
-          const token = localStorage.getItem('token')
-          const response = await fetch(`${apiBase}/api/admin/hotels/${id}/restore`, {
-            method: 'PUT',
-            headers: { Authorization: `Bearer ${token}` }
-          })
-          const data = await response.json()
-          if (!response.ok) {
-            message.error(data.message || '恢复失败')
-            return
-          }
+          await api.put(`/api/admin/hotels/${id}/restore`)
           message.success('酒店已恢复上架')
           fetchHotel()
-        } catch {
-          message.error('恢复失败')
+        } catch (error) {
+          console.error('恢复上架失败:', error)
+          message.error('恢复上架失败，请重试')
         }
       }
     })

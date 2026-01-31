@@ -1,5 +1,18 @@
 const express = require('express')
-const { create, update, list, detail, updateStatus } = require('../controllers/merchantHotelsController')
+const {
+  create,
+  update,
+  list,
+  detail,
+  updateStatus,
+  roomTypeStats,
+  batchDiscount,
+  batchRoom,
+  roomOverview,
+  orders,
+  orderStats,
+  overview
+} = require('../controllers/merchantHotelsController')
 
 const router = express.Router()
 
@@ -44,6 +57,15 @@ router.get('/', list)
  *         description: created
  */
 router.post('/', create)
+
+router.get('/overview', overview)
+router.get('/room-type-stats', roomTypeStats)
+router.post('/batch-discount', batchDiscount)
+router.post('/batch-room', batchRoom)
+
+router.get('/:id/overview', roomOverview)
+router.get('/:id/orders', orders)
+router.get('/:id/order-stats', orderStats)
 
 /**
  * @openapi

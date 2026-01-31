@@ -2,9 +2,8 @@ import { Card, Table, Space, Typography, Tag, Select } from 'antd'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { EyeOutlined, StarFilled } from '@ant-design/icons'
-import { GlassButton, glassMessage as message } from '../components/GlassUI'
-
-const apiBase = 'http://127.0.0.1:4100'
+import { GlassButton } from '../components'
+import { api } from '../services/request'
 
 const statusMap = {
   pending: { color: 'orange', label: '待审核' },
@@ -20,22 +19,13 @@ export default function Audit() {
   const [statusFilter, setStatusFilter] = useState('pending')
 
   const fetchHotels = async (statusValue) => {
-    const token = localStorage.getItem('token')
-    if (!token) return
     setLoading(true)
     try {
       const query = statusValue && statusValue !== 'all' ? `?status=${statusValue}` : ''
-      const response = await fetch(`${apiBase}/api/admin/hotels${query}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        message.error(data.message || '获取酒店列表失败')
-        return
-      }
+      const data = await api.get(`/api/admin/hotels${query}`)
       setHotels(data)
-    } catch {
-      message.error('获取酒店列表失败')
+    } catch (error) {
+      console.error('获取审核列表失败:', error)
     } finally {
       setLoading(false)
     }

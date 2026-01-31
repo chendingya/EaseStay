@@ -2,9 +2,8 @@ import { Card, Table, Space, Typography, Tag, Modal, Form, Input } from 'antd'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { UserOutlined, ShopOutlined, EyeOutlined, KeyOutlined } from '@ant-design/icons'
-import { GlassButton, glassMessage as message } from '../components/GlassUI'
-
-const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:4100'
+import { GlassButton, glassMessage as message } from '../components'
+import { api } from '../services/request'
 
 export default function Merchants() {
   const navigate = useNavigate()
@@ -15,21 +14,12 @@ export default function Merchants() {
   const [resetting, setResetting] = useState(false)
 
   const fetchMerchants = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) return
-
     setLoading(true)
     try {
-      const response = await fetch(`${apiBase}/api/user/merchants`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const data = await response.json()
-      if (response.ok) {
-        setMerchants(data)
-      } else {
-        message.error(data.message || '获取商户列表失败')
-      }
-    } catch {
+      const data = await api.get('/api/user/merchants')
+      setMerchants(data)
+    } catch (error) {
+      console.error('获取商户列表失败:', error)
       message.error('获取商户列表失败')
     } finally {
       setLoading(false)
@@ -45,26 +35,13 @@ export default function Merchants() {
       }
 
       setResetting(true)
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${apiBase}/api/user/merchants/${resetModal.id}/reset-password`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ newPassword: values.newPassword })
-      })
-      const data = await response.json()
-
-      if (response.ok) {
-        message.success('密码重置成功')
-        setResetModal(null)
-        form.resetFields()
-      } else {
-        message.error(data.message || '重置密码失败')
-      }
+      await api.post(`/api/user/merchants/${resetModal.id}/reset-password`, { newPassword: values.newPassword })
+      message.success('密码重置成功')
+      setResetModal(null)
+      form.resetFields()
     } catch (err) {
       if (err.errorFields) return
+      console.error('重置密码失败:', err)
       message.error('重置密码失败')
     } finally {
       setResetting(false)

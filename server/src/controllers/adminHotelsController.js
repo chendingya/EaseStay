@@ -1,4 +1,11 @@
-const { listAdminHotels, updateHotelStatus, getAdminHotelDetail } = require('../services/hotelService')
+const {
+  listAdminHotels,
+  updateHotelStatus,
+  getAdminHotelDetail,
+  getRoomTypeStatsByHotelIds,
+  batchSetRoomDiscount,
+  batchRoomOperation
+} = require('../services/hotelService')
 
 const list = async (req, res) => {
   const result = await listAdminHotels({ status: req.query.status })
@@ -27,8 +34,56 @@ const updateStatus = async (req, res) => {
   res.status(result.status).json(result.data)
 }
 
+const roomTypeStats = async (req, res) => {
+  const hotelIds = (req.query.hotelIds || '')
+    .split(',')
+    .map((id) => Number(id))
+    .filter((id) => Number.isFinite(id))
+
+  const result = await getRoomTypeStatsByHotelIds(hotelIds)
+  if (!result.ok) {
+    res.status(result.status).json({ message: result.message })
+    return
+  }
+  res.status(result.status).json(result.data)
+}
+
+const batchDiscount = async (req, res) => {
+  const { hotelIds, roomTypeName, quantity, discount } = req.body || {}
+  const result = await batchSetRoomDiscount({
+    hotelIds: Array.isArray(hotelIds) ? hotelIds : [],
+    roomTypeName,
+    quantity,
+    discount
+  })
+  if (!result.ok) {
+    res.status(result.status).json({ message: result.message })
+    return
+  }
+  res.status(result.status).json(result.data)
+}
+
+const batchRoom = async (req, res) => {
+  const { hotelIds, roomTypeName, action, quantity, stock } = req.body || {}
+  const result = await batchRoomOperation({
+    hotelIds: Array.isArray(hotelIds) ? hotelIds : [],
+    roomTypeName,
+    action,
+    quantity,
+    stock
+  })
+  if (!result.ok) {
+    res.status(result.status).json({ message: result.message })
+    return
+  }
+  res.status(result.status).json(result.data)
+}
+
 module.exports = {
   list,
   getDetail,
-  updateStatus
+  updateStatus,
+  roomTypeStats,
+  batchDiscount,
+  batchRoom
 }

@@ -2,18 +2,7 @@
  * 前端通知服务 - 封装所有通知相关的API调用
  */
 
-const API_BASE = 'http://127.0.0.1:4100'
-
-/**
- * 获取认证头
- */
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('token')
-  return {
-    Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  }
-}
+import { api } from './request'
 
 /**
  * 获取通知列表
@@ -24,17 +13,10 @@ const getAuthHeaders = () => {
 export const getNotifications = async ({ unreadOnly = false } = {}) => {
   try {
     const query = unreadOnly ? '?unreadOnly=true' : ''
-    const response = await fetch(`${API_BASE}/api/notifications${query}`, {
-      headers: getAuthHeaders()
-    })
-    
-    if (!response.ok) {
-      throw new Error('获取通知失败')
-    }
-    
-    return await response.json()
+    const data = await api.get(`/api/notifications${query}`)
+    return Array.isArray(data) ? data : []
   } catch (error) {
-    console.error('获取通知失败:', error)
+    console.error('获取通知列表失败:', error)
     return []
   }
 }
@@ -45,18 +27,10 @@ export const getNotifications = async ({ unreadOnly = false } = {}) => {
  */
 export const getUnreadCount = async () => {
   try {
-    const response = await fetch(`${API_BASE}/api/notifications/unread-count`, {
-      headers: getAuthHeaders()
-    })
-    
-    if (!response.ok) {
-      return 0
-    }
-    
-    const data = await response.json()
-    return data.count || 0
+    const data = await api.get('/api/notifications/unread-count')
+    return data?.count || 0
   } catch (error) {
-    console.error('获取未读数量失败:', error)
+    console.error('获取未读通知数量失败:', error)
     return 0
   }
 }
@@ -69,17 +43,12 @@ export const getUnreadCount = async () => {
 export const markAsRead = async (notificationId) => {
   try {
     const url = notificationId 
-      ? `${API_BASE}/api/notifications/${notificationId}/read`
-      : `${API_BASE}/api/notifications/read-all`
-    
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: getAuthHeaders()
-    })
-    
-    return response.ok
+      ? `/api/notifications/${notificationId}/read`
+      : '/api/notifications/read-all'
+    await api.put(url)
+    return true
   } catch (error) {
-    console.error('标记已读失败:', error)
+    console.error('标记通知已读失败:', error)
     return false
   }
 }
@@ -91,12 +60,8 @@ export const markAsRead = async (notificationId) => {
  */
 export const deleteNotification = async (notificationId) => {
   try {
-    const response = await fetch(`${API_BASE}/api/notifications/${notificationId}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders()
-    })
-    
-    return response.ok
+    await api.delete(`/api/notifications/${notificationId}`)
+    return true
   } catch (error) {
     console.error('删除通知失败:', error)
     return false

@@ -1,7 +1,7 @@
 import './App.css'
 import { Layout, Menu, Space, Typography, Tag, Button, Breadcrumb, Badge } from 'antd'
 import { HomeOutlined, SettingOutlined, UserOutlined, TeamOutlined, BellOutlined, FileSearchOutlined, ShopOutlined } from '@ant-design/icons'
-import { Routes, Route, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import Login from './pages/Login.jsx'
 import Hotels from './pages/Hotels.jsx'

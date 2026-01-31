@@ -30,12 +30,35 @@ CREATE TABLE hotels (
 );
 
 -- 房型表
-CREATE TABLE room_types (
+
+-- ===== 从零执行（全量建表） =====
+CREATE TABLE IF NOT EXISTS room_types (
   id SERIAL PRIMARY KEY,
   hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
   name VARCHAR(200) NOT NULL,
   price DECIMAL(10, 2) NOT NULL,
   stock INT DEFAULT 0,
+  used_stock INT DEFAULT 0,
+  offline_stock INT DEFAULT 0,
+  discount_rate DECIMAL(4, 2),
+  discount_quota INT DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 订单表
+CREATE TABLE orders (
+  id SERIAL PRIMARY KEY,
+  hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
+  merchant_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  room_type_id INT REFERENCES room_types(id) ON DELETE SET NULL,
+  room_type_name VARCHAR(200) NOT NULL,
+  quantity INT DEFAULT 1,
+  price_per_night DECIMAL(10, 2) NOT NULL,
+  nights INT DEFAULT 1,
+  total_price DECIMAL(10, 2) NOT NULL,
+  status VARCHAR(20) DEFAULT 'confirmed' CHECK (status IN ('confirmed', 'finished', 'cancelled')),
+  check_in DATE,
+  check_out DATE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

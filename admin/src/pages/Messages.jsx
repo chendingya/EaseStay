@@ -4,7 +4,7 @@ import {
   BellOutlined, CheckCircleOutlined, CloseCircleOutlined, 
   InfoCircleOutlined, WarningOutlined, DeleteOutlined
 } from '@ant-design/icons'
-import { GlassButton, glassMessage as message } from '../components/GlassUI'
+import { GlassButton, glassMessage as message } from '../components'
 import { getNotifications, markAsRead as markNotificationAsRead, formatNotificationTime } from '../services/notificationService'
 
 const typeConfig = {
@@ -26,7 +26,8 @@ export default function Messages() {
       const data = await getNotifications({ unreadOnly })
       setNotifications(data)
       setUnreadCount(data.filter(n => !n.is_read).length)
-    } catch {
+    } catch (error) {
+      console.error('获取消息失败:', error)
       message.error('获取消息失败')
     } finally {
       setLoading(false)
@@ -54,7 +55,8 @@ export default function Messages() {
         setUnreadCount(0)
         message.success('已全部标记为已读')
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('全部标记已读失败:', error)
       message.error('操作失败')
     } finally {
       setLoading(false)

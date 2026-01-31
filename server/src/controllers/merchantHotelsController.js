@@ -3,7 +3,14 @@ const {
   updateHotel,
   listMerchantHotels,
   getMerchantHotel,
-  updateMerchantHotelStatus
+  updateMerchantHotelStatus,
+  getRoomTypeStatsByHotelIds,
+  batchSetRoomDiscount,
+  batchRoomOperation,
+  getHotelRoomOverview,
+  listHotelOrders,
+  getHotelOrderStats,
+  getMerchantOverview
 } = require('../services/hotelService')
 
 const create = async (req, res) => {
@@ -62,10 +69,108 @@ const updateStatus = async (req, res) => {
   res.status(result.status).json(result.data)
 }
 
+const roomTypeStats = async (req, res) => {
+  const hotelIds = (req.query.hotelIds || '')
+    .split(',')
+    .map((id) => Number(id))
+    .filter((id) => Number.isFinite(id))
+
+  const result = await getRoomTypeStatsByHotelIds(hotelIds)
+  if (!result.ok) {
+    res.status(result.status).json({ message: result.message })
+    return
+  }
+  res.status(result.status).json(result.data)
+}
+
+const batchDiscount = async (req, res) => {
+  const { hotelIds, roomTypeName, quantity, discount } = req.body || {}
+  const result = await batchSetRoomDiscount({
+    hotelIds: Array.isArray(hotelIds) ? hotelIds : [],
+    roomTypeName,
+    quantity,
+    discount,
+    merchantId: req.user.id
+  })
+  if (!result.ok) {
+    res.status(result.status).json({ message: result.message })
+    return
+  }
+  res.status(result.status).json(result.data)
+}
+
+const batchRoom = async (req, res) => {
+  const { hotelIds, roomTypeName, action, quantity, stock } = req.body || {}
+  const result = await batchRoomOperation({
+    hotelIds: Array.isArray(hotelIds) ? hotelIds : [],
+    roomTypeName,
+    action,
+    quantity,
+    stock,
+    merchantId: req.user.id
+  })
+  if (!result.ok) {
+    res.status(result.status).json({ message: result.message })
+    return
+  }
+  res.status(result.status).json(result.data)
+}
+
+const roomOverview = async (req, res) => {
+  const result = await getHotelRoomOverview({ hotelId: Number(req.params.id) })
+  if (!result.ok) {
+    res.status(result.status).json({ message: result.message })
+    return
+  }
+  res.status(result.status).json(result.data)
+}
+
+const orders = async (req, res) => {
+  const result = await listHotelOrders({
+    merchantId: req.user.id,
+    hotelId: Number(req.params.id),
+    page: req.query.page,
+    pageSize: req.query.pageSize
+  })
+  if (!result.ok) {
+    res.status(result.status).json({ message: result.message })
+    return
+  }
+  res.status(result.status).json(result.data)
+}
+
+const orderStats = async (req, res) => {
+  const result = await getHotelOrderStats({
+    merchantId: req.user.id,
+    hotelId: Number(req.params.id)
+  })
+  if (!result.ok) {
+    res.status(result.status).json({ message: result.message })
+    return
+  }
+  res.status(result.status).json(result.data)
+}
+
+const overview = async (req, res) => {
+  const result = await getMerchantOverview({ merchantId: req.user.id })
+  if (!result.ok) {
+    res.status(result.status).json({ message: result.message })
+    return
+  }
+  res.status(result.status).json(result.data)
+}
+
 module.exports = {
   create,
   update,
   list,
   detail,
-  updateStatus
+  updateStatus,
+  roomTypeStats,
+  batchDiscount,
+  batchRoom,
+  roomOverview,
+  orders,
+  orderStats,
+  overview
 }

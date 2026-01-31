@@ -335,3 +335,59 @@ Query：unreadOnly（可选，true/false）
 | member | 会员专享 |
 | festival | 节日优惠 |
 | package | 套餐优惠 |
+
+## 9. PC 管理端模块实现（admin）
+### 9.1 路由与权限入口
+- App.jsx 统一路由与面包屑配置，按角色渲染菜单
+- 登录态缺失自动跳转登录页，商户角色限制管理员路由访问
+
+### 9.2 工作台（Dashboard）
+- 统一拉取酒店列表并统计待审核/已上架/已下线
+- 提供批量折扣与批量房型操作入口
+
+### 9.3 商户酒店管理
+- Hotels：搜索筛选、状态标签、批量导入
+- HotelEdit：地图选址、图片上传、设施/房型/优惠编辑与申请提交
+- HotelDetail：商户侧酒店详情与房型/设施信息展示
+
+### 9.4 管理员酒店管理
+- AdminHotels：全量酒店管理列表与统计卡片
+- AdminHotelDetail：管理员侧酒店详情与上下架/审核动作入口
+- Audit / AuditDetail：审核列表与酒店审核详情，支持通过/驳回/下线/恢复
+
+### 9.5 申请审核
+- RequestAudit：按类型/酒店过滤待审申请，支持通过/拒绝与原因记录
+
+### 9.6 消息中心
+- Messages：消息列表、未读筛选、标记已读/全部已读
+
+### 9.7 账户与商户管理
+- Account：账户信息与修改密码
+- Merchants / MerchantDetail：商户列表、详情、重置密码与酒店统计
+
+## 10. 服务端模块实现（server）
+### 10.1 入口与路由组织
+- app.js 统一挂载 /api、/status、/health 与 Swagger 文档
+- routes/index.js 维护鉴权与角色路由聚合
+
+### 10.2 认证与鉴权
+- authController/authService 负责登录注册与短信验证码
+- middleware/auth.js 统一 JWT 校验与角色鉴权
+
+### 10.3 酒店管理
+- merchantHotelsController/adminHotelsController 提供商户与管理员接口
+- hotelService 处理酒店状态流转与通知触发
+
+### 10.4 申请审核与通知
+- requestController/requestService 处理申请提交、查询与审核
+- notificationService 管理消息模板与已读状态
+
+### 10.5 预设数据
+- presetController/presetService 提供设施/房型/优惠/城市等预设数据
+- /api/presets、/api/admin/presets 分别提供公开与管理端入口
+
+### 10.6 地图服务
+- mapController 提供 POI 搜索、地理编码与逆地理编码
+
+### 10.7 状态与健康检查
+- statusController 输出状态页与健康检查接口

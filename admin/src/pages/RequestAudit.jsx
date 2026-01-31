@@ -1,13 +1,12 @@
 import { Card, Table, Typography, Tag, Modal, Form, Input, Tabs, Descriptions, Empty, Alert, Space } from 'antd'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { 
   CheckCircleOutlined, CloseCircleOutlined, ShopOutlined, 
   AppstoreOutlined, HomeOutlined, GiftOutlined, ArrowLeftOutlined
 } from '@ant-design/icons'
-import { GlassButton, glassMessage as message } from '../components/GlassUI'
-
-const apiBase = 'http://127.0.0.1:4100'
+import { GlassButton, glassMessage as message } from '../components'
+import { api } from '../services/request'
 
 const typeMap = {
   facility: { label: '设施申请', icon: <AppstoreOutlined />, color: 'blue' },
@@ -33,60 +32,37 @@ export default function RequestAudit() {
   const [rejectForm] = Form.useForm()
   const [detailModal, setDetailModal] = useState(null)
 
-  const fetchRequests = async (type) => {
-    const token = localStorage.getItem('token')
-    if (!token) return
+  const fetchRequests = useCallback(async (type) => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
       if (type && type !== 'all') params.append('type', type)
       if (hotelIdFilter) params.append('hotelId', hotelIdFilter)
       const query = params.toString() ? `?${params.toString()}` : ''
-      
-      const response = await fetch(`${apiBase}/api/admin/requests${query}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        message.error(data.message || '获取申请列表失败')
-        return
-      }
+      const data = await api.get(`/api/admin/requests${query}`)
       setRequests(data)
-    } catch {
-      message.error('获取申请列表失败')
+    } catch (error) {
+      console.error('获取申请列表失败:', error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [hotelIdFilter])
 
   useEffect(() => {
     fetchRequests(activeTab)
-  }, [activeTab, hotelIdFilter])
+  }, [activeTab, fetchRequests])
 
   const handleReview = async (id, action, rejectReason) => {
-    const token = localStorage.getItem('token')
-    if (!token) return
     setLoading(true)
     try {
-      const response = await fetch(`${apiBase}/api/admin/requests/${id}/review`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ action, rejectReason })
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        message.error(data.message || '操作失败')
-        return
-      }
+      await api.put(`/api/admin/requests/${id}/review`, { action, rejectReason })
       message.success(action === 'approve' ? '已通过申请并通知商户' : '已拒绝申请并通知商户')
       setRejecting(null)
       rejectForm.resetFields()
       fetchRequests(activeTab)
-    } catch {
-      message.error('操作失败')
+    } catch (error) {
+      console.error('审核申请失败:', error)
+      message.error('审核失败，请重试')
     } finally {
       setLoading(false)
     }

@@ -1,17 +1,9 @@
 import { ConfigProvider, Form, Input, Select, Tabs, Typography, theme } from 'antd'
 import { LockOutlined, MobileOutlined, UserOutlined } from '@ant-design/icons'
 import { useEffect, useState } from 'react'
-import { GlassButton, glassMessage as message } from '../components/GlassUI'
+import { GlassButton, glassMessage as message } from '../components'
+import { api } from '../services/request'
 import './Login.css'
-
-const apiBase = 'http://127.0.0.1:4100'
-
-const iconStyles = {
-  color: 'rgba(0, 0, 0, 0.25)',
-  fontSize: '18px',
-  verticalAlign: 'middle',
-  cursor: 'pointer'
-}
 
 export default function Login({ onLoggedIn }) {
   const { token } = theme.useToken()
@@ -21,40 +13,32 @@ export default function Login({ onLoggedIn }) {
   const [form] = Form.useForm()
 
   const handleLogin = async (values) => {
-    const response = await fetch(`${apiBase}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: values.username, password: values.password })
-    })
-    const data = await response.json()
-    if (!response.ok) {
-      message.error(data.message || '登录失败')
+    try {
+      const data = await api.post('/api/auth/login', { username: values.username, password: values.password })
+      onLoggedIn({ token: data.token, role: data.userRole, username: values.username })
+      message.success('登录成功')
+      return true
+    } catch (error) {
+      console.error('登录失败:', error)
       return false
     }
-    onLoggedIn({ token: data.token, role: data.userRole, username: values.username })
-    message.success('登录成功')
-    return true
   }
 
   const handleRegister = async (values) => {
-    const response = await fetch(`${apiBase}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    try {
+      await api.post('/api/auth/register', {
         username: values.username,
         password: values.password,
         role: values.role,
         code: values.code
       })
-    })
-    const data = await response.json()
-    if (!response.ok) {
-      message.error(data.message || '注册失败')
+      const loginOk = await handleLogin({ username: values.username, password: values.password })
+      if (loginOk) message.success('注册成功')
+      return loginOk
+    } catch (error) {
+      console.error('注册失败:', error)
       return false
     }
-    const loginOk = await handleLogin({ username: values.username, password: values.password })
-    if (loginOk) message.success('注册成功')
-    return loginOk
   }
 
   const handleSendCode = async () => {
@@ -64,21 +48,14 @@ export default function Login({ onLoggedIn }) {
       return
     }
     setSending(true)
-    const response = await fetch(`${apiBase}/api/auth/sms/send`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username })
-    })
-    const data = await response.json()
-    if (!response.ok) {
-      message.error(data.message || '验证码发送失败')
+    try {
+      const data = await api.post('/api/auth/sms/send', { username })
+      form.setFieldsValue({ code: data.code })
+      message.success(`验证码已发送：${data.code}`)
+      setSeconds(60)
+    } finally {
       setSending(false)
-      return
     }
-    form.setFieldsValue({ code: data.code })
-    message.success(`验证码已发送：${data.code}`)
-    setSeconds(60)
-    setSending(false)
   }
 
   useEffect(() => {

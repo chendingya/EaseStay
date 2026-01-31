@@ -2,9 +2,8 @@ import { Card, Table, Tag, Space, Typography, Input, Select, Row, Col, Statistic
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SearchOutlined, ShopOutlined, StarFilled, EnvironmentOutlined } from '@ant-design/icons'
-import { GlassButton, glassMessage as message } from '../components/GlassUI'
-
-const apiBase = 'http://127.0.0.1:4100'
+import { GlassButton } from '../components'
+import { api } from '../services/request'
 
 const statusMap = {
   pending: { color: 'orange', label: '待审核' },
@@ -24,21 +23,12 @@ export default function AdminHotels() {
   const [cityFilter, setCityFilter] = useState('all')
 
   const fetchHotels = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) return
     setLoading(true)
     try {
-      const response = await fetch(`${apiBase}/api/admin/hotels`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        message.error(data.message || '获取酒店列表失败')
-        return
-      }
+      const data = await api.get('/api/admin/hotels')
       setHotels(data)
-    } catch {
-      message.error('获取酒店列表失败')
+    } catch (error) {
+      console.error('获取酒店列表失败:', error)
     } finally {
       setLoading(false)
     }

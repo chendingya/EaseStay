@@ -8,13 +8,12 @@ import {
   EyeOutlined, EditOutlined, StarFilled, EnvironmentOutlined, CalendarOutlined,
   PlusOutlined, DeleteOutlined, SearchOutlined
 } from '@ant-design/icons'
-import { GlassButton, glassMessage as message } from '../components/GlassUI'
+import { GlassButton, glassMessage as message } from '../components'
+import { api } from '../services/request'
 import dayjs from 'dayjs'
 
-const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:4100'
-
 // ========== 地图选择组件 ==========
-function MapPicker({ onAddressChange, hotCities = [] }) {
+function MapPicker({ onAddressChange }) {
   const [searchText, setSearchText] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [showResults, setShowResults] = useState(false)
@@ -26,8 +25,7 @@ function MapPicker({ onAddressChange, hotCities = [] }) {
     
     setSearching(true)
     try {
-      const response = await fetch(`${apiBase}/api/map/search?keywords=${encodeURIComponent(searchText)}`)
-      const result = await response.json()
+      const result = await api.get(`/api/map/search?keywords=${encodeURIComponent(searchText)}`)
       
       if (result.success && result.data && result.data.length > 0) {
         const results = result.data.map(poi => {
@@ -394,7 +392,7 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], onReques
 }
 
 // ========== 周边信息组件 ==========
-function NearbyInfoEditor({ attractions = [], transport = [], malls = [], onChangeAttractions, onChangeTransport, onChangeMalls, hotelLocation }) {
+function NearbyInfoEditor({ attractions = [], transport = [], malls = [], onChangeAttractions, onChangeTransport, onChangeMalls }) {
   const [searchText, setSearchText] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [searching, setSearching] = useState(false)
@@ -412,8 +410,7 @@ function NearbyInfoEditor({ attractions = [], transport = [], malls = [], onChan
       else if (searchType === 'transport') keywords += ' 地铁站|公交站|火车站|机场'
       else if (searchType === 'mall') keywords += ' 商场|购物中心|超市|百货'
       
-      const response = await fetch(`${apiBase}/api/map/search?keywords=${encodeURIComponent(keywords)}`)
-      const result = await response.json()
+      const result = await api.get(`/api/map/search?keywords=${encodeURIComponent(keywords)}`)
       
       if (result.success && result.data && result.data.length > 0) {
         const results = result.data.map(poi => {
@@ -621,8 +618,7 @@ export default function HotelEdit() {
   useEffect(() => {
     const fetchPresets = async () => {
       try {
-        const response = await fetch(`${apiBase}/api/presets`)
-        const result = await response.json()
+        const result = await api.get('/api/presets')
         if (result.success && result.data) {
           setPresets({
             facilities: result.data.facilities || [],
@@ -641,13 +637,9 @@ export default function HotelEdit() {
   useEffect(() => {
     if (id) {
       const fetchHotel = async () => {
-        const token = localStorage.getItem('token')
-        if (!token) return
         setLoading(true)
         try {
-          const response = await fetch(`${apiBase}/api/merchant/hotels/${id}`, { headers: { Authorization: `Bearer ${token}` } })
-          const data = await response.json()
-          if (!response.ok) { message.error(data.message || '获取酒店详情失败'); navigate('/hotels'); return }
+          const data = await api.get(`/api/merchant/hotels/${id}`)
           form.setFieldsValue({
             ...data,
             opening_time: data.opening_time ? dayjs(data.opening_time) : null,
@@ -660,7 +652,11 @@ export default function HotelEdit() {
             promotions: data.promotions || []
           })
           setPreviewData(data)
-        } catch { message.error('获取酒店详情失败') }
+        } catch (error) { 
+          console.error('获取酒店详情失败:', error)
+          message.error('获取酒店详情失败')
+          navigate('/hotels')
+        }
         finally { setLoading(false) }
       }
       fetchHotel()
@@ -671,108 +667,77 @@ export default function HotelEdit() {
   
   // 提交设施申请到后端
   const handleRequestFacility = async (name) => {
-    const token = localStorage.getItem('token')
-    if (!token) return
-    
     try {
-      const response = await fetch(`${apiBase}/api/requests`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          hotelId: id ? parseInt(id) : null,
-          type: 'facility',
-          name: name,
-          data: { description: '' }
-        })
+      await api.post('/api/requests', {
+        hotelId: id ? parseInt(id) : null,
+        type: 'facility',
+        name: name,
+        data: { description: '' }
       })
-      const data = await response.json()
-      if (!response.ok) {
-        message.error(data.message || '提交申请失败')
-        return
-      }
       setPendingFacilities([...pendingFacilities, { name, status: 'pending' }])
       message.success('设施申请已提交，等待管理员审核')
-    } catch {
+    } catch (error) {
+      console.error('提交设施申请失败:', error)
       message.error('提交申请失败')
     }
   }
   
   // 提交房型申请到后端
   const handleRequestRoomType = async (room) => {
-    const token = localStorage.getItem('token')
-    if (!token) return
-    
     try {
-      const response = await fetch(`${apiBase}/api/requests`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          hotelId: id ? parseInt(id) : null,
-          type: 'room_type',
-          name: room.name,
-          data: { price: room.price, stock: room.stock }
-        })
+      await api.post('/api/requests', {
+        hotelId: id ? parseInt(id) : null,
+        type: 'room_type',
+        name: room.name,
+        data: { price: room.price, stock: room.stock }
       })
-      const data = await response.json()
-      if (!response.ok) {
-        message.error(data.message || '提交申请失败')
-        return
-      }
       setPendingRoomTypes([...pendingRoomTypes, { ...room, status: 'pending' }])
       message.success('房型申请已提交，等待管理员审核')
-    } catch {
+    } catch (error) {
+      console.error('提交房型申请失败:', error)
       message.error('提交申请失败')
     }
   }
   
   // 提交优惠申请到后端
   const handleRequestPromotion = async (promo) => {
-    const token = localStorage.getItem('token')
-    if (!token) return
-    
     try {
-      const response = await fetch(`${apiBase}/api/requests`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          hotelId: id ? parseInt(id) : null,
-          type: 'promotion',
-          name: promo.title,
-          data: { type: promo.type, value: promo.value }
-        })
+      await api.post('/api/requests', {
+        hotelId: id ? parseInt(id) : null,
+        type: 'promotion',
+        name: promo.title,
+        data: { type: promo.type, value: promo.value }
       })
-      const data = await response.json()
-      if (!response.ok) {
-        message.error(data.message || '提交申请失败')
-        return
-      }
       setPendingPromotions([...pendingPromotions, { ...promo, status: 'pending' }])
       message.success('优惠申请已提交，等待管理员审核')
-    } catch {
+    } catch (error) {
+      console.error('提交优惠申请失败:', error)
       message.error('提交申请失败')
     }
   }
 
   const handleSubmit = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) return
     try {
       const values = await form.validateFields()
+      const nearbyAttractions = form.getFieldValue('nearby_attractions') || []
+      const nearbyTransport = form.getFieldValue('nearby_transport') || []
+      const nearbyMalls = form.getFieldValue('nearby_malls') || []
       const payload = {
         ...values,
         star_rating: Number(values.star_rating || 0),
         opening_time: values.opening_time ? values.opening_time.format('YYYY-MM-DD') : '',
+        nearby_attractions: Array.isArray(nearbyAttractions) ? nearbyAttractions : [],
+        nearby_transport: Array.isArray(nearbyTransport) ? nearbyTransport : [],
+        nearby_malls: Array.isArray(nearbyMalls) ? nearbyMalls : [],
         roomTypes: (values.roomTypes || []).filter((room) => room && room.name),
         promotions: (values.promotions || []).filter((promo) => promo && promo.title)
       }
       setSaving(true)
-      const response = await fetch(isEditing ? `${apiBase}/api/merchant/hotels/${id}` : `${apiBase}/api/merchant/hotels`, {
-        method: isEditing ? 'PUT' : 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      const data = await response.json()
-      if (!response.ok) { message.error(data.message || '保存失败'); return }
+      if (isEditing) {
+        await api.put(`/api/merchant/hotels/${id}`, payload)
+      } else {
+        await api.post('/api/merchant/hotels', payload)
+      }
       message.success('保存成功')
       navigate('/hotels')
     } catch (err) {
@@ -828,6 +793,9 @@ export default function HotelEdit() {
 
           <Divider />
           <Typography.Title level={5}>周边信息</Typography.Title>
+          <Form.Item name="nearby_attractions" hidden><Input /></Form.Item>
+          <Form.Item name="nearby_transport" hidden><Input /></Form.Item>
+          <Form.Item name="nearby_malls" hidden><Input /></Form.Item>
           <NearbyInfoEditor
             attractions={form.getFieldValue('nearby_attractions') || []}
             transport={form.getFieldValue('nearby_transport') || []}

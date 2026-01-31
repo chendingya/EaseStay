@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, Descriptions, Tag, Image, Space, Typography, Table, Spin, Row, Col } from 'antd'
+import { Card, Descriptions, Tag, Image, Space, Typography, Table, Spin, Row, Col, Tabs, Progress, Statistic, Modal, Form, InputNumber } from 'antd'
 import { StarFilled, EnvironmentOutlined, CalendarOutlined } from '@ant-design/icons'
-import { GlassButton, glassMessage as message } from '../components/GlassUI'
-
-const apiBase = 'http://127.0.0.1:4100'
+import { GlassButton, glassMessage as message } from '../components'
+import { api } from '../services/request'
 
 const statusMap = {
   pending: { color: 'orange', label: '待审核' },
@@ -18,31 +17,76 @@ export default function HotelDetail() {
   const navigate = useNavigate()
   const [hotel, setHotel] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [overview, setOverview] = useState(null)
+  const [orders, setOrders] = useState([])
+  const [ordersTotal, setOrdersTotal] = useState(0)
+  const [ordersPage, setOrdersPage] = useState(1)
+  const [ordersLoading, setOrdersLoading] = useState(false)
+  const [orderStats, setOrderStats] = useState(null)
+  const [statsLoading, setStatsLoading] = useState(false)
+  const [discountModal, setDiscountModal] = useState(false)
+  const [selectedRoom, setSelectedRoom] = useState(null)
+  const [discountLoading, setDiscountLoading] = useState(false)
+
+  const fetchHotel = useCallback(async () => {
+    setLoading(true)
+    try {
+      const data = await api.get(`/api/merchant/hotels/${id}`)
+      setHotel(data)
+    } catch (error) {
+      if (error?.response?.status) {
+        navigate('/hotels')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [id, navigate])
 
   useEffect(() => {
-    const fetchHotel = async () => {
-      const token = localStorage.getItem('token')
-      if (!token) return
-      setLoading(true)
+    fetchHotel()
+  }, [fetchHotel])
+
+  useEffect(() => {
+    const fetchOverview = async () => {
       try {
-        const response = await fetch(`${apiBase}/api/merchant/hotels/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        const data = await response.json()
-        if (!response.ok) {
-          message.error(data.message || '获取酒店详情失败')
-          navigate('/hotels')
-          return
-        }
-        setHotel(data)
-      } catch {
-        message.error('获取酒店详情失败')
-      } finally {
-        setLoading(false)
+        const data = await api.get(`/api/merchant/hotels/${id}/overview`)
+        setOverview(data)
+      } catch (error) {
+        console.error('获取酒店概览失败:', error)
+        setOverview(null)
       }
     }
-    fetchHotel()
-  }, [id, navigate])
+
+    const fetchOrders = async () => {
+      setOrdersLoading(true)
+      try {
+        const params = new URLSearchParams({ page: ordersPage, pageSize: 8 })
+        const data = await api.get(`/api/merchant/hotels/${id}/orders?${params.toString()}`)
+        setOrders(data.list || [])
+        setOrdersTotal(data.total || 0)
+      } catch (error) {
+        console.error('获取订单列表失败:', error)
+      } finally {
+        setOrdersLoading(false)
+      }
+    }
+
+    const fetchOrderStats = async () => {
+      setStatsLoading(true)
+      try {
+        const data = await api.get(`/api/merchant/hotels/${id}/order-stats`)
+        setOrderStats(data)
+      } catch (error) {
+        console.error('获取订单统计失败:', error)
+      } finally {
+        setStatsLoading(false)
+      }
+    }
+
+    fetchOverview()
+    fetchOrders()
+    fetchOrderStats()
+  }, [id, ordersPage])
 
   if (loading) {
     return (
@@ -58,15 +102,253 @@ export default function HotelDetail() {
 
   const statusInfo = statusMap[hotel.status] || { color: 'default', label: hotel.status }
 
+  const promotionList = (hotel.promotions || []).filter((promo) => promo && promo.title)
+
+  const openDiscountModal = (room) => {
+    setSelectedRoom(room)
+    setDiscountModal(true)
+  }
+
+  const handleSetDiscount = async (values) => {
+    if (!selectedRoom) return
+    try {
+      setDiscountLoading(true)
+      await api.post('/api/merchant/hotels/batch-discount', {
+        hotelIds: [hotel.id],
+        roomTypeName: selectedRoom.name,
+        quantity: values.quantity,
+        discount: values.discount
+      })
+      message.success('折扣已设置')
+      setDiscountModal(false)
+      setSelectedRoom(null)
+      await fetchHotel()
+    } catch (error) {
+      console.error('设置折扣失败:', error)
+      message.error('设置折扣失败，请重试')
+    } finally {
+      setDiscountLoading(false)
+    }
+  }
+
+  const handleCancelDiscount = (room) => {
+    Modal.confirm({
+      title: '确认取消该房型折扣？',
+      content: `房型：${room?.name || ''}`,
+      okText: '确认取消',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      async onOk() {
+        try {
+          setDiscountLoading(true)
+          await api.post('/api/merchant/hotels/batch-discount', {
+            hotelIds: [hotel.id],
+            roomTypeName: room.name,
+            quantity: 0,
+            discount: 0
+          })
+          message.success('折扣已取消')
+          await fetchHotel()
+        } catch (error) {
+          console.error('取消折扣失败:', error)
+          message.error('取消折扣失败，请重试')
+        } finally {
+          setDiscountLoading(false)
+        }
+      }
+    })
+  }
+
   const roomColumns = [
     { title: '房型名称', dataIndex: 'name', key: 'name' },
     {
       title: '价格',
       dataIndex: 'price',
       key: 'price',
+      render: (price, record) => {
+        const basePrice = Number(price) || 0
+        const discountRate = Number(record.discount_rate) || 0
+        const discountQuota = Number(record.discount_quota) || 0
+        const hasDiscount = discountRate > 0 && discountRate <= 10 && discountQuota > 0
+        const discounted = hasDiscount ? Math.round(basePrice * discountRate * 10) / 100 : basePrice
+        return (
+          <div>
+            <div style={{ color: '#999', textDecoration: hasDiscount ? 'line-through' : 'none' }}>基础价 ¥{basePrice}</div>
+            <div style={{ color: '#f5222d', fontWeight: 600 }}>{hasDiscount ? '批量折扣价' : '当前售价'} ¥{discounted}</div>
+          </div>
+        )
+      }
+    },
+    {
+      title: '优惠',
+      key: 'discount',
+      render: (_, record) => {
+        const tags = []
+        const discountRate = Number(record.discount_rate) || 0
+        const discountQuota = Number(record.discount_quota) || 0
+        if (discountRate > 0 && discountRate <= 10 && discountQuota > 0) {
+          tags.push(
+            <Tag color="purple" key={`batch-${record.id || record.name}`}>
+              批量折扣 {discountRate}折 余{discountQuota}
+            </Tag>
+          )
+        }
+        promotionList.forEach((promo, index) => {
+          tags.push(
+            <Tag color="blue" key={`promo-${record.id || record.name}-${index}`}>
+              {promo.type ? `条件优惠 ${promo.type} ${promo.title}` : `条件优惠 ${promo.title}`}
+            </Tag>
+          )
+        })
+        return tags.length ? <Space size={[4, 4]} wrap>{tags}</Space> : <Tag>无优惠</Tag>
+      }
+    },
+    { title: '库存', dataIndex: 'stock', key: 'stock' },
+    {
+      title: '已用',
+      dataIndex: 'used_stock',
+      key: 'used_stock',
+      render: (value) => value || 0
+    },
+    {
+      title: '空闲',
+      key: 'available',
+      render: (_, record) => {
+        const stock = Number(record.stock) || 0
+        const used = Number(record.used_stock) || 0
+        const offline = Number(record.offline_stock) || 0
+        return Math.max(stock - used - offline, 0)
+      }
+    },
+    {
+      title: '操作',
+      key: 'action',
+      render: (_, record) => {
+        const discountRate = Number(record.discount_rate) || 0
+        const discountQuota = Number(record.discount_quota) || 0
+        const hasDiscount = discountRate > 0 && discountRate <= 10 && discountQuota > 0
+        return (
+          <Space size="small">
+            <GlassButton type="link" size="small" onClick={() => openDiscountModal(record)}>设置折扣</GlassButton>
+            <GlassButton type="link" size="small" danger disabled={!hasDiscount} onClick={() => handleCancelDiscount(record)}>取消折扣</GlassButton>
+          </Space>
+        )
+      }
+    }
+  ]
+
+  const orderColumns = [
+    { title: '订单号', dataIndex: 'id', key: 'id', width: 90 },
+    { title: '房型', dataIndex: 'room_type_name', key: 'room_type_name' },
+    { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 70 },
+    {
+      title: '单价',
+      dataIndex: 'price_per_night',
+      key: 'price_per_night',
+      render: (price) => <span style={{ color: '#f5222d' }}>¥{price}</span>
+    },
+    { title: '间夜', dataIndex: 'nights', key: 'nights', width: 70 },
+    {
+      title: '总价',
+      dataIndex: 'total_price',
+      key: 'total_price',
       render: (price) => <span style={{ color: '#f5222d', fontWeight: 600 }}>¥{price}</span>
     },
-    { title: '库存', dataIndex: 'stock', key: 'stock' }
+    { title: '状态', dataIndex: 'status', key: 'status', width: 90 },
+    {
+      title: '入住',
+      dataIndex: 'check_in',
+      key: 'check_in',
+      render: (value) => value || '-'
+    },
+    {
+      title: '下单时间',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      render: (value) => value ? new Date(value).toLocaleString() : '-'
+    }
+  ]
+
+  const computedOverview = overview || (() => {
+    const totals = (hotel.roomTypes || []).reduce(
+      (acc, room) => {
+        const stock = Number(room.stock) || 0
+        const used = Number(room.used_stock) || 0
+        const offline = Number(room.offline_stock) || 0
+        const available = Math.max(stock - used - offline, 0)
+        acc.total += stock
+        acc.used += used
+        acc.offline += offline
+        acc.available += available
+        return acc
+      },
+      { total: 0, used: 0, available: 0, offline: 0 }
+    )
+    return totals
+  })()
+  const overviewTotal = computedOverview.total || 0
+  const usedPercent = overviewTotal ? Math.round((computedOverview.used / overviewTotal) * 100) : 0
+  const availablePercent = overviewTotal ? Math.round((computedOverview.available / overviewTotal) * 100) : 0
+  const offlinePercent = overviewTotal ? Math.round((computedOverview.offline / overviewTotal) * 100) : 0
+  const roomTypeSummary = orderStats?.roomTypeSummary || []
+  const roomTypeDaily = orderStats?.roomTypeDaily || []
+  const roomTypeMonthly = orderStats?.roomTypeMonthly || []
+  const totalRoomNights = roomTypeSummary.reduce((sum, item) => sum + (Number(item.nights) || 0), 0)
+
+  const roomTypeSummaryColumns = [
+    { title: '房型', dataIndex: 'roomTypeName', key: 'roomTypeName' },
+    { title: '入住间夜', dataIndex: 'nights', key: 'nights', width: 90 },
+    {
+      title: '入住率',
+      dataIndex: 'occupancyRate',
+      key: 'occupancyRate',
+      width: 90,
+      render: (value) => `${value || 0}%`
+    },
+    {
+      title: '收入',
+      dataIndex: 'revenue',
+      key: 'revenue',
+      render: (value) => `¥${value || 0}`
+    }
+  ]
+
+  const roomTypeDailyColumns = [
+    { title: '日期', dataIndex: 'date', key: 'date', width: 120 },
+    { title: '房型', dataIndex: 'roomTypeName', key: 'roomTypeName' },
+    { title: '入住间夜', dataIndex: 'nights', key: 'nights', width: 90 },
+    {
+      title: '入住率',
+      dataIndex: 'occupancyRate',
+      key: 'occupancyRate',
+      width: 90,
+      render: (value) => `${value || 0}%`
+    },
+    {
+      title: '订单金额',
+      dataIndex: 'revenue',
+      key: 'revenue',
+      render: (value) => `¥${value || 0}`
+    }
+  ]
+
+  const roomTypeMonthlyColumns = [
+    { title: '月份', dataIndex: 'month', key: 'month', width: 120 },
+    { title: '房型', dataIndex: 'roomTypeName', key: 'roomTypeName' },
+    { title: '入住间夜', dataIndex: 'nights', key: 'nights', width: 90 },
+    {
+      title: '入住率',
+      dataIndex: 'occupancyRate',
+      key: 'occupancyRate',
+      width: 90,
+      render: (value) => `${value || 0}%`
+    },
+    {
+      title: '订单金额',
+      dataIndex: 'revenue',
+      key: 'revenue',
+      render: (value) => `¥${value || 0}`
+    }
   ]
 
   return (
@@ -122,16 +404,184 @@ export default function HotelDetail() {
             )}
           </Card>
 
-          {/* 房型信息 */}
-          <Card title="房型信息" style={{ marginBottom: 24 }}>
-            <Table
-              columns={roomColumns}
-              dataSource={hotel.roomTypes || []}
-              rowKey="id"
-              pagination={false}
-              locale={{ emptyText: '暂无房型信息' }}
-            />
-          </Card>
+          <Tabs
+            items={[
+              {
+                key: 'overview',
+                label: '房间总览',
+                children: (
+                  <Card style={{ marginBottom: 24 }}>
+                    <Row gutter={16}>
+                      <Col span={6}>
+                        <Statistic title="总房间" value={computedOverview.total} suffix="间" />
+                      </Col>
+                      <Col span={6}>
+                        <Statistic title="已使用" value={computedOverview.used} styles={{ content: { color: '#faad14' } }} suffix="间" />
+                      </Col>
+                      <Col span={6}>
+                        <Statistic title="空闲" value={computedOverview.available} styles={{ content: { color: '#52c41a' } }} suffix="间" />
+                      </Col>
+                      <Col span={6}>
+                        <Statistic title="已下架" value={computedOverview.offline} styles={{ content: { color: '#999' } }} suffix="间" />
+                      </Col>
+                    </Row>
+                    <div style={{ marginTop: 16 }}>
+                      <Progress
+                        percent={computedOverview.total ? Math.round((computedOverview.used / computedOverview.total) * 100) : 0}
+                        status="active"
+                        format={(p) => `入住率 ${p}%`}
+                      />
+                    </div>
+                    <Row gutter={16} style={{ marginTop: 16 }}>
+                      <Col span={8} style={{ textAlign: 'center' }}>
+                        <Progress type="circle" percent={usedPercent} strokeColor="#faad14" />
+                        <div style={{ marginTop: 8 }}>已使用占比</div>
+                      </Col>
+                      <Col span={8} style={{ textAlign: 'center' }}>
+                        <Progress type="circle" percent={availablePercent} strokeColor="#52c41a" />
+                        <div style={{ marginTop: 8 }}>空闲占比</div>
+                      </Col>
+                      <Col span={8} style={{ textAlign: 'center' }}>
+                        <Progress type="circle" percent={offlinePercent} strokeColor="#999" />
+                        <div style={{ marginTop: 8 }}>下架占比</div>
+                      </Col>
+                    </Row>
+                  </Card>
+                )
+              },
+              {
+                key: 'rooms',
+                label: '房型列表',
+                children: (
+                  <Card style={{ marginBottom: 24 }}>
+                    <Table
+                      columns={roomColumns}
+                      dataSource={hotel.roomTypes || []}
+                      rowKey="id"
+                      pagination={false}
+                      locale={{ emptyText: '暂无房型信息' }}
+                    />
+                  </Card>
+                )
+              },
+              {
+                key: 'orders',
+                label: '订单展示',
+                children: (
+                  <Card title="订单列表" style={{ marginBottom: 24 }}>
+                    <Table
+                      columns={orderColumns}
+                      dataSource={orders}
+                      rowKey="id"
+                      loading={ordersLoading}
+                      pagination={{
+                        current: ordersPage,
+                        pageSize: 8,
+                        total: ordersTotal,
+                        onChange: (page) => setOrdersPage(page)
+                      }}
+                      locale={{ emptyText: '暂无订单' }}
+                    />
+                  </Card>
+                )
+              },
+              {
+                key: 'stats',
+                label: '订单统计',
+                children: (
+                  <Card loading={statsLoading} style={{ marginBottom: 24 }}>
+                    <Row gutter={16}>
+                      <Col span={8}>
+                        <Statistic title="订单总量" value={orderStats?.totalOrders || 0} />
+                      </Col>
+                      <Col span={8}>
+                        <Statistic title="订单收入" value={orderStats?.revenue || 0} prefix="¥" />
+                      </Col>
+                      <Col span={8}>
+                        <Statistic title="状态种类" value={orderStats?.statusStats?.length || 0} />
+                      </Col>
+                    </Row>
+                    <Row gutter={16} style={{ marginTop: 16 }}>
+                      <Col span={8}>
+                        <Statistic title="房型数" value={roomTypeSummary.length} />
+                      </Col>
+                      <Col span={8}>
+                        <Statistic title="入住间夜" value={totalRoomNights} />
+                      </Col>
+                      <Col span={8}>
+                        <Statistic title="统计记录" value={(roomTypeDaily.length || 0) + (roomTypeMonthly.length || 0)} />
+                      </Col>
+                    </Row>
+                    <Row gutter={16} style={{ marginTop: 16 }}>
+                      <Col span={12}>
+                        <Typography.Title level={5} style={{ marginTop: 0 }}>订单状态分布</Typography.Title>
+                        <Table
+                          columns={[
+                            { title: '状态', dataIndex: 'status', key: 'status' },
+                            { title: '数量', dataIndex: 'count', key: 'count' }
+                          ]}
+                          dataSource={orderStats?.statusStats || []}
+                          rowKey="status"
+                          pagination={false}
+                          size="small"
+                        />
+                      </Col>
+                      <Col span={12}>
+                        <Typography.Title level={5} style={{ marginTop: 0 }}>月度收入</Typography.Title>
+                        <Table
+                          columns={[
+                            { title: '月份', dataIndex: 'month', key: 'month' },
+                            { title: '收入', dataIndex: 'revenue', key: 'revenue', render: (v) => `¥${v}` }
+                          ]}
+                          dataSource={orderStats?.monthly || []}
+                          rowKey="month"
+                          pagination={false}
+                          size="small"
+                        />
+                      </Col>
+                    </Row>
+                    <Row gutter={16} style={{ marginTop: 16 }}>
+                      <Col span={24}>
+                        <Typography.Title level={5} style={{ marginTop: 0 }}>房型汇总</Typography.Title>
+                        <Table
+                          columns={roomTypeSummaryColumns}
+                          dataSource={roomTypeSummary}
+                          rowKey={(record) => `${record.roomTypeName}-${record.nights}-${record.revenue}`}
+                          pagination={{ pageSize: 6 }}
+                          size="small"
+                          locale={{ emptyText: '暂无统计数据' }}
+                        />
+                      </Col>
+                    </Row>
+                    <Row gutter={16} style={{ marginTop: 16 }}>
+                      <Col span={12}>
+                        <Typography.Title level={5} style={{ marginTop: 0 }}>房型日度表现</Typography.Title>
+                        <Table
+                          columns={roomTypeDailyColumns}
+                          dataSource={roomTypeDaily}
+                          rowKey={(record) => `${record.date}-${record.roomTypeName}`}
+                          pagination={{ pageSize: 6 }}
+                          size="small"
+                          locale={{ emptyText: '暂无统计数据' }}
+                        />
+                      </Col>
+                      <Col span={12}>
+                        <Typography.Title level={5} style={{ marginTop: 0 }}>房型月度表现</Typography.Title>
+                        <Table
+                          columns={roomTypeMonthlyColumns}
+                          dataSource={roomTypeMonthly}
+                          rowKey={(record) => `${record.month}-${record.roomTypeName}`}
+                          pagination={{ pageSize: 6 }}
+                          size="small"
+                          locale={{ emptyText: '暂无统计数据' }}
+                        />
+                      </Col>
+                    </Row>
+                  </Card>
+                )
+              }
+            ]}
+          />
 
           {/* 图片展示 */}
           {hotel.images && hotel.images.length > 1 && (
@@ -216,6 +666,70 @@ export default function HotelDetail() {
           </Card>
         </Col>
       </Row>
+      <DiscountModal
+        open={discountModal}
+        selectedRoom={selectedRoom}
+        onClose={() => {
+          setDiscountModal(false)
+          setSelectedRoom(null)
+        }}
+        onSubmit={handleSetDiscount}
+        loading={discountLoading}
+      />
     </>
+  )
+}
+
+function DiscountModal({ open, selectedRoom, onClose, onSubmit, loading }) {
+  const [form] = Form.useForm()
+
+  useEffect(() => {
+    if (open) {
+      form.setFieldsValue({ quantity: 1, discount: 9 })
+    }
+  }, [open, form])
+
+  const handleClose = () => {
+    form.resetFields()
+    onClose()
+  }
+
+  return (
+    <Modal
+      title={selectedRoom ? `设置折扣 - ${selectedRoom.name}` : '设置折扣'}
+      open={open}
+      onCancel={handleClose}
+      footer={null}
+      destroyOnHidden
+    >
+      <Form form={form} layout="vertical" initialValues={{ quantity: 1, discount: 9 }} onFinish={onSubmit}>
+        <Form.Item name="quantity" label="折扣数量" rules={[{ required: true }]}>
+          <InputNumber
+            min={1}
+            style={{ width: 150 }}
+            formatter={(value) => `${value} 间`}
+            parser={(value) => value?.replace(/[^\d]/g, '')}
+          />
+        </Form.Item>
+        <Form.Item name="discount" label="折扣力度" rules={[{ required: true }]}>
+          <InputNumber
+            min={1}
+            max={10}
+            step={0.5}
+            style={{ width: 150 }}
+            formatter={(value) => `${value} 折`}
+            parser={(value) => value?.replace(/[^\d.]/g, '')}
+          />
+        </Form.Item>
+        <Form.Item>
+          <Space>
+            <GlassButton type="primary" loading={loading} onClick={() => form.submit()}>
+              确认设置
+            </GlassButton>
+            <GlassButton onClick={handleClose}>取消</GlassButton>
+          </Space>
+        </Form.Item>
+      </Form>
+    </Modal>
   )
 }

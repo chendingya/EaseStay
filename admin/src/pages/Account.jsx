@@ -1,9 +1,8 @@
 import { Card, Form, Input, Space, Typography, Descriptions, Divider, Modal } from 'antd'
 import { useEffect, useState } from 'react'
 import { UserOutlined, LockOutlined, CalendarOutlined } from '@ant-design/icons'
-import { GlassButton, glassMessage as message } from '../components/GlassUI'
-
-const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:4100'
+import { GlassButton, glassMessage as message } from '../components'
+import { api } from '../services/request'
 
 export default function Account() {
   const [loading, setLoading] = useState(false)
@@ -13,21 +12,12 @@ export default function Account() {
   const [saving, setSaving] = useState(false)
 
   const fetchUser = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) return
-
     setLoading(true)
     try {
-      const response = await fetch(`${apiBase}/api/user/me`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const data = await response.json()
-      if (response.ok) {
-        setUser(data)
-      } else {
-        message.error(data.message || '获取用户信息失败')
-      }
-    } catch {
+      const data = await api.get('/api/user/me')
+      setUser(data)
+    } catch (error) {
+      console.error('获取用户信息失败:', error)
       message.error('获取用户信息失败')
     } finally {
       setLoading(false)
@@ -47,29 +37,16 @@ export default function Account() {
       }
 
       setSaving(true)
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${apiBase}/api/user/change-password`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          oldPassword: values.oldPassword,
-          newPassword: values.newPassword
-        })
+      await api.post('/api/user/change-password', {
+        oldPassword: values.oldPassword,
+        newPassword: values.newPassword
       })
-      const data = await response.json()
-
-      if (response.ok) {
-        message.success('密码修改成功')
-        setPasswordModal(false)
-        form.resetFields()
-      } else {
-        message.error(data.message || '修改密码失败')
-      }
+      message.success('密码修改成功')
+      setPasswordModal(false)
+      form.resetFields()
     } catch (err) {
-      if (err.errorFields) return // 表单验证失败
+      if (err.errorFields) return
+      console.error('修改密码失败:', err)
       message.error('修改密码失败')
     } finally {
       setSaving(false)

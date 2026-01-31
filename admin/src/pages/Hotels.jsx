@@ -2,9 +2,8 @@ import { Card, Table, Tag, Space, Typography, Input, Select, Modal, Upload, Aler
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SearchOutlined, UploadOutlined, DownloadOutlined, InboxOutlined, StopOutlined, CheckCircleOutlined } from '@ant-design/icons'
-import { GlassButton, glassMessage as message } from '../components/GlassUI'
-
-const apiBase = 'http://127.0.0.1:4100'
+import { GlassButton, glassMessage as message } from '../components'
+import { api } from '../services/request'
 
 const statusMap = {
   pending: { color: 'orange', label: '待审核' },
@@ -83,20 +82,12 @@ export default function Hotels() {
   const [importing, setImporting] = useState(false)
 
   const fetchHotels = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) return
     setLoading(true)
     try {
-      const response = await fetch(`${apiBase}/api/merchant/hotels`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        message.error(data.message || '获取酒店列表失败')
-        return
-      }
+      const data = await api.get('/api/merchant/hotels')
       setHotels(data)
-    } catch {
+    } catch (error) {
+      console.error('获取酒店列表失败:', error)
       message.error('获取酒店列表失败')
     } finally {
       setLoading(false)
@@ -129,26 +120,13 @@ export default function Hotels() {
 
   // 商户更新酒店状态
   const handleUpdateStatus = async (hotelId, action) => {
-    const token = localStorage.getItem('token')
-    if (!token) return
     try {
-      const response = await fetch(`${apiBase}/api/merchant/hotels/${hotelId}/status`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ action })
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        message.error(data.message || '操作失败')
-        return
-      }
+      await api.patch(`/api/merchant/hotels/${hotelId}/status`, { action })
       message.success(action === 'offline' ? '酒店已下线' : '酒店已恢复上架')
       fetchHotels()
-    } catch {
-      message.error('操作失败')
+    } catch (error) {
+      console.error('更新酒店状态失败:', error)
+      message.error('更新状态失败，请重试')
     }
   }
 
@@ -165,7 +143,8 @@ export default function Hotels() {
         }
         setImportData(data)
         message.success(`解析成功，共 ${data.length} 条数据`)
-      } catch (err) {
+      } catch (error) {
+        console.error('解析导入文件失败:', error)
         message.error('文件解析失败，请检查格式')
       }
     }
@@ -180,29 +159,16 @@ export default function Hotels() {
       return
     }
     
-    const token = localStorage.getItem('token')
-    if (!token) return
-    
     setImporting(true)
     let successCount = 0
     let failCount = 0
     
     for (const hotel of importData) {
       try {
-        const response = await fetch(`${apiBase}/api/merchant/hotels`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(hotel)
-        })
-        if (response.ok) {
-          successCount++
-        } else {
-          failCount++
-        }
-      } catch {
+        await api.post('/api/merchant/hotels', hotel)
+        successCount++
+      } catch (error) {
+        console.error('导入酒店失败:', error)
         failCount++
       }
     }

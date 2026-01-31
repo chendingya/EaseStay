@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Card, Descriptions, Tag, Space, Typography, Table, Spin, Row, Col, Statistic, Modal, Form, Input } from 'antd'
 import { UserOutlined, ShopOutlined, CalendarOutlined, KeyOutlined, StarFilled, EnvironmentOutlined } from '@ant-design/icons'
-import { GlassButton, glassMessage as message } from '../components/GlassUI'
-
-const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:4100'
+import { GlassButton, glassMessage as message } from '../components'
+import { api } from '../services/request'
 
 const statusMap = {
   pending: { color: 'orange', label: '待审核' },
@@ -22,31 +21,23 @@ export default function MerchantDetail() {
   const [resetting, setResetting] = useState(false)
   const [form] = Form.useForm()
 
-  const fetchMerchant = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) return
+  const fetchMerchant = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${apiBase}/api/user/merchants/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        message.error(data.message || '获取商户详情失败')
-        navigate('/merchants')
-        return
-      }
+      const data = await api.get(`/api/user/merchants/${id}`)
       setMerchant(data)
-    } catch {
-      message.error('获取商户详情失败')
+    } catch (error) {
+      if (error?.response?.status) {
+        navigate('/merchants')
+      }
     } finally {
       setLoading(false)
     }
-  }
+  }, [id, navigate])
 
   useEffect(() => {
     fetchMerchant()
-  }, [id])
+  }, [fetchMerchant])
 
   const handleResetPassword = async () => {
     try {
@@ -57,27 +48,12 @@ export default function MerchantDetail() {
       }
 
       setResetting(true)
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${apiBase}/api/user/merchants/${id}/reset-password`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ newPassword: values.newPassword })
-      })
-      const data = await response.json()
-
-      if (response.ok) {
-        message.success('密码重置成功')
-        setResetModal(false)
-        form.resetFields()
-      } else {
-        message.error(data.message || '重置密码失败')
-      }
+      await api.post(`/api/user/merchants/${id}/reset-password`, { newPassword: values.newPassword })
+      message.success('密码重置成功')
+      setResetModal(false)
+      form.resetFields()
     } catch (err) {
       if (err.errorFields) return
-      message.error('重置密码失败')
     } finally {
       setResetting(false)
     }

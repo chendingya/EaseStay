@@ -1,5 +1,5 @@
 import { Card, Typography, Tag, Descriptions, Image, Table, Space, Row, Col, Divider, Form, Input, Modal, Spin, Empty, Alert, Badge } from 'antd'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { 
   StarFilled, EnvironmentOutlined, CalendarOutlined, CheckCircleOutlined, 
@@ -7,9 +7,8 @@ import {
   GiftOutlined, AppstoreOutlined, CarOutlined, ShopOutlined, CompassOutlined,
   ExclamationCircleOutlined
 } from '@ant-design/icons'
-import { GlassButton, glassMessage as message } from '../components/GlassUI'
-
-const apiBase = 'http://127.0.0.1:4100'
+import { GlassButton, glassMessage as message } from '../components'
+import { api } from '../services/request'
 
 const statusMap = {
   pending: { color: 'orange', label: '待审核' },
@@ -36,66 +35,39 @@ export default function AuditDetail() {
   const [offlineForm] = Form.useForm()
   const [actionLoading, setActionLoading] = useState(false)
 
-  const fetchHotel = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) return
+  const fetchHotel = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${apiBase}/api/admin/hotels/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        message.error(data.message || '获取酒店详情失败')
-        return
-      }
+      const data = await api.get(`/api/admin/hotels/${id}`)
       setHotel(data)
-    } catch {
+    } catch (error) {
+      console.error('获取酒店详情失败:', error)
       message.error('获取酒店详情失败')
     } finally {
       setLoading(false)
     }
-  }
+  }, [id])
 
-  const fetchPendingRequests = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) return
+  const fetchPendingRequests = useCallback(async () => {
     try {
-      const response = await fetch(`${apiBase}/api/admin/requests?hotelId=${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const data = await response.json()
-      if (response.ok && Array.isArray(data)) {
+      const data = await api.get(`/api/admin/requests?hotelId=${id}`)
+      if (Array.isArray(data)) {
         setPendingRequests(data)
       }
-    } catch {
-      // 忽略错误
+    } catch (error) {
+      console.error('获取待审核申请失败:', error)
     }
-  }
+  }, [id])
 
   useEffect(() => {
     fetchHotel()
     fetchPendingRequests()
-  }, [id])
+  }, [fetchHotel, fetchPendingRequests])
 
   const updateStatus = async (status, rejectReason) => {
-    const token = localStorage.getItem('token')
-    if (!token) return
     setActionLoading(true)
     try {
-      const response = await fetch(`${apiBase}/api/admin/hotels/${id}/status`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status, rejectReason })
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        message.error(data.message || '操作失败')
-        return
-      }
+      await api.patch(`/api/admin/hotels/${id}/status`, { status, rejectReason })
       message.success(
         status === 'approved' ? '审核通过，已通知商户' 
         : status === 'rejected' ? '已驳回，已通知商户' 
@@ -107,8 +79,9 @@ export default function AuditDetail() {
       rejectForm.resetFields()
       offlineForm.resetFields()
       fetchHotel()
-    } catch {
-      message.error('操作失败')
+    } catch (error) {
+      console.error('更新酒店状态失败:', error)
+      message.error('操作失败，请重试')
     } finally {
       setActionLoading(false)
     }
