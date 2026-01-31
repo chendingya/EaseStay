@@ -1,4 +1,4 @@
-import { View, Text, Image, Swiper, SwiperItem } from '@tarojs/components'
+import { View, Text, Image, Swiper, SwiperItem, Input, Picker } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useEffect, useState } from 'react'
 import './index.css'
@@ -39,6 +39,30 @@ export default function Index() {
     return `${y}-${m}-${d}`
   }
 
+  const addDays = (dateStr, days) => {
+    const base = new Date(dateStr)
+    if (Number.isNaN(base.getTime())) return dateStr
+    base.setDate(base.getDate() + days)
+    return formatDate(base)
+  }
+
+  const handleCheckInChange = (e) => {
+    const value = e.detail.value
+    setCheckIn(value)
+    if (checkOut && new Date(checkOut) <= new Date(value)) {
+      setCheckOut(addDays(value, 1))
+    }
+  }
+
+  const handleCheckOutChange = (e) => {
+    const value = e.detail.value
+    if (checkIn && new Date(value) <= new Date(checkIn)) {
+      setCheckOut(addDays(checkIn, 1))
+      return
+    }
+    setCheckOut(value)
+  }
+
   const fetchHotHotels = async () => {
     try {
       const res = await Taro.request({
@@ -71,6 +95,14 @@ export default function Index() {
     })
   }
 
+  const handleBannerClick = () => {
+    if (!hotHotels.length) {
+      handleSearch()
+      return
+    }
+    handleHotelClick(hotHotels[0].id)
+  }
+
   const nights = () => {
     if (!checkIn || !checkOut) return 1
     const diff = (new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24)
@@ -83,7 +115,7 @@ export default function Index() {
       <Swiper className="banner-swiper" autoplay circular indicatorDots indicatorColor="rgba(255,255,255,0.5)" indicatorActiveColor="#fff">
         {bannerList.map(item => (
           <SwiperItem key={item.id}>
-            <View className="banner-item" style={{ background: `linear-gradient(135deg, ${item.color} 0%, ${item.color}99 100%)` }}>
+            <View className="banner-item" onClick={handleBannerClick} style={{ background: `linear-gradient(135deg, ${item.color} 0%, ${item.color}99 100%)` }}>
               <Text className="banner-title">{item.title}</Text>
             </View>
           </SwiperItem>
@@ -94,35 +126,39 @@ export default function Index() {
       <View className="search-card glass-card">
         <View className="search-row">
           <Text className="search-label">城市</Text>
-          <input
+          <Input
             className="search-input"
             placeholder="请输入城市"
             value={city}
-            onInput={(e) => setCity(e.target.value)}
+            onInput={(e) => setCity(e.detail.value)}
           />
         </View>
         <View className="search-row">
           <Text className="search-label">关键词</Text>
-          <input
+          <Input
             className="search-input"
             placeholder="酒店名/商圈/地标"
             value={keyword}
-            onInput={(e) => setKeyword(e.target.value)}
+            onInput={(e) => setKeyword(e.detail.value)}
           />
         </View>
         <View className="date-row">
-          <View className="date-item">
-            <Text className="date-label">入住</Text>
-            <Text className="date-value">{checkIn}</Text>
-          </View>
+          <Picker mode="date" value={checkIn} onChange={handleCheckInChange}>
+            <View className="date-item">
+              <Text className="date-label">入住</Text>
+              <Text className="date-value">{checkIn}</Text>
+            </View>
+          </Picker>
           <View className="date-nights">
             <Text className="nights-num">{nights()}</Text>
             <Text className="nights-text">晚</Text>
           </View>
-          <View className="date-item">
-            <Text className="date-label">离店</Text>
-            <Text className="date-value">{checkOut}</Text>
-          </View>
+          <Picker mode="date" value={checkOut} onChange={handleCheckOutChange}>
+            <View className="date-item">
+              <Text className="date-label">离店</Text>
+              <Text className="date-value">{checkOut}</Text>
+            </View>
+          </Picker>
         </View>
         <View className="search-btn" onClick={handleSearch}>
           搜索酒店

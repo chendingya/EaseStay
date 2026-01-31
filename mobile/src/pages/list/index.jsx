@@ -50,7 +50,7 @@ export default function List() {
       if (res.data) {
         const { list = [], total: t = 0 } = res.data
         setTotal(t)
-        setHotels(append ? [...hotels, ...list] : list)
+        setHotels((prev) => append ? [...prev, ...list] : list)
         setHasMore(list.length === 10)
         setPage(pageNum)
       }
@@ -60,11 +60,13 @@ export default function List() {
     } finally {
       setLoading(false)
     }
-  }, [city, keyword, checkIn, checkOut, sort, hotels, loading])
+  }, [city, keyword, checkIn, checkOut, sort, loading])
 
   useEffect(() => {
+    setPage(1)
+    setHotels([])
     fetchHotels(1, false)
-  }, [sort])
+  }, [sort, city, keyword, checkIn, checkOut, fetchHotels])
 
   const handleLoadMore = () => {
     if (hasMore && !loading) {
@@ -90,13 +92,52 @@ export default function List() {
     return Math.max(1, diff)
   }
 
+  const applyFilter = (list) => {
+    if (activeFilter === '不限') return list
+    if (activeFilter === '五星' || activeFilter === '四星') {
+      const target = activeFilter === '五星' ? 5 : 4
+      return list.filter((hotel) => Number(hotel.star_rating) === target)
+    }
+    if (activeFilter === '含早') {
+      return list.filter((hotel) => {
+        const facilities = hotel.facilities || []
+        return facilities.includes('含早') || facilities.includes('早餐') || facilities.includes('含早餐')
+      })
+    }
+    if (activeFilter === '免费停车') {
+      return list.filter((hotel) => {
+        const facilities = hotel.facilities || []
+        return facilities.includes('免费停车') || facilities.includes('停车场')
+      })
+    }
+    return list.filter((hotel) => {
+      const facilities = hotel.facilities || []
+      return facilities.includes(activeFilter) || hotel.name?.includes(activeFilter) || hotel.name_en?.includes(activeFilter)
+    })
+  }
+
+  const applySort = (list) => {
+    if (sort === 'price_asc') {
+      return [...list].sort((a, b) => (Number(a.lowestPrice) || 0) - (Number(b.lowestPrice) || 0))
+    }
+    if (sort === 'price_desc') {
+      return [...list].sort((a, b) => (Number(b.lowestPrice) || 0) - (Number(a.lowestPrice) || 0))
+    }
+    if (sort === 'star') {
+      return [...list].sort((a, b) => (Number(b.star_rating) || 0) - (Number(a.star_rating) || 0))
+    }
+    return list
+  }
+
+  const displayHotels = applySort(applyFilter(hotels))
+
   return (
     <View className="list-page">
       {/* 日期和城市信息 */}
       <View className="list-header glass-card">
         <View className="header-info">
           <Text className="header-city">{city || '全部城市'}</Text>
-          <Text className="header-date">{checkIn} - {checkOut} · {nights()}晚</Text>
+          <Text className="header-date">{checkIn || '选择日期'} - {checkOut || '选择日期'} · {nights()}晚</Text>
         </View>
         {keyword && <Text className="header-keyword">"{keyword}"</Text>}
       </View>
@@ -134,7 +175,7 @@ export default function List() {
         onScrollToLower={handleLoadMore}
         lowerThreshold={100}
       >
-        {hotels.map(hotel => (
+        {displayHotels.map(hotel => (
           <View key={hotel.id} className="hotel-card glass-card" onClick={() => handleHotelClick(hotel.id)}>
             <View className="hotel-img-wrap">
               {hotel.images && hotel.images[0] ? (
@@ -182,7 +223,7 @@ export default function List() {
         {!loading && !hasMore && hotels.length > 0 && (
           <View className="loading-tip">没有更多了</View>
         )}
-        {!loading && hotels.length === 0 && (
+        {!loading && displayHotels.length === 0 && (
           <View className="empty-tip">暂无酒店数据</View>
         )}
       </ScrollView>

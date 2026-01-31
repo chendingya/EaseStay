@@ -406,6 +406,41 @@
   color: #666;
 }
 
+/* 周边信息 */
+.nearby-section {
+  margin: 12px;
+  padding: 14px 16px;
+}
+
+.nearby-item {
+  margin-bottom: 12px;
+}
+
+.nearby-item:last-child {
+  margin-bottom: 0;
+}
+
+.nearby-label {
+  font-size: 13px;
+  color: #999;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.nearby-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nearby-tag {
+  font-size: 12px;
+  color: #1677ff;
+  background: rgba(22, 119, 255, 0.08);
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
 /* 酒店政策 */
 .policy-section {
   margin: 12px;

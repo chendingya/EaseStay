@@ -98,9 +98,22 @@ export default function Detail() {
     ? hotel.facilities 
     : defaultFacilities
   
-  const roomTypes = hotel.room_types?.length > 0 
-    ? hotel.room_types 
-    : defaultRoomTypes
+  const rawRoomTypes = hotel.roomTypes?.length > 0
+    ? hotel.roomTypes
+    : hotel.room_types?.length > 0
+      ? hotel.room_types
+      : defaultRoomTypes
+
+  const roomTypes = [...rawRoomTypes].sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0))
+  const minRoomPrice = roomTypes.length ? roomTypes[0].price : 299
+
+  const nights = () => {
+    if (!checkIn || !checkOut) return 1
+    const diff = (new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24)
+    return Math.max(1, diff)
+  }
+
+  const openingYear = hotel.opening_time ? hotel.opening_time.split('-')[0] : ''
 
   return (
     <View className="detail-page">
@@ -160,8 +173,8 @@ export default function Detail() {
             <Text className="location-text">{hotel.city} {hotel.address}</Text>
           </View>
 
-          {hotel.opening_year && (
-            <Text className="hotel-meta">{hotel.opening_year}年开业 · 装修时间</Text>
+          {openingYear && (
+            <Text className="hotel-meta">{openingYear}年开业</Text>
           )}
 
           {/* 标签 */}
@@ -183,12 +196,24 @@ export default function Detail() {
         {hotel.promotions?.length > 0 && (
           <View className="promo-section glass-card">
             <Text className="section-title">优惠活动</Text>
-            {hotel.promotions.map((promo, idx) => (
-              <View key={idx} className="promo-item">
-                <Text className="promo-tag">惠</Text>
-                <Text className="promo-text">{promo}</Text>
-              </View>
-            ))}
+            {hotel.promotions.map((promo, idx) => {
+              if (typeof promo === 'string') {
+                return (
+                  <View key={idx} className="promo-item">
+                    <Text className="promo-tag">惠</Text>
+                    <Text className="promo-text">{promo}</Text>
+                  </View>
+                )
+              }
+              const label = promo.title || promo.type || '优惠'
+              const value = promo.value ? `${promo.value}折` : ''
+              return (
+                <View key={idx} className="promo-item">
+                  <Text className="promo-tag">惠</Text>
+                  <Text className="promo-text">{label} {value}</Text>
+                </View>
+              )
+            })}
           </View>
         )}
 
@@ -200,7 +225,7 @@ export default function Detail() {
               <Text className="date-value">{checkIn || '选择日期'}</Text>
             </View>
             <View className="date-divider">
-              <Text className="nights-text">1晚</Text>
+              <Text className="nights-text">{nights()}晚</Text>
             </View>
             <View className="date-item">
               <Text className="date-label">离店</Text>
@@ -253,6 +278,42 @@ export default function Detail() {
           </View>
         </View>
 
+        {(hotel.nearby_attractions?.length || hotel.nearby_transport?.length || hotel.nearby_malls?.length) && (
+          <View className="nearby-section glass-card">
+            <Text className="section-title">周边信息</Text>
+            {hotel.nearby_attractions?.length > 0 && (
+              <View className="nearby-item">
+                <Text className="nearby-label">热门景点</Text>
+                <View className="nearby-tags">
+                  {hotel.nearby_attractions.map((item, idx) => (
+                    <Text key={idx} className="nearby-tag">{item}</Text>
+                  ))}
+                </View>
+              </View>
+            )}
+            {hotel.nearby_transport?.length > 0 && (
+              <View className="nearby-item">
+                <Text className="nearby-label">交通出行</Text>
+                <View className="nearby-tags">
+                  {hotel.nearby_transport.map((item, idx) => (
+                    <Text key={idx} className="nearby-tag">{item}</Text>
+                  ))}
+                </View>
+              </View>
+            )}
+            {hotel.nearby_malls?.length > 0 && (
+              <View className="nearby-item">
+                <Text className="nearby-label">购物商场</Text>
+                <View className="nearby-tags">
+                  {hotel.nearby_malls.map((item, idx) => (
+                    <Text key={idx} className="nearby-tag">{item}</Text>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* 酒店政策 */}
         <View className="policy-section glass-card">
           <Text className="section-title">酒店政策</Text>
@@ -289,7 +350,7 @@ export default function Detail() {
         <View className="bottom-right">
           <View className="price-info">
             <Text className="price-from">¥</Text>
-            <Text className="price-value">{hotel.price || roomTypes[0]?.price || 299}</Text>
+            <Text className="price-value">{hotel.price || minRoomPrice}</Text>
             <Text className="price-suffix">起</Text>
           </View>
           <View className="main-book-btn" onClick={() => handleBook(roomTypes[0])}>
