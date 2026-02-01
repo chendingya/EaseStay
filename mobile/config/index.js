@@ -9,7 +9,10 @@ const config = {
   },
   sourceRoot: 'src',
   outputRoot: 'dist',
-  plugins: ['@tarojs/plugin-platform-h5'],
+  plugins: [
+    '@tarojs/plugin-platform-h5',
+    '@tarojs/plugin-html'
+  ],
   defineConstants: {},
   copy: {
     patterns: [],
