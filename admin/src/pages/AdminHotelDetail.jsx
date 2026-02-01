@@ -36,6 +36,12 @@ export default function AdminHotelDetail() {
     fetchHotel()
   }, [fetchHotel])
 
+  useEffect(() => {
+    const handleFocus = () => fetchHotel()
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [fetchHotel])
+
   // 下架酒店
   const handleOffline = () => {
     let reason = ''
@@ -135,6 +141,9 @@ export default function AdminHotelDetail() {
           )}
         </div>
         <Space>
+          <GlassButton onClick={fetchHotel}>
+            刷新
+          </GlassButton>
           <GlassButton onClick={() => navigate('/admin-hotels')}>
             返回列表
           </GlassButton>

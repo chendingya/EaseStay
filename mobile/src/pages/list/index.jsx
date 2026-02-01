@@ -1,9 +1,8 @@
 import { View, Text, Image, ScrollView } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useEffect, useState, useCallback } from 'react'
+import { api } from '../../services/request'
 import './index.css'
-
-const API_BASE = 'http://127.0.0.1:4100'
 
 // 排序选项
 const sortOptions = [
@@ -20,13 +19,28 @@ export default function List() {
   const router = useRouter()
   const { city = '', keyword = '', checkIn = '', checkOut = '' } = router.params || {}
   
+  const decodeValue = (value) => {
+    if (!value) return ''
+    try {
+      return decodeURIComponent(value)
+    } catch {
+      return value
+    }
+  }
+
+  const displayCity = decodeValue(city)
+  const displayKeyword = decodeValue(keyword)
+  const displayCheckIn = decodeValue(checkIn)
+  const displayCheckOut = decodeValue(checkOut)
+  const headerTitle = displayCity || displayKeyword || '全部城市'
+
   const [hotels, setHotels] = useState([])
   const [loading, setLoading] = useState(false)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [total, setTotal] = useState(0)
   const [sort, setSort] = useState('recommend')
-  const [activeFilter, setActiveFilter] = useState('不限')
+  const [activeFilters, setActiveFilters] = useState(['不限'])
 
   const fetchHotels = useCallback(async (pageNum = 1, append = false) => {
     if (loading) return
@@ -34,39 +48,33 @@ export default function List() {
     
     try {
       const params = new URLSearchParams()
-      if (city) params.append('city', city)
-      if (keyword) params.append('keyword', keyword)
-      if (checkIn) params.append('checkIn', checkIn)
-      if (checkOut) params.append('checkOut', checkOut)
+      if (displayCity) params.append('city', displayCity)
+      if (displayKeyword) params.append('keyword', displayKeyword)
+      if (displayCheckIn) params.append('checkIn', displayCheckIn)
+      if (displayCheckOut) params.append('checkOut', displayCheckOut)
       if (sort) params.append('sort', sort)
       params.append('page', pageNum)
       params.append('pageSize', 10)
 
-      const res = await Taro.request({
-        url: `${API_BASE}/api/hotels?${params.toString()}`,
-        method: 'GET'
-      })
-      
-      if (res.data) {
-        const { list = [], total: t = 0 } = res.data
+      const data = await api.get(`/api/hotels?${params.toString()}`)
+
+      if (data) {
+        const { list = [], total: t = 0 } = data
         setTotal(t)
         setHotels((prev) => append ? [...prev, ...list] : list)
         setHasMore(list.length === 10)
         setPage(pageNum)
       }
-    } catch (err) {
-      console.error('获取酒店列表失败', err)
-      Taro.showToast({ title: '加载失败', icon: 'none' })
-    } finally {
+    } catch (err) {} finally {
       setLoading(false)
     }
-  }, [city, keyword, checkIn, checkOut, sort, loading])
+  }, [displayCity, displayKeyword, displayCheckIn, displayCheckOut, sort, loading])
 
   useEffect(() => {
     setPage(1)
     setHotels([])
     fetchHotels(1, false)
-  }, [sort, city, keyword, checkIn, checkOut, fetchHotels])
+  }, [sort, displayCity, displayKeyword, displayCheckIn, displayCheckOut, fetchHotels])
 
   const handleLoadMore = () => {
     if (hasMore && !loading) {
@@ -87,33 +95,35 @@ export default function List() {
   }
 
   const nights = () => {
-    if (!checkIn || !checkOut) return 1
-    const diff = (new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24)
+    if (!displayCheckIn || !displayCheckOut) return 1
+    const diff = (new Date(displayCheckOut) - new Date(displayCheckIn)) / (1000 * 60 * 60 * 24)
     return Math.max(1, diff)
   }
 
   const applyFilter = (list) => {
-    if (activeFilter === '不限') return list
-    if (activeFilter === '五星' || activeFilter === '四星') {
-      const target = activeFilter === '五星' ? 5 : 4
-      return list.filter((hotel) => Number(hotel.star_rating) === target)
-    }
-    if (activeFilter === '含早') {
-      return list.filter((hotel) => {
+    if (!activeFilters.length || activeFilters.includes('不限')) return list
+    return activeFilters.reduce((filtered, filterTag) => {
+      if (filterTag === '五星' || filterTag === '四星') {
+        const target = filterTag === '五星' ? 5 : 4
+        return filtered.filter((hotel) => Number(hotel.star_rating) === target)
+      }
+      if (filterTag === '含早') {
+        return filtered.filter((hotel) => {
+          const facilities = hotel.facilities || []
+          return facilities.includes('含早') || facilities.includes('早餐') || facilities.includes('含早餐')
+        })
+      }
+      if (filterTag === '免费停车') {
+        return filtered.filter((hotel) => {
+          const facilities = hotel.facilities || []
+          return facilities.includes('免费停车') || facilities.includes('停车场')
+        })
+      }
+      return filtered.filter((hotel) => {
         const facilities = hotel.facilities || []
-        return facilities.includes('含早') || facilities.includes('早餐') || facilities.includes('含早餐')
+        return facilities.includes(filterTag) || hotel.name?.includes(filterTag) || hotel.name_en?.includes(filterTag)
       })
-    }
-    if (activeFilter === '免费停车') {
-      return list.filter((hotel) => {
-        const facilities = hotel.facilities || []
-        return facilities.includes('免费停车') || facilities.includes('停车场')
-      })
-    }
-    return list.filter((hotel) => {
-      const facilities = hotel.facilities || []
-      return facilities.includes(activeFilter) || hotel.name?.includes(activeFilter) || hotel.name_en?.includes(activeFilter)
-    })
+    }, list)
   }
 
   const applySort = (list) => {
@@ -133,13 +143,22 @@ export default function List() {
 
   return (
     <View className="list-page">
-      {/* 日期和城市信息 */}
-      <View className="list-header glass-card">
-        <View className="header-info">
-          <Text className="header-city">{city || '全部城市'}</Text>
-          <Text className="header-date">{checkIn || '选择日期'} - {checkOut || '选择日期'} · {nights()}晚</Text>
+      <View className="list-topbar">
+        <View className="topbar-left" onClick={() => Taro.navigateBack()}>
+          <Text className="topbar-back">‹</Text>
         </View>
-        {keyword && <Text className="header-keyword">"{keyword}"</Text>}
+        <Text className="topbar-title">酒店列表</Text>
+        <View className="topbar-right"></View>
+      </View>
+
+      <View className="list-header">
+        <View className="header-content">
+          <Text className="header-title">{headerTitle}</Text>
+          <Text className="header-subtitle">
+            {displayCheckIn || '选择日期'} - {displayCheckOut || '选择日期'} · {nights()}晚
+          </Text>
+        </View>
+        {!!displayKeyword && displayKeyword !== headerTitle && <Text className="header-tag">{displayKeyword}</Text>}
       </View>
 
       {/* 排序和筛选 */}
@@ -159,8 +178,17 @@ export default function List() {
           {filterTags.map((tag, idx) => (
             <View
               key={idx}
-              className={`filter-tag ${activeFilter === tag ? 'active' : ''}`}
-              onClick={() => setActiveFilter(tag)}
+              className={`filter-tag ${activeFilters.includes(tag) ? 'active' : ''}`}
+              onClick={() => {
+                if (tag === '不限') {
+                  setActiveFilters(['不限'])
+                  return
+                }
+                const next = activeFilters.includes(tag)
+                  ? activeFilters.filter((item) => item !== tag)
+                  : [...activeFilters.filter((item) => item !== '不限'), tag]
+                setActiveFilters(next.length ? next : ['不限'])
+              }}
             >
               {tag}
             </View>

@@ -1,9 +1,8 @@
 import { View, Text, Image, Swiper, SwiperItem, Input, Picker } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useEffect, useState } from 'react'
+import { api } from '../../services/request'
 import './index.css'
-
-const API_BASE = 'http://127.0.0.1:4100'
 
 // 轮播 Banner 数据
 const bannerList = [
@@ -65,16 +64,11 @@ export default function Index() {
 
   const fetchHotHotels = async () => {
     try {
-      const res = await Taro.request({
-        url: `${API_BASE}/api/hotels?pageSize=4`,
-        method: 'GET'
-      })
-      if (res.data && res.data.list) {
-        setHotHotels(res.data.list)
+      const data = await api.get('/api/hotels?pageSize=4')
+      if (data && data.list) {
+        setHotHotels(data.list)
       }
-    } catch (err) {
-      console.error('获取酒店失败', err)
-    }
+    } catch (err) {}
   }
 
   const handleSearch = () => {

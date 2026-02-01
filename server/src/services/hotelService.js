@@ -838,6 +838,8 @@ const listPublicHotels = async ({ query }) => {
     city,
     keyword,
     sort,
+    checkIn,
+    checkOut,
     page = 1,
     pageSize = 10
   } = query || {}
@@ -852,7 +854,7 @@ const listPublicHotels = async ({ query }) => {
     .eq('status', 'approved')
 
   if (city) {
-    dbQuery = dbQuery.eq('city', city)
+    dbQuery = dbQuery.ilike('city', `%${city}%`)
   }
 
   if (keyword) {
@@ -873,12 +875,14 @@ const listPublicHotels = async ({ query }) => {
     lowestPrice: priceMap[hotel.id]
   }))
 
-  // 排序
   if (sort === 'price_asc') {
     enriched.sort((a, b) => (a.lowestPrice || 0) - (b.lowestPrice || 0))
-  }
-  if (sort === 'score_desc') {
+  } else if (sort === 'price_desc') {
+    enriched.sort((a, b) => (b.lowestPrice || 0) - (a.lowestPrice || 0))
+  } else if (sort === 'star' || sort === 'score_desc') {
     enriched.sort((a, b) => (b.star_rating || 0) - (a.star_rating || 0))
+  } else if (sort === 'recommend') {
+    enriched.sort((a, b) => (b.star_rating || 0) - (a.star_rating || 0) || (a.lowestPrice || 0) - (b.lowestPrice || 0))
   }
 
   return {
@@ -913,6 +917,117 @@ const getPublicHotel = async ({ hotelId }) => {
     .order('price', { ascending: true })
 
   return { ok: true, status: 200, data: { ...hotel, roomTypes: roomTypes || [] } }
+}
+
+const createPublicOrder = async ({ hotelId, payload }) => {
+  const {
+    roomTypeId,
+    roomTypeName,
+    quantity = 1,
+    checkIn,
+    checkOut
+  } = payload || {}
+
+  if (!hotelId) {
+    return { ok: false, status: 400, message: 'hotelId 不能为空' }
+  }
+  if (!roomTypeId && !roomTypeName) {
+    return { ok: false, status: 400, message: 'roomTypeId 或 roomTypeName 不能为空' }
+  }
+
+  const { data: hotel, error: hotelError } = await supabase
+    .from('hotels')
+    .select('id, merchant_id, status')
+    .eq('id', hotelId)
+    .eq('status', 'approved')
+    .single()
+
+  if (hotelError || !hotel) {
+    return { ok: false, status: 404, message: '酒店不存在或未上架' }
+  }
+
+  let roomQuery = supabase
+    .from('room_types')
+    .select('*')
+    .eq('hotel_id', hotelId)
+
+  if (roomTypeId) {
+    roomQuery = roomQuery.eq('id', roomTypeId)
+  } else {
+    roomQuery = roomQuery.eq('name', roomTypeName)
+  }
+
+  const { data: room, error: roomError } = await roomQuery.single()
+
+  if (roomError || !room) {
+    return { ok: false, status: 404, message: '房型不存在' }
+  }
+
+  const normalizedQuantity = Math.max(normalizeNumber(quantity), 1)
+  const stock = normalizeNumber(room.stock)
+  const used = normalizeNumber(room.used_stock)
+  const offline = normalizeNumber(room.offline_stock)
+  const available = Math.max(stock - used - offline, 0)
+
+  if (available < normalizedQuantity) {
+    return { ok: false, status: 400, message: '房型库存不足' }
+  }
+
+  let nights = 1
+  let checkInValue = null
+  let checkOutValue = null
+
+  if (checkIn || checkOut) {
+    const checkInDate = checkIn ? new Date(checkIn) : null
+    const checkOutDate = checkOut ? new Date(checkOut) : null
+    if (!checkInDate || Number.isNaN(checkInDate.getTime()) || !checkOutDate || Number.isNaN(checkOutDate.getTime())) {
+      return { ok: false, status: 400, message: '入住或离店日期不合法' }
+    }
+    const diff = (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)
+    if (diff <= 0) {
+      return { ok: false, status: 400, message: '离店日期需晚于入住日期' }
+    }
+    nights = Math.max(1, Math.round(diff))
+    checkInValue = checkIn
+    checkOutValue = checkOut
+  }
+
+  const pricePerNight = normalizeNumber(room.price)
+  const totalPrice = Math.round(pricePerNight * normalizedQuantity * nights * 100) / 100
+
+  const { data: order, error: orderError } = await supabase
+    .from('orders')
+    .insert({
+      hotel_id: hotelId,
+      merchant_id: hotel.merchant_id,
+      room_type_id: room.id,
+      room_type_name: room.name,
+      quantity: normalizedQuantity,
+      price_per_night: pricePerNight,
+      nights,
+      total_price: totalPrice,
+      status: 'confirmed',
+      check_in: checkInValue,
+      check_out: checkOutValue
+    })
+    .select()
+    .single()
+
+  if (orderError) {
+    return { ok: false, status: 500, message: '创建订单失败：' + orderError.message }
+  }
+
+  const { error: updateError } = await supabase
+    .from('room_types')
+    .update({ used_stock: used + normalizedQuantity })
+    .eq('id', room.id)
+
+  if (updateError) {
+    await supabase.from('orders').delete().eq('id', order.id)
+    return { ok: false, status: 500, message: '更新库存失败：' + updateError.message }
+  }
+
+  return { ok: true, status: 201, data: order }
 }
 
 // 管理员获取酒店详情（可查看任意状态）
@@ -991,6 +1106,7 @@ module.exports = {
   updateMerchantHotelStatus,
   listPublicHotels,
   getPublicHotel,
+  createPublicOrder,
   getRoomTypeStatsByHotelIds,
   batchSetRoomDiscount,
   batchRoomOperation,

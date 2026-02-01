@@ -1,5 +1,5 @@
 const express = require('express')
-const { list, detail } = require('../controllers/publicHotelsController')
+const { list, detail, createOrder } = require('../controllers/publicHotelsController')
 
 const router = express.Router()
 
@@ -60,5 +60,41 @@ router.get('/', list)
  *         description: ok
  */
 router.get('/:id', detail)
+
+/**
+ * @openapi
+ * /api/hotels/{id}/orders:
+ *   post:
+ *     tags:
+ *       - Public
+ *     summary: 创建酒店订单
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: number
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               roomTypeId:
+ *                 type: number
+ *               roomTypeName:
+ *                 type: string
+ *               quantity:
+ *                 type: number
+ *               checkIn:
+ *                 type: string
+ *               checkOut:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: ok
+ */
+router.post('/:id/orders', createOrder)
 
 module.exports = router

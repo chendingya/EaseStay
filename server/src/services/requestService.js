@@ -114,7 +114,6 @@ const reviewRequest = async ({ requestId, action, rejectReason }) => {
     return { ok: false, status: 500, message: '更新申请状态失败' }
   }
 
-  // 如果批准，将内容添加到酒店
   if (action === 'approve' && request.hotel_id) {
     const { data: hotel } = await supabase
       .from('hotels')

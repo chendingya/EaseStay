@@ -1,4 +1,4 @@
-const { listPublicHotels, getPublicHotel } = require('../services/hotelService')
+const { listPublicHotels, getPublicHotel, createPublicOrder } = require('../services/hotelService')
 
 const list = async (req, res) => {
   const result = await listPublicHotels({ query: req.query })
@@ -14,7 +14,20 @@ const detail = async (req, res) => {
   res.status(result.status).json(result.data)
 }
 
+const createOrder = async (req, res) => {
+  const result = await createPublicOrder({
+    hotelId: Number(req.params.id),
+    payload: req.body
+  })
+  if (!result.ok) {
+    res.status(result.status).json({ message: result.message })
+    return
+  }
+  res.status(result.status).json(result.data)
+}
+
 module.exports = {
   list,
-  detail
+  detail,
+  createOrder
 }

@@ -179,7 +179,7 @@ function ImageUploader({ value = [], onChange }) {
 }
 
 // ========== 设施标签选择器 ==========
-function FacilitySelector({ value = [], onChange, pendingRequests = [], onRequestNew, presetFacilities = [] }) {
+function FacilitySelector({ value = [], onChange, pendingRequests = [], approvedRequests = [], onRequestNew, onReuseApproved, presetFacilities = [] }) {
   const [customFacility, setCustomFacility] = useState('')
   const [showCustomInput, setShowCustomInput] = useState(false)
 
@@ -211,6 +211,27 @@ function FacilitySelector({ value = [], onChange, pendingRequests = [], onReques
         </div>
       </div>
 
+      {approvedRequests.length > 0 && (
+        <div style={{ padding: '8px 12px', background: '#f6ffed', borderRadius: 8, border: '1px solid #b7eb8f' }}>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>已通过申请（点击添加/撤销）：</Typography.Text>
+          <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {approvedRequests.map((req, idx) => {
+              const exists = value.includes(req.name)
+              return (
+                <Tag
+                  key={`${req.id || req.name}-${idx}`}
+                  color={exists ? 'default' : 'green'}
+                  style={{ cursor: 'pointer', margin: 0 }}
+                  onClick={() => onReuseApproved?.(req, exists ? 'remove' : 'add')}
+                >
+                  {req.name}{exists ? '（点击撤销）' : ''}
+                </Tag>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {pendingRequests.length > 0 && (
         <div style={{ padding: '8px 12px', background: '#fffbe6', borderRadius: 8, border: '1px solid #ffe58f' }}>
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>待审核设施：</Typography.Text>
@@ -238,7 +259,7 @@ function FacilitySelector({ value = [], onChange, pendingRequests = [], onReques
 }
 
 // ========== 房型管理组件 ==========
-function RoomTypeManager({ value = [], onChange, pendingRequests = [], onRequestNew, presetRoomTypes = [] }) {
+function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedRequests = [], onRequestNew, onReuseApproved, presetRoomTypes = [] }) {
   const [showPresets, setShowPresets] = useState(false)
   const [customRoom, setCustomRoom] = useState({ name: '', price: 0, stock: 10 })
   const [showCustomInput, setShowCustomInput] = useState(false)
@@ -274,6 +295,30 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], onRequest
           <Col span={5}><GlassButton type="link" danger icon={<DeleteOutlined />} onClick={() => handleRemove(index)}>删除</GlassButton></Col>
         </Row>
       ))}
+
+      {approvedRequests.length > 0 && (
+        <div style={{ padding: '8px 12px', background: '#f6ffed', borderRadius: 8, border: '1px solid #b7eb8f' }}>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>已通过申请（点击添加/撤销）：</Typography.Text>
+          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {approvedRequests.map((req, idx) => {
+              const exists = value.some((room) => room && room.name === req.name)
+              const price = req.data?.price ?? 0
+              const stock = req.data?.stock ?? 0
+              return (
+                <div key={`${req.id || req.name}-${idx}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ fontSize: 13 }}>
+                    <Tag color={exists ? 'default' : 'green'} style={{ marginRight: 8 }}>{req.name}</Tag>
+                    <span style={{ color: '#999' }}>¥{price} / 库存 {stock}</span>
+                  </div>
+                  <GlassButton size="small" onClick={() => onReuseApproved?.(req, exists ? 'remove' : 'add')}>
+                    {exists ? '撤销' : '添加'}
+                  </GlassButton>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {pendingRequests.length > 0 && (
         <div style={{ padding: '8px 12px', background: '#fffbe6', borderRadius: 8 }}>
@@ -316,7 +361,7 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], onRequest
 }
 
 // ========== 优惠管理组件 ==========
-function PromotionManager({ value = [], onChange, pendingRequests = [], onRequestNew, presetPromotionTypes = [] }) {
+function PromotionManager({ value = [], onChange, pendingRequests = [], approvedRequests = [], onRequestNew, onReuseApproved, presetPromotionTypes = [] }) {
   const [showPresets, setShowPresets] = useState(false)
   const [customPromo, setCustomPromo] = useState({ type: '', title: '', value: 0 })
   const [showCustomInput, setShowCustomInput] = useState(false)
@@ -352,6 +397,31 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], onReques
           <Col span={4}><GlassButton type="link" danger icon={<DeleteOutlined />} onClick={() => handleRemove(index)}>删除</GlassButton></Col>
         </Row>
       ))}
+
+      {approvedRequests.length > 0 && (
+        <div style={{ padding: '8px 12px', background: '#f6ffed', borderRadius: 8, border: '1px solid #b7eb8f' }}>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>已通过申请（点击添加/撤销）：</Typography.Text>
+          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {approvedRequests.map((req, idx) => {
+              const exists = value.some((promo) => promo && promo.title === req.name && promo.type === (req.data?.type || ''))
+              const type = req.data?.type || ''
+              const valueText = req.data?.value ?? 0
+              return (
+                <div key={`${req.id || req.name}-${idx}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ fontSize: 13 }}>
+                    {type && <Tag color={exists ? 'default' : 'green'} style={{ marginRight: 8 }}>{type}</Tag>}
+                    <span>{req.name}</span>
+                    <span style={{ color: '#f5222d', marginLeft: 8 }}>{valueText}折</span>
+                  </div>
+                  <GlassButton size="small" onClick={() => onReuseApproved?.(req, exists ? 'remove' : 'add')}>
+                    {exists ? '撤销' : '添加'}
+                  </GlassButton>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {pendingRequests.length > 0 && (
         <div style={{ padding: '8px 12px', background: '#fffbe6', borderRadius: 8 }}>
@@ -603,6 +673,9 @@ export default function HotelEdit() {
   const [pendingFacilities, setPendingFacilities] = useState([])
   const [pendingRoomTypes, setPendingRoomTypes] = useState([])
   const [pendingPromotions, setPendingPromotions] = useState([])
+  const [approvedFacilities, setApprovedFacilities] = useState([])
+  const [approvedRoomTypes, setApprovedRoomTypes] = useState([])
+  const [approvedPromotions, setApprovedPromotions] = useState([])
 
   // 预设数据 state
   const [presets, setPresets] = useState({
@@ -632,6 +705,24 @@ export default function HotelEdit() {
       }
     }
     fetchPresets()
+  }, [])
+
+  useEffect(() => {
+    const fetchApprovedRequests = async () => {
+      try {
+        const [facilities, roomTypes, promotions] = await Promise.all([
+          api.get('/api/requests?status=approved&type=facility'),
+          api.get('/api/requests?status=approved&type=room_type'),
+          api.get('/api/requests?status=approved&type=promotion')
+        ])
+        setApprovedFacilities(Array.isArray(facilities) ? facilities : [])
+        setApprovedRoomTypes(Array.isArray(roomTypes) ? roomTypes : [])
+        setApprovedPromotions(Array.isArray(promotions) ? promotions : [])
+      } catch (error) {
+        console.error('获取已通过申请失败:', error)
+      }
+    }
+    fetchApprovedRequests()
   }, [])
 
   useEffect(() => {
@@ -716,6 +807,62 @@ export default function HotelEdit() {
     }
   }
 
+  const handleReuseFacility = (req, action) => {
+    const current = form.getFieldValue('facilities') || []
+    if (action === 'remove') {
+      if (current.includes(req.name)) {
+        form.setFieldsValue({ facilities: current.filter((item) => item !== req.name) })
+        handleFormChange()
+      }
+      return
+    }
+    if (!current.includes(req.name)) {
+      form.setFieldsValue({ facilities: [...current, req.name] })
+      handleFormChange()
+    }
+  }
+
+  const handleReuseRoomType = (req, action) => {
+    const current = form.getFieldValue('roomTypes') || []
+    const exists = current.some((room) => room && room.name === req.name)
+    if (action === 'remove') {
+      if (exists) {
+        form.setFieldsValue({
+          roomTypes: current.filter((room) => room && room.name !== req.name)
+        })
+        handleFormChange()
+      }
+      return
+    }
+    if (!exists) {
+      form.setFieldsValue({
+        roomTypes: [...current, { name: req.name, price: req.data?.price || 0, stock: req.data?.stock || 0 }]
+      })
+      handleFormChange()
+    }
+  }
+
+  const handleReusePromotion = (req, action) => {
+    const current = form.getFieldValue('promotions') || []
+    const type = req.data?.type || ''
+    const exists = current.some((promo) => promo && promo.title === req.name && promo.type === type)
+    if (action === 'remove') {
+      if (exists) {
+        form.setFieldsValue({
+          promotions: current.filter((promo) => !(promo && promo.title === req.name && promo.type === type))
+        })
+        handleFormChange()
+      }
+      return
+    }
+    if (!exists) {
+      form.setFieldsValue({
+        promotions: [...current, { type, title: req.name, value: req.data?.value || 0 }]
+      })
+      handleFormChange()
+    }
+  }
+
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields()
@@ -789,7 +936,15 @@ export default function HotelEdit() {
 
           <Divider />
           <Typography.Title level={5}>设施服务</Typography.Title>
-          <Form.Item name="facilities"><FacilitySelector pendingRequests={pendingFacilities} onRequestNew={handleRequestFacility} presetFacilities={presets.facilities} /></Form.Item>
+          <Form.Item name="facilities">
+            <FacilitySelector
+              pendingRequests={pendingFacilities}
+              approvedRequests={approvedFacilities}
+              onRequestNew={handleRequestFacility}
+              onReuseApproved={handleReuseFacility}
+              presetFacilities={presets.facilities}
+            />
+          </Form.Item>
 
           <Divider />
           <Typography.Title level={5}>周边信息</Typography.Title>
@@ -807,11 +962,27 @@ export default function HotelEdit() {
 
           <Divider />
           <Typography.Title level={5}>房型信息</Typography.Title>
-          <Form.Item name="roomTypes"><RoomTypeManager pendingRequests={pendingRoomTypes} onRequestNew={handleRequestRoomType} presetRoomTypes={presets.roomTypes} /></Form.Item>
+          <Form.Item name="roomTypes">
+            <RoomTypeManager
+              pendingRequests={pendingRoomTypes}
+              approvedRequests={approvedRoomTypes}
+              onRequestNew={handleRequestRoomType}
+              onReuseApproved={handleReuseRoomType}
+              presetRoomTypes={presets.roomTypes}
+            />
+          </Form.Item>
 
           <Divider />
           <Typography.Title level={5}>优惠活动</Typography.Title>
-          <Form.Item name="promotions"><PromotionManager pendingRequests={pendingPromotions} onRequestNew={handleRequestPromotion} presetPromotionTypes={presets.promotionTypes} /></Form.Item>
+          <Form.Item name="promotions">
+            <PromotionManager
+              pendingRequests={pendingPromotions}
+              approvedRequests={approvedPromotions}
+              onRequestNew={handleRequestPromotion}
+              onReuseApproved={handleReusePromotion}
+              presetPromotionTypes={presets.promotionTypes}
+            />
+          </Form.Item>
         </Form>
       )
     },

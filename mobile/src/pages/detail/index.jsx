@@ -2,9 +2,8 @@ import { View, Text, Image, ScrollView, Swiper, SwiperItem } from '@tarojs/compo
 import { useRouter } from '@tarojs/taro'
 import Taro from '@tarojs/taro'
 import { useState, useEffect } from 'react'
+import { api } from '../../services/request'
 import './index.css'
-
-const API_BASE = 'http://127.0.0.1:4100'
 
 // 默认房型（后端暂未提供时使用）
 const defaultRoomTypes = [
@@ -23,6 +22,7 @@ export default function Detail() {
   const [hotel, setHotel] = useState(null)
   const [loading, setLoading] = useState(true)
   const [navOpacity, setNavOpacity] = useState(0)
+  const [bookingRoomId, setBookingRoomId] = useState(null)
 
   useEffect(() => {
     fetchHotelDetail()
@@ -31,17 +31,11 @@ export default function Detail() {
   const fetchHotelDetail = async () => {
     try {
       setLoading(true)
-      const res = await Taro.request({
-        url: `${API_BASE}/api/hotels/${id}`,
-        method: 'GET'
-      })
-      if (res.statusCode === 200 && res.data) {
-        setHotel(res.data)
+      const data = await api.get(`/api/hotels/${id}`)
+      if (data) {
+        setHotel(data)
       }
-    } catch (err) {
-      console.error('获取酒店详情失败:', err)
-      Taro.showToast({ title: '加载失败', icon: 'none' })
-    } finally {
+    } catch (err) {} finally {
       setLoading(false)
     }
   }
@@ -57,9 +51,21 @@ export default function Detail() {
     Taro.navigateBack()
   }
 
-  const handleBook = (room) => {
-    Taro.showToast({ title: `预订${room.name}`, icon: 'none' })
-    // TODO: 跳转到预订页面
+  const handleBook = async (room) => {
+    if (!room || bookingRoomId) return
+    setBookingRoomId(room.id)
+    try {
+      await api.post(`/api/hotels/${id}/orders`, {
+        roomTypeId: room.id,
+        quantity: 1,
+        checkIn,
+        checkOut
+      })
+      Taro.showToast({ title: '预订成功', icon: 'success' })
+    } catch (err) {
+    } finally {
+      setBookingRoomId(null)
+    }
   }
 
   const handleShare = () => {
