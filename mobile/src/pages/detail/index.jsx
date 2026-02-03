@@ -261,8 +261,49 @@ export default function Detail() {
               <View className="room-right">
                 <View className="room-price">
                   <Text className="price-symbol">¥</Text>
-                  <Text className="price-num">{room.price}</Text>
+                  <Text className="price-num">
+                    {(() => {
+                      const price = Number(room.price) || 0
+                      const discount = Number(room.discount_rate) || 0
+                      const quota = Number(room.discount_quota) || 0
+                      let finalPrice = price
+                      
+                      if (quota > 0) {
+                        if (discount > 0 && discount <= 10) {
+                          finalPrice = price * (discount / 10)
+                        } else if (discount < 0) {
+                          finalPrice = Math.max(0, price + discount)
+                        }
+                      }
+                      return Math.round(finalPrice * 100) / 100
+                    })()}
+                  </Text>
+                  {(() => {
+                    const discount = Number(room.discount_rate) || 0
+                    const quota = Number(room.discount_quota) || 0
+                    if (discount !== 0 && quota > 0) {
+                      return (
+                        <Text className="original-price" style={{ textDecoration: 'line-through', color: '#999', fontSize: '12px', marginLeft: '4px' }}>
+                          ¥{room.price}
+                        </Text>
+                      )
+                    }
+                    return null
+                  })()}
                 </View>
+                {(() => {
+                  const discount = Number(room.discount_rate) || 0
+                  const quota = Number(room.discount_quota) || 0
+                  if (discount !== 0 && quota > 0) {
+                    const text = discount < 0 ? `减¥${Math.abs(discount)}` : `${discount}折`
+                    return (
+                      <View className="discount-tag" style={{ alignSelf: 'flex-end', marginTop: '2px' }}>
+                        <Text style={{ color: '#f5222d', fontSize: '10px', border: '1px solid #f5222d', padding: '0 4px', borderRadius: '2px' }}>{text}</Text>
+                      </View>
+                    )
+                  }
+                  return null
+                })()}
                 <View className="book-btn" onClick={() => handleBook(room)}>
                   <Text className="book-text">预订</Text>
                 </View>

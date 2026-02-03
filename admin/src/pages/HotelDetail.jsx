@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, Descriptions, Tag, Image, Space, Typography, Table, Spin, Row, Col, Tabs, Progress, Statistic, Modal, Form, InputNumber } from 'antd'
+import { Card, Descriptions, Tag, Image, Space, Typography, Table, Spin, Row, Col, Tabs, Progress, Statistic, Modal, Form, InputNumber, Radio } from 'antd'
 import { StarFilled, EnvironmentOutlined, CalendarOutlined } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
 import { api } from '../services/request'
@@ -31,7 +31,7 @@ export default function HotelDetail() {
   const fetchHotel = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await api.get(`/api/merchant/hotels/${id}`)
+      const data = await api.get(`/api/merchant/hotels/${id}?_t=${Date.now()}`)
       setHotel(data)
     } catch (error) {
       if (error?.response?.status) {
@@ -113,13 +113,17 @@ export default function HotelDetail() {
     if (!selectedRoom) return
     try {
       setDiscountLoading(true)
-      await api.post('/api/merchant/hotels/batch-discount', {
+      const res = await api.post('/api/merchant/hotels/batch-discount', {
         hotelIds: [hotel.id],
         roomTypeName: selectedRoom.name,
         quantity: values.quantity,
         discount: values.discount
       })
-      message.success('折扣已设置')
+      if (res && res.data && res.data.successCount === 0) {
+          message.warning('设置折扣未生效，请检查是否超出限制')
+      } else {
+          message.success('折扣已设置')
+      }
       setDiscountModal(false)
       setSelectedRoom(null)
       await fetchHotel()
@@ -169,12 +173,21 @@ export default function HotelDetail() {
         const basePrice = Number(price) || 0
         const discountRate = Number(record.discount_rate) || 0
         const discountQuota = Number(record.discount_quota) || 0
-        const hasDiscount = discountRate > 0 && discountRate <= 10 && discountQuota > 0
-        const discounted = hasDiscount ? Math.round(basePrice * discountRate * 10) / 100 : basePrice
+        const hasDiscount = discountQuota > 0 && ((discountRate > 0 && discountRate <= 10) || discountRate < 0)
+        
+        let discounted = basePrice
+        if (hasDiscount) {
+          if (discountRate > 0) {
+             discounted = Math.round(basePrice * discountRate * 10) / 100
+          } else {
+             discounted = Math.max(0, basePrice + discountRate)
+          }
+        }
+
         return (
           <div>
             <div style={{ color: '#999', textDecoration: hasDiscount ? 'line-through' : 'none' }}>基础价 ¥{basePrice}</div>
-            <div style={{ color: '#f5222d', fontWeight: 600 }}>{hasDiscount ? '批量折扣价' : '当前售价'} ¥{discounted}</div>
+            <div style={{ color: '#f5222d', fontWeight: 600 }}>{hasDiscount ? '优惠价' : '当前售价'} ¥{discounted}</div>
           </div>
         )
       }
@@ -186,12 +199,21 @@ export default function HotelDetail() {
         const tags = []
         const discountRate = Number(record.discount_rate) || 0
         const discountQuota = Number(record.discount_quota) || 0
-        if (discountRate > 0 && discountRate <= 10 && discountQuota > 0) {
-          tags.push(
-            <Tag color="purple" key={`batch-${record.id || record.name}`}>
-              批量折扣 {discountRate}折 余{discountQuota}
-            </Tag>
-          )
+        
+        if (discountQuota > 0) {
+          if (discountRate > 0 && discountRate <= 10) {
+            tags.push(
+              <Tag color="purple" key={`batch-${record.id || record.name}`}>
+                批量折扣 {discountRate}折 余{discountQuota}
+              </Tag>
+            )
+          } else if (discountRate < 0) {
+             tags.push(
+              <Tag color="purple" key={`batch-${record.id || record.name}`}>
+                立减 {Math.abs(discountRate)}元 余{discountQuota}
+              </Tag>
+            )
+          }
         }
         promotionList.forEach((promo, index) => {
           tags.push(
@@ -226,7 +248,7 @@ export default function HotelDetail() {
       render: (_, record) => {
         const discountRate = Number(record.discount_rate) || 0
         const discountQuota = Number(record.discount_quota) || 0
-        const hasDiscount = discountRate > 0 && discountRate <= 10 && discountQuota > 0
+        const hasDiscount = discountQuota > 0 && ((discountRate > 0 && discountRate <= 10) || discountRate < 0)
         return (
           <Space size="small">
             <GlassButton type="link" size="small" onClick={() => openDiscountModal(record)}>设置折扣</GlassButton>
@@ -682,16 +704,27 @@ export default function HotelDetail() {
 
 function DiscountModal({ open, selectedRoom, onClose, onSubmit, loading }) {
   const [form] = Form.useForm()
+  const [discountType, setDiscountType] = useState('rate')
+  const formDiscountType = Form.useWatch('type', form) || 'rate'
 
   useEffect(() => {
     if (open) {
-      form.setFieldsValue({ quantity: 1, discount: 9 })
+      form.setFieldsValue({ quantity: 1, discount: 9, type: 'rate', amount: 50 })
+      setDiscountType('rate')
     }
   }, [open, form])
 
   const handleClose = () => {
     form.resetFields()
     onClose()
+  }
+
+  const handleFinish = (values) => {
+    const payload = {
+      quantity: values.quantity,
+      discount: values.type === 'rate' ? values.discount : -Math.abs(values.amount)
+    }
+    onSubmit(payload)
   }
 
   return (
@@ -702,7 +735,7 @@ function DiscountModal({ open, selectedRoom, onClose, onSubmit, loading }) {
       footer={null}
       destroyOnHidden
     >
-      <Form form={form} layout="vertical" initialValues={{ quantity: 1, discount: 9 }} onFinish={onSubmit}>
+      <Form form={form} layout="vertical" initialValues={{ quantity: 1, discount: 9, type: 'rate', amount: 50 }} onFinish={handleFinish}>
         <Form.Item name="quantity" label="折扣数量" rules={[{ required: true }]}>
           <InputNumber
             min={1}
@@ -711,16 +744,51 @@ function DiscountModal({ open, selectedRoom, onClose, onSubmit, loading }) {
             parser={(value) => value?.replace(/[^\d]/g, '')}
           />
         </Form.Item>
-        <Form.Item name="discount" label="折扣力度" rules={[{ required: true }]}>
-          <InputNumber
-            min={1}
-            max={10}
-            step={0.5}
-            style={{ width: 150 }}
-            formatter={(value) => `${value} 折`}
-            parser={(value) => value?.replace(/[^\d.]/g, '')}
-          />
+
+        <Form.Item name="type" label="折扣类型" rules={[{ required: true }]}>
+          <Radio.Group onChange={(e) => setDiscountType(e.target.value)}>
+            <Radio value="rate">折扣率</Radio>
+            <Radio value="amount">固定减免</Radio>
+          </Radio.Group>
         </Form.Item>
+
+        {formDiscountType === 'rate' ? (
+          <Form.Item name="discount" label="折扣力度" rules={[{ required: true }]}>
+            <InputNumber
+              min={0.1}
+              max={10}
+              step={0.5}
+              style={{ width: 150 }}
+              formatter={(value) => `${value} 折`}
+              parser={(value) => value?.replace(/[^\d.]/g, '')}
+            />
+          </Form.Item>
+        ) : (
+          <Form.Item 
+            name="amount" 
+            label="减免金额" 
+            rules={[
+              { required: true },
+              {
+                validator: (_, value) => {
+                  if (selectedRoom && value > Number(selectedRoom.price)) {
+                    return Promise.reject('减免金额不能超过房型原价')
+                  }
+                  return Promise.resolve()
+                }
+              }
+            ]}
+          >
+            <InputNumber
+              min={1}
+              max={selectedRoom ? Number(selectedRoom.price) : undefined}
+              style={{ width: 150 }}
+              formatter={(value) => `¥ ${value}`}
+              parser={(value) => value?.replace(/[^\d]/g, '')}
+            />
+          </Form.Item>
+        )}
+
         <Form.Item>
           <Space>
             <GlassButton type="primary" loading={loading} onClick={() => form.submit()}>

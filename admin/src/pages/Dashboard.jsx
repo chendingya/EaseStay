@@ -1,4 +1,4 @@
-import { Card, Col, Row, Statistic, Space, Typography, Modal, Form, InputNumber, Select, Table, Progress } from 'antd'
+import { Card, Col, Row, Statistic, Space, Typography, Modal, Form, InputNumber, Select, Table, Progress, Radio } from 'antd'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PercentageOutlined, EditOutlined, ShopOutlined } from '@ant-design/icons'
@@ -25,6 +25,7 @@ export default function Dashboard() {
   const [overviewLoading, setOverviewLoading] = useState(false)
 
   const discountScope = Form.useWatch('scope', discountForm)
+  const discountType = Form.useWatch('discountType', discountForm)
   const discountRoomType = Form.useWatch('roomTypeName', discountForm)
   const roomTypeName = Form.useWatch('roomTypeName', roomForm)
 
@@ -109,16 +110,23 @@ export default function Dashboard() {
 
       const base = role === 'admin' ? '/api/admin/hotels' : '/api/merchant/hotels'
       const isCancel = values.action === 'cancel'
+      let finalDiscount = 0
+      if (!isCancel) {
+        finalDiscount = values.discountType === 'rate' ? values.discount : -Math.abs(values.amount)
+      }
+
       const data = await api.post(`${base}/batch-discount`, {
         hotelIds: targetHotels.map((h) => h.id),
         roomTypeName: values.roomTypeName,
         quantity: isCancel ? 0 : values.quantity,
-        discount: isCancel ? 0 : values.discount
+        discount: finalDiscount
       })
       message.success(`已为 ${data.successCount || 0} 个房型${isCancel ? '取消折扣' : '设置折扣'}`)
       setDiscountModal(false)
       discountForm.resetFields()
       setSelectedHotels([])
+      // 刷新数据
+      fetchRoomTypeStats(targetHotels.map(h => h.id))
     } catch (error) {
       console.error('批量设置折扣失败:', error)
       message.error('批量设置折扣失败，请重试')
@@ -153,6 +161,8 @@ export default function Dashboard() {
       setRoomModal(false)
       roomForm.resetFields()
       setSelectedHotels([])
+      // 刷新数据
+      fetchRoomTypeStats(hotels.map(h => h.id)) // 简单起见，刷新所有
     } catch (error) {
       console.error('批量房型操作失败:', error)
       message.error('批量房型操作失败，请重试')
@@ -317,7 +327,7 @@ export default function Dashboard() {
         footer={null}
         width={700}
       >
-        <Form form={discountForm} layout="vertical" initialValues={{ scope: 'all', discount: 9, action: 'set' }}>
+        <Form form={discountForm} layout="vertical" initialValues={{ scope: 'all', discount: 9, action: 'set', discountType: 'rate', amount: 50 }}>
           <Form.Item name="scope" label="应用范围">
             <Select options={[
               { value: 'all', label: '所有已上架酒店' },
@@ -368,7 +378,7 @@ export default function Dashboard() {
             }}
           </Form.Item>
 
-          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.action !== cur.action}>
+          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.action !== cur.action || prev.discountType !== cur.discountType}>
             {({ getFieldValue }) => getFieldValue('action') !== 'cancel' && (
               <>
                 <Form.Item name="quantity" label="折扣数量" rules={[{ required: true }]}>
@@ -380,16 +390,34 @@ export default function Dashboard() {
                   />
                 </Form.Item>
 
-                <Form.Item name="discount" label="折扣力度" rules={[{ required: true }]}>
-                  <InputNumber
-                    min={1}
-                    max={10}
-                    step={0.5}
-                    style={{ width: 150 }}
-                    formatter={(value) => `${value} 折`}
-                    parser={(value) => value?.replace(/[^\d.]/g, '')}
-                  />
+                <Form.Item name="discountType" label="折扣类型" rules={[{ required: true }]}>
+                  <Radio.Group>
+                    <Radio value="rate">折扣率</Radio>
+                    <Radio value="amount">固定减免</Radio>
+                  </Radio.Group>
                 </Form.Item>
+
+                {getFieldValue('discountType') === 'rate' ? (
+                  <Form.Item name="discount" label="折扣力度" rules={[{ required: true }]}>
+                    <InputNumber
+                      min={0.1}
+                      max={10}
+                      step={0.5}
+                      style={{ width: 150 }}
+                      formatter={(value) => `${value} 折`}
+                      parser={(value) => value?.replace(/[^\d.]/g, '')}
+                    />
+                  </Form.Item>
+                ) : (
+                  <Form.Item name="amount" label="减免金额" rules={[{ required: true }]}>
+                    <InputNumber
+                      min={1}
+                      style={{ width: 150 }}
+                      formatter={(value) => `¥ ${value}`}
+                      parser={(value) => value?.replace(/[^\d]/g, '')}
+                    />
+                  </Form.Item>
+                )}
               </>
             )}
           </Form.Item>

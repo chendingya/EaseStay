@@ -1,5 +1,6 @@
 const supabase = require('../config/supabase')
 const { sendNotification, NotificationTemplates } = require('./notificationService')
+const { applyPromotionsToRooms } = require('./hotelService')
 
 // 创建申请
 const createRequest = async ({ merchantId, hotelId, type, name, data }) => {
@@ -141,16 +142,20 @@ const reviewRequest = async ({ requestId, action, rejectReason }) => {
           })
       } else if (request.type === 'promotion') {
         const promotions = hotel.promotions || []
+        const newPromotions = [...promotions, {
+          type: request.data?.type || '',
+          title: request.name,
+          value: request.data?.value || 0
+        }]
         await supabase
           .from('hotels')
           .update({
-            promotions: [...promotions, {
-              type: request.data?.type || '',
-              title: request.name,
-              value: request.data?.value || 0
-            }]
+            promotions: newPromotions
           })
           .eq('id', request.hotel_id)
+        
+        // 自动重新计算房型价格
+        await applyPromotionsToRooms(request.hotel_id, newPromotions)
       }
     }
   }
