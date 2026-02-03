@@ -185,6 +185,33 @@ Query：status（可选）
 ```
 响应：更新后的酒店信息
 
+#### GET /api/admin/hotels/:id/overview
+响应：
+```json
+{
+  "totalRooms": 100,
+  "usedRooms": 20,
+  "freeRooms": 75,
+  "offlineRooms": 5,
+  "occupancyRate": 20
+}
+```
+
+#### GET /api/admin/hotels/:id/orders
+Query：page, pageSize
+响应：订单列表（分页）
+
+#### GET /api/admin/hotels/:id/order-stats
+响应：
+```json
+{
+  "totalOrders": 150,
+  "totalRevenue": 50000,
+  "statusDistribution": [...],
+  "monthlyRevenue": [...]
+}
+```
+
 ### 4.5 酒店查询（移动端）
 #### GET /api/hotels
 Query：

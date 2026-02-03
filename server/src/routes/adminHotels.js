@@ -1,5 +1,5 @@
 const express = require('express')
-const { list, getDetail, updateStatus, roomTypeStats, batchDiscount, batchRoom } = require('../controllers/adminHotelsController')
+const { list, getDetail, updateStatus, roomTypeStats, batchDiscount, batchRoom, roomOverview, orders, orderStats } = require('../controllers/adminHotelsController')
 
 const router = express.Router()
 
@@ -47,6 +47,9 @@ router.post('/batch-room', batchRoom)
  *         description: ok
  */
 router.get('/:id', getDetail)
+router.get('/:id/overview', roomOverview)
+router.get('/:id/orders', orders)
+router.get('/:id/order-stats', orderStats)
 
 /**
  * @openapi
