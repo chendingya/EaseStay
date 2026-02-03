@@ -5,199 +5,58 @@
 }
 
 /* 轮播 Banner */
+.banner-container {
+  height: 200px;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
 .banner-swiper {
-  height: 180px;
+  height: 100%;
+  --height: 100%; /* antd-mobile Swiper variable */
 }
 
 .banner-item {
-  height: 180px;
+  height: 100%;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.banner-title {
   color: #fff;
   font-size: 24px;
-  font-weight: 600;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-/* 玻璃卡片通用 */
-.glass-card {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  font-weight: bold;
 }
 
 /* 搜索卡片 */
 .search-card {
-  margin: -40px 16px 0;
-  padding: 20px;
+  margin: 12px 16px 0 !important; /* Separated from banner for better responsiveness */
+  border-radius: 12px !important;
   position: relative;
   z-index: 10;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+  background: #fff;
 }
 
 .search-row {
   display: flex;
   align-items: center;
   padding: 12px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.search-label {
-  width: 60px;
-  font-size: 14px;
-  color: #666;
-  flex-shrink: 0;
-}
-
-.search-input {
-  flex: 1;
-  border: none;
-  background: transparent;
-  font-size: 15px;
-  outline: none;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 12px;
 }
 
 .date-row {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  padding: 16px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.date-item {
-  flex: 1;
-  text-align: center;
-}
-
-.date-label {
-  display: block;
-  font-size: 12px;
-  color: #999;
-  margin-bottom: 4px;
-}
-
-.date-value {
-  font-size: 15px;
-  color: #333;
-  font-weight: 500;
-}
-
-.date-nights {
-  padding: 0 16px;
-  text-align: center;
-}
-
-.nights-num {
-  font-size: 20px;
-  font-weight: 600;
-  color: #1677ff;
-}
-
-.nights-text {
-  font-size: 12px;
-  color: #999;
-  margin-left: 2px;
+  margin-bottom: 16px;
+  padding: 8px 0;
 }
 
 .search-btn {
-  margin-top: 16px;
-  padding: 14px;
-  text-align: center;
-  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
-  color: #fff;
-  font-size: 16px;
-  font-weight: 500;
-  border-radius: 12px;
-}
-
-/* 快捷标签 */
-.quick-section {
-  margin: 20px 16px 0;
-}
-
-.section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 12px;
-  display: block;
-}
-
-.quick-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.quick-tag {
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(8px);
-  border-radius: 20px;
-  font-size: 13px;
-  color: #333;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-/* 热门酒店 */
-.hot-section {
-  margin: 24px 16px 0;
-}
-
-.hot-list {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-.hot-card {
-  overflow: hidden;
-  padding: 0;
-}
-
-.hot-img {
-  width: 100%;
-  height: 100px;
-  display: block;
-}
-
-.hot-img-placeholder {
-  width: 100%;
-  height: 100px;
-  background: linear-gradient(135deg, #e6f4ff 0%, #bae0ff 100%);
-}
-
-.hot-info {
-  padding: 12px;
-}
-
-.hot-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hot-city {
-  font-size: 12px;
-  color: #999;
-  display: block;
-  margin-top: 4px;
-}
-
-.hot-price {
-  font-size: 14px;
-  color: #f5222d;
-  font-weight: 600;
-  display: block;
-  margin-top: 6px;
+  background: linear-gradient(to right, #0086F6, #2db7f5) !important;
+  border: none !important;
+  border-radius: 24px !important;
+  font-weight: bold !important;
+  font-size: 18px !important;
 }
