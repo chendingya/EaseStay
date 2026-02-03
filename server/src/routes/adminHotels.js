@@ -1,5 +1,5 @@
 const express = require('express')
-const { list, getDetail, updateStatus, roomTypeStats, batchDiscount, batchRoom } = require('../controllers/adminHotelsController')
+const { list, getDetail, updateStatus, offline, restore, roomTypeStats, batchDiscount, batchRoom, roomOverview, orders, orderStats } = require('../controllers/adminHotelsController')
 
 const router = express.Router()
 
@@ -47,6 +47,9 @@ router.post('/batch-room', batchRoom)
  *         description: ok
  */
 router.get('/:id', getDetail)
+router.get('/:id/overview', roomOverview)
+router.get('/:id/orders', orders)
+router.get('/:id/order-stats', orderStats)
 
 /**
  * @openapi
@@ -74,5 +77,55 @@ router.get('/:id', getDetail)
  *         description: ok
  */
 router.patch('/:id/status', updateStatus)
+
+/**
+ * @openapi
+ * /api/admin/hotels/{id}/offline:
+ *   put:
+ *     tags:
+ *       - Admin
+ *     summary: 下架酒店
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: number
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: ok
+ */
+router.put('/:id/offline', offline)
+
+/**
+ * @openapi
+ * /api/admin/hotels/{id}/restore:
+ *   put:
+ *     tags:
+ *       - Admin
+ *     summary: 恢复上架酒店
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: number
+ *     responses:
+ *       200:
+ *         description: ok
+ */
+router.put('/:id/restore', restore)
 
 module.exports = router

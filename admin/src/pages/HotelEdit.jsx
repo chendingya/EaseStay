@@ -496,7 +496,7 @@ function NearbyInfoEditor({ attractions = [], transport = [], malls = [], onChan
           return {
             name: poi.name,
             address: poi.address || '',
-            distance: poi.distance ? `${poi.distance}m` : '未知',
+            distance: (poi.distance && !isNaN(parseFloat(poi.distance))) ? `${poi.distance}m` : '未知',
             type: type
           }
         })

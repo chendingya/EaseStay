@@ -4,6 +4,34 @@
 
 import { api } from './request'
 
+// 存储监听器
+const listeners = []
+
+/**
+ * 监听未读数量变化
+ * @param {Function} callback - 回调函数，接收新的未读数量
+ * @returns {Function} 取消监听函数
+ */
+export const onUnreadCountChange = (callback) => {
+  listeners.push(callback)
+  return () => {
+    const index = listeners.indexOf(callback)
+    if (index > -1) listeners.splice(index, 1)
+  }
+}
+
+/**
+ * 触发未读数量更新通知
+ */
+const notifyUnreadUpdate = async () => {
+  try {
+    const count = await getUnreadCount()
+    listeners.forEach(cb => cb(count))
+  } catch (error) {
+    console.error('更新未读数量失败:', error)
+  }
+}
+
 /**
  * 获取通知列表
  * @param {Object} options
@@ -46,6 +74,7 @@ export const markAsRead = async (notificationId) => {
       ? `/api/notifications/${notificationId}/read`
       : '/api/notifications/read-all'
     await api.put(url)
+    notifyUnreadUpdate()
     return true
   } catch (error) {
     console.error('标记通知已读失败:', error)
@@ -61,6 +90,7 @@ export const markAsRead = async (notificationId) => {
 export const deleteNotification = async (notificationId) => {
   try {
     await api.delete(`/api/notifications/${notificationId}`)
+    notifyUnreadUpdate()
     return true
   } catch (error) {
     console.error('删除通知失败:', error)
@@ -119,6 +149,7 @@ export default {
   getUnreadCount,
   markAsRead,
   deleteNotification,
+  onUnreadCountChange,
   NotificationTypeConfig,
   formatNotificationTime
 }

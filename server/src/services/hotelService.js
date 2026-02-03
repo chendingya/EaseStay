@@ -267,13 +267,18 @@ const listHotelOrders = async ({ merchantId, hotelId, page = 1, pageSize = 10 })
   const normalizedPageSize = Math.max(Number(pageSize) || 10, 1)
   const offset = (normalizedPage - 1) * normalizedPageSize
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from('orders')
     .select('*', { count: 'exact' })
-    .eq('merchant_id', merchantId)
     .eq('hotel_id', hotelId)
     .order('created_at', { ascending: false })
     .range(offset, offset + normalizedPageSize - 1)
+
+  if (merchantId) {
+    query = query.eq('merchant_id', merchantId)
+  }
+
+  const { data, error, count } = await query
 
   if (error) {
     if (error.message && error.message.includes('relation') && error.message.includes('orders')) {
@@ -295,11 +300,16 @@ const listHotelOrders = async ({ merchantId, hotelId, page = 1, pageSize = 10 })
 }
 
 const getHotelOrderStats = async ({ merchantId, hotelId }) => {
-  const { data, error } = await supabase
+  let query = supabase
     .from('orders')
     .select('total_price, status, created_at, room_type_name, quantity, nights, check_in')
-    .eq('merchant_id', merchantId)
     .eq('hotel_id', hotelId)
+
+  if (merchantId) {
+    query = query.eq('merchant_id', merchantId)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     if (error.message && error.message.includes('relation') && error.message.includes('orders')) {
