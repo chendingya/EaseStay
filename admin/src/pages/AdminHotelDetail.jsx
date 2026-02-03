@@ -41,57 +41,61 @@ export default function AdminHotelDetail() {
     }
   }, [id, navigate])
 
-  useEffect(() => {
-    fetchHotel()
-  }, [fetchHotel])
-
-  useEffect(() => {
-    const fetchOverview = async () => {
-      try {
-        const data = await api.get(`/api/admin/hotels/${id}/overview`)
-        setOverview(data)
-      } catch (error) {
-        console.error('获取酒店概览失败:', error)
-        setOverview(null)
-      }
+  const fetchOverview = useCallback(async () => {
+    try {
+      const data = await api.get(`/api/admin/hotels/${id}/overview`)
+      setOverview(data)
+    } catch (error) {
+      console.error('获取酒店概览失败:', error)
+      setOverview(null)
     }
+  }, [id])
 
-    const fetchOrders = async () => {
-      setOrdersLoading(true)
-      try {
-        const params = new URLSearchParams({ page: ordersPage, pageSize: 8 })
-        const data = await api.get(`/api/admin/hotels/${id}/orders?${params.toString()}`)
-        setOrders(data.list || [])
-        setOrdersTotal(data.total || 0)
-      } catch (error) {
-        console.error('获取订单列表失败:', error)
-      } finally {
-        setOrdersLoading(false)
-      }
+  const fetchOrders = useCallback(async () => {
+    setOrdersLoading(true)
+    try {
+      const params = new URLSearchParams({ page: ordersPage, pageSize: 8 })
+      const data = await api.get(`/api/admin/hotels/${id}/orders?${params.toString()}`)
+      setOrders(data.list || [])
+      setOrdersTotal(data.total || 0)
+    } catch (error) {
+      console.error('获取订单列表失败:', error)
+    } finally {
+      setOrdersLoading(false)
     }
-
-    const fetchOrderStats = async () => {
-      setStatsLoading(true)
-      try {
-        const data = await api.get(`/api/admin/hotels/${id}/order-stats`)
-        setOrderStats(data)
-      } catch (error) {
-        console.error('获取订单统计失败:', error)
-      } finally {
-        setStatsLoading(false)
-      }
-    }
-
-    fetchOverview()
-    fetchOrders()
-    fetchOrderStats()
   }, [id, ordersPage])
 
+  const fetchOrderStats = useCallback(async () => {
+    setStatsLoading(true)
+    try {
+      const data = await api.get(`/api/admin/hotels/${id}/order-stats`)
+      setOrderStats(data)
+    } catch (error) {
+      console.error('获取订单统计失败:', error)
+    } finally {
+      setStatsLoading(false)
+    }
+  }, [id])
+
   useEffect(() => {
-    const handleFocus = () => fetchHotel()
-    window.addEventListener('focus', handleFocus)
-    return () => window.removeEventListener('focus', handleFocus)
-  }, [fetchHotel])
+    fetchHotel()
+    fetchOverview()
+    fetchOrderStats()
+  }, [fetchHotel, fetchOverview, fetchOrderStats])
+
+  useEffect(() => {
+    fetchOrders()
+  }, [fetchOrders])
+
+  const handleRefresh = async () => {
+    await Promise.all([
+      fetchHotel(),
+      fetchOverview(),
+      fetchOrders(),
+      fetchOrderStats()
+    ])
+    message.success('已刷新')
+  }
 
   // 下架酒店
   const handleOffline = () => {
@@ -362,7 +366,7 @@ export default function AdminHotelDetail() {
           )}
         </div>
         <Space>
-          <GlassButton onClick={fetchHotel}>
+          <GlassButton onClick={handleRefresh}>
             刷新
           </GlassButton>
           <GlassButton onClick={() => navigate('/admin-hotels')}>
@@ -569,7 +573,7 @@ export default function AdminHotelDetail() {
                       </Col>
                     </Row>
                     <Row gutter={16} style={{ marginTop: 16 }}>
-                      <Col span={12}>
+                      <Col span={24}>
                         <Typography.Title level={5} style={{ marginTop: 0 }}>房型日度表现</Typography.Title>
                         <Table
                           columns={roomTypeDailyColumns}
@@ -580,7 +584,9 @@ export default function AdminHotelDetail() {
                           locale={{ emptyText: '暂无统计数据' }}
                         />
                       </Col>
-                      <Col span={12}>
+                    </Row>
+                    <Row gutter={16} style={{ marginTop: 16 }}>
+                      <Col span={24}>
                         <Typography.Title level={5} style={{ marginTop: 0 }}>房型月度表现</Typography.Title>
                         <Table
                           columns={roomTypeMonthlyColumns}

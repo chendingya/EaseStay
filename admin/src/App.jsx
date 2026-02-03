@@ -1,8 +1,9 @@
 import './App.css'
-import { Layout, Menu, Space, Typography, Tag, Button, Breadcrumb, Badge } from 'antd'
+import { Layout, Menu, Space, Typography, Tag, Button, Breadcrumb, Badge, Tooltip } from 'antd'
 import { HomeOutlined, SettingOutlined, UserOutlined, TeamOutlined, BellOutlined, FileSearchOutlined, ShopOutlined } from '@ant-design/icons'
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
+import { getUnreadCount } from './services/notificationService'
 import Login from './pages/Login.jsx'
 import Hotels from './pages/Hotels.jsx'
 import HotelDetail from './pages/HotelDetail.jsx'
@@ -107,6 +108,7 @@ function App() {
     role: localStorage.getItem('role'),
     username: localStorage.getItem('username')
   }))
+  const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
     if (!auth.token && location.pathname !== '/login') {
@@ -121,6 +123,13 @@ function App() {
       navigate('/hotels')
     }
   }, [auth, location.pathname, navigate])
+
+  // Fetch unread count
+  useEffect(() => {
+    if (auth.token) {
+      getUnreadCount().then(setUnreadCount)
+    }
+  }, [auth.token, location.pathname])
 
   const menuItems = useMemo(() => {
     const items = [{ key: 'dashboard', icon: <HomeOutlined />, label: '工作台' }]
@@ -203,6 +212,17 @@ function App() {
         <Layout.Header className="header">
           <Typography.Title level={4} className="header-title">酒店管理后台</Typography.Title>
           <Space className="header-actions">
+            <Tooltip title="消息中心">
+              <Badge count={unreadCount} overflowCount={99} size="small" offset={[-2, 2]}>
+                <Button 
+                  type="text" 
+                  size="small"
+                  icon={<BellOutlined style={{ fontSize: 16 }} />} 
+                  onClick={() => navigate('/messages')}
+                  style={{ marginRight: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                />
+              </Badge>
+            </Tooltip>
             {auth.role ? <Tag color="blue">{auth.role === 'admin' ? '管理员' : '商户'}</Tag> : null}
             <Button size="small" onClick={handleLogout}>退出登录</Button>
           </Space>
