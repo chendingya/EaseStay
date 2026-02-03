@@ -3,7 +3,7 @@ import { Layout, Menu, Space, Typography, Tag, Button, Breadcrumb, Badge, Toolti
 import { HomeOutlined, SettingOutlined, UserOutlined, TeamOutlined, BellOutlined, FileSearchOutlined, ShopOutlined } from '@ant-design/icons'
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
-import { getUnreadCount } from './services/notificationService'
+import { getUnreadCount, onUnreadCountChange } from './services/notificationService'
 import Login from './pages/Login.jsx'
 import Hotels from './pages/Hotels.jsx'
 import HotelDetail from './pages/HotelDetail.jsx'
@@ -124,12 +124,19 @@ function App() {
     }
   }, [auth, location.pathname, navigate])
 
-  // Fetch unread count
+  // Fetch unread count and subscribe to changes
   useEffect(() => {
     if (auth.token) {
       getUnreadCount().then(setUnreadCount)
+      
+      // 订阅未读数量变化
+      const unsubscribe = onUnreadCountChange((count) => {
+        setUnreadCount(count)
+      })
+      
+      return unsubscribe
     }
-  }, [auth.token, location.pathname])
+  }, [auth.token]) // Remove location.pathname dependency as we now have real-time updates via subscription
 
   const menuItems = useMemo(() => {
     const items = [{ key: 'dashboard', icon: <HomeOutlined />, label: '工作台' }]

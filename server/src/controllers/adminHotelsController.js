@@ -37,6 +37,31 @@ const updateStatus = async (req, res) => {
   res.status(result.status).json(result.data)
 }
 
+const offline = async (req, res) => {
+  const result = await updateHotelStatus({
+    hotelId: Number(req.params.id),
+    status: 'offline',
+    rejectReason: req.body?.reason
+  })
+  if (!result.ok) {
+    res.status(result.status).json({ message: result.message })
+    return
+  }
+  res.status(result.status).json(result.data)
+}
+
+const restore = async (req, res) => {
+  const result = await updateHotelStatus({
+    hotelId: Number(req.params.id),
+    status: 'restore'
+  })
+  if (!result.ok) {
+    res.status(result.status).json({ message: result.message })
+    return
+  }
+  res.status(result.status).json(result.data)
+}
+
 const roomTypeStats = async (req, res) => {
   const hotelIds = (req.query.hotelIds || '')
     .split(',')
@@ -119,6 +144,8 @@ module.exports = {
   list,
   getDetail,
   updateStatus,
+  offline,
+  restore,
   roomTypeStats,
   batchDiscount,
   batchRoom,
