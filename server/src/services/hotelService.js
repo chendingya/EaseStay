@@ -850,6 +850,7 @@ const listPublicHotels = async ({ query }) => {
     sort,
     checkIn,
     checkOut,
+    stars, // comma separated strings '3,4,5'
     page = 1,
     pageSize = 10
   } = query || {}
@@ -869,6 +870,13 @@ const listPublicHotels = async ({ query }) => {
 
   if (keyword) {
     dbQuery = dbQuery.or(`name.ilike.%${keyword}%,name_en.ilike.%${keyword}%,address.ilike.%${keyword}%`)
+  }
+
+  if (stars) {
+    const starList = stars.split(',').map(Number).filter(n => !isNaN(n))
+    if (starList.length > 0) {
+      dbQuery = dbQuery.in('star_rating', starList)
+    }
   }
 
   const { data: hotels, error, count } = await dbQuery.range(offset, offset + normalizedPageSize - 1)

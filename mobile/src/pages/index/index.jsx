@@ -1,7 +1,7 @@
 import { View, Image, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useEffect, useState } from 'react'
-import { Swiper, Button, Card, SearchBar, Tag, Space, Toast, Calendar } from 'antd-mobile'
+import { Swiper, Button, Card, SearchBar, Tag, Space, Toast, CalendarPicker } from 'antd-mobile'
 import { SearchOutline, CalendarOutline, EnvironmentOutline } from 'antd-mobile-icons'
 import { api } from '../../services/request'
 import HotelCard from '../../components/HotelCard'
@@ -64,6 +64,22 @@ export default function Index() {
         setHotHotels(data.list)
       }
     } catch (err) {}
+  }
+
+  const handleLocation = () => {
+    Taro.getLocation({
+      type: 'wgs84',
+      success: function (res) {
+        // Mock city name based on location or call reverse geocoding API
+        // For now, we simulate finding "杭州" if successful, or keep it simple.
+        // In real app, you would call a map API here.
+        Taro.showToast({ title: '定位成功', icon: 'success' })
+        setCity('杭州') // Demo purpose
+      },
+      fail: function () {
+        Taro.showToast({ title: '定位失败', icon: 'none' })
+      }
+    })
   }
 
   const handleSearch = () => {
@@ -134,12 +150,13 @@ export default function Index() {
       {/* 携程风搜索卡片 */}
       <Card className="search-card">
         {/* 城市选择 */}
-        <View className="search-row">
+        <View className="search-row" onClick={handleLocation}>
            <View style={{ display: 'flex', alignItems: 'center', fontSize: 18, fontWeight: 'bold' }}>
              <EnvironmentOutline style={{ marginRight: 4, color: '#0086F6' }} />
              {city}
              <Tag color="primary" fill="outline" style={{ marginLeft: 8, fontSize: 10 }}>当前位置</Tag>
            </View>
+           <View style={{ fontSize: 12, color: '#999' }}>我的位置</View>
         </View>
 
         {/* 日期选择 */}
@@ -165,6 +182,12 @@ export default function Index() {
                 {checkOut.split('-')[1]}月{checkOut.split('-')[2]}日
              </View>
           </View>
+        </View>
+
+        {/* 筛选条件（星级/价格） */}
+        <View className="filter-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid #f5f5f5' }}>
+           <View style={{ flex: 1, color: '#333', fontSize: 14 }}>价格/星级</View>
+           <View style={{ color: '#999', fontSize: 14 }}>不限 &gt;</View>
         </View>
 
         {/* 关键字搜索 */}
@@ -224,13 +247,13 @@ export default function Index() {
       )}
 
       {/* 日期选择弹窗 */}
-      <Calendar
-        selectionMode='range'
-        visible={calendarVisible}
-        onClose={() => setCalendarVisible(false)}
-        onConfirm={handleDateConfirm}
-        defaultValue={[new Date(checkIn), new Date(checkOut)]}
-      />
+      <CalendarPicker
+          selectionMode='range'
+          visible={calendarVisible}
+          onClose={() => setCalendarVisible(false)}
+          onConfirm={handleDateConfirm}
+          defaultValue={[new Date(checkIn), new Date(checkOut)]}
+        />
     </View>
   )
 }
