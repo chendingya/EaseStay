@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS room_types (
   stock INT DEFAULT 0,
   used_stock INT DEFAULT 0,
   offline_stock INT DEFAULT 0,
-  discount_rate DECIMAL(4, 2),
+  discount_rate DECIMAL,
   discount_quota INT DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

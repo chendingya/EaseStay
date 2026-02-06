@@ -55,7 +55,7 @@ export const getNotifications = async ({ unreadOnly = false } = {}) => {
  */
 export const getUnreadCount = async () => {
   try {
-    const data = await api.get('/api/notifications/unread-count')
+    const data = await api.get(`/api/notifications/unread-count?t=${Date.now()}`)
     return data?.count || 0
   } catch (error) {
     console.error('获取未读通知数量失败:', error)

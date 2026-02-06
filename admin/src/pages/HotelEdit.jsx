@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  Form, Input, InputNumber, Select, Space, Typography, Divider, DatePicker,
-  Row, Col, Spin, Image, Tag, Table, Descriptions, Tabs, Upload, Modal, Badge, Card
+  Form, Input, InputNumber, Select, Radio, Space, Typography, Divider, DatePicker,
+  Row, Col, Spin, Image, Tag, Table, Descriptions, Tabs, Upload, Modal, Badge, Card, Popover
 } from 'antd'
 import {
   EyeOutlined, EditOutlined, StarFilled, EnvironmentOutlined, CalendarOutlined,
-  PlusOutlined, DeleteOutlined, SearchOutlined
+  PlusOutlined, DeleteOutlined, SearchOutlined, PercentageOutlined
 } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
 import { api } from '../services/request'
@@ -273,7 +273,23 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
 
   const handleChange = (index, field, val) => {
     const newValue = [...value]
-    newValue[index] = { ...newValue[index], [field]: val }
+    const currentRoom = newValue[index]
+    const updates = { [field]: val }
+    
+    // 自动设置/清除配额
+    if (field === 'discount_rate') {
+      if (val && val !== 0) {
+        // 如果设置了折扣且当前没有配额，自动填充满库存
+        if (!currentRoom.discount_quota) {
+          updates.discount_quota = currentRoom.stock || 999
+        }
+      } else {
+        // 如果清除了折扣，清除配额
+        updates.discount_quota = 0
+      }
+    }
+
+    newValue[index] = { ...currentRoom, ...updates }
     onChange?.(newValue)
   }
 
@@ -289,10 +305,74 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 12 }}>
       {value.map((room, index) => (
         <Row gutter={16} key={index} align="middle">
-          <Col span={8}><Input value={room.name} onChange={(e) => handleChange(index, 'name', e.target.value)} placeholder="房型名称" /></Col>
-          <Col span={6}><InputNumber value={room.price} onChange={(val) => handleChange(index, 'price', val)} min={0} style={{ width: '100%' }} prefix="¥" /></Col>
-          <Col span={5}><InputNumber value={room.stock} onChange={(val) => handleChange(index, 'stock', val)} min={0} style={{ width: '100%' }} /></Col>
-          <Col span={5}><GlassButton type="link" danger icon={<DeleteOutlined />} onClick={() => handleRemove(index)}>删除</GlassButton></Col>
+          <Col span={7}><Input value={room.name} onChange={(e) => handleChange(index, 'name', e.target.value)} placeholder="房型名称" /></Col>
+          <Col span={5}><InputNumber value={room.price} onChange={(val) => handleChange(index, 'price', val)} min={0} style={{ width: '100%' }} prefix="¥" /></Col>
+          <Col span={4}><InputNumber value={room.stock} onChange={(val) => handleChange(index, 'stock', val)} min={0} style={{ width: '100%' }} /></Col>
+          <Col span={4}>
+            <Popover
+              content={
+                <div style={{ padding: 8, width: 280 }}>
+                  <Typography.Text strong style={{ display: 'block', marginBottom: 12 }}>单房型优惠设置</Typography.Text>
+                  
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ marginBottom: 8 }}>优惠方式:</div>
+                    <Radio.Group 
+                      value={room._discountType || (room.discount_rate < 0 ? 'amount' : 'rate')} 
+                      onChange={(e) => {
+                        const newType = e.target.value
+                        // 更新UI类型状态
+                        handleChange(index, '_discountType', newType)
+                        // 更新数值符号
+                        const currentVal = Math.abs(room.discount_rate || 0)
+                        const newVal = newType === 'amount' ? -currentVal : currentVal
+                        handleChange(index, 'discount_rate', newVal)
+                      }}
+                      style={{ marginBottom: 12, display: 'flex' }}
+                      optionType="button"
+                      buttonStyle="solid"
+                    >
+                      <Radio.Button value="rate">折扣 (折)</Radio.Button>
+                      <Radio.Button value="amount">减免 (元)</Radio.Button>
+                    </Radio.Group>
+
+                    <div style={{ marginBottom: 4 }}>优惠力度:</div>
+                    <InputNumber 
+                      value={room.discount_rate < 0 ? Math.abs(room.discount_rate) : room.discount_rate} 
+                      onChange={(val) => {
+                        const type = room._discountType || (room.discount_rate < 0 ? 'amount' : 'rate')
+                        const newVal = type === 'amount' ? -Math.abs(val) : Math.abs(val)
+                        handleChange(index, 'discount_rate', newVal)
+                      }}
+                      placeholder={room._discountType === 'amount' || room.discount_rate < 0 ? "输入减免金额" : "输入折扣 (0-10)"}
+                      step={0.5}
+                      style={{ width: '100%' }}
+                      addonAfter={room._discountType === 'amount' || room.discount_rate < 0 ? '元' : '折'}
+                    />
+                    <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+                      {room.discount_rate < 0 ? `固定减免 ${Math.abs(room.discount_rate)} 元` : (room.discount_rate > 0 && room.discount_rate <= 10 ? `${room.discount_rate} 折优惠` : '无折扣')}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div style={{ marginBottom: 4 }}>优惠配额 (间):</div>
+                    <InputNumber 
+                      value={room.discount_quota} 
+                      onChange={(val) => handleChange(index, 'discount_quota', val)}
+                      min={0}
+                      style={{ width: '100%' }} 
+                    />
+                  </div>
+                </div>
+              }
+              title={null}
+              trigger="click"
+            >
+              <GlassButton type={room.discount_rate ? 'primary' : 'default'} ghost={!!room.discount_rate} size="small" icon={<PercentageOutlined />}>
+                {room.discount_rate ? '已设优惠' : '优惠'}
+              </GlassButton>
+            </Popover>
+          </Col>
+          <Col span={4}><GlassButton type="link" danger icon={<DeleteOutlined />} onClick={() => handleRemove(index)}>删除</GlassButton></Col>
         </Row>
       ))}
 
@@ -393,7 +473,15 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
         <Row gutter={16} key={index} align="middle">
           <Col span={6}><Input value={promo.type} onChange={(e) => handleChange(index, 'type', e.target.value)} placeholder="类型" /></Col>
           <Col span={10}><Input value={promo.title} onChange={(e) => handleChange(index, 'title', e.target.value)} placeholder="优惠标题" /></Col>
-          <Col span={4}><InputNumber value={promo.value} onChange={(val) => handleChange(index, 'value', val)} min={0} max={10} style={{ width: '100%' }} /></Col>
+          <Col span={4}>
+            <InputNumber 
+              value={promo.value} 
+              onChange={(val) => handleChange(index, 'value', val)} 
+              style={{ width: '100%' }} 
+              placeholder="数值"
+              addonAfter={promo.value < 0 ? '元' : (promo.value > 10 ? '元' : '折')}
+            />
+          </Col>
           <Col span={4}><GlassButton type="link" danger icon={<DeleteOutlined />} onClick={() => handleRemove(index)}>删除</GlassButton></Col>
         </Row>
       ))}
@@ -411,7 +499,9 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
                   <div style={{ fontSize: 13 }}>
                     {type && <Tag color={exists ? 'default' : 'green'} style={{ marginRight: 8 }}>{type}</Tag>}
                     <span>{req.name}</span>
-                    <span style={{ color: '#f5222d', marginLeft: 8 }}>{valueText}折</span>
+                    <span style={{ color: '#f5222d', marginLeft: 8 }}>
+                      {valueText < 0 ? `减免 ${Math.abs(valueText)} 元` : (valueText > 10 ? `减免 ${valueText} 元` : `${valueText} 折`)}
+                    </span>
                   </div>
                   <GlassButton size="small" onClick={() => onReuseApproved?.(req, exists ? 'remove' : 'add')}>
                     {exists ? '撤销' : '添加'}
@@ -447,7 +537,14 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
           <Row gutter={8} style={{ marginTop: 8 }}>
             <Col span={6}><Input placeholder="类型" value={customPromo.type} onChange={(e) => setCustomPromo({ ...customPromo, type: e.target.value })} /></Col>
             <Col span={10}><Input placeholder="优惠标题" value={customPromo.title} onChange={(e) => setCustomPromo({ ...customPromo, title: e.target.value })} /></Col>
-            <Col span={4}><InputNumber placeholder="折扣" value={customPromo.value} onChange={(val) => setCustomPromo({ ...customPromo, value: val })} min={0} max={10} style={{ width: '100%' }} /></Col>
+            <Col span={4}>
+              <InputNumber 
+                placeholder="数值" 
+                value={customPromo.value} 
+                onChange={(val) => setCustomPromo({ ...customPromo, value: val })} 
+                style={{ width: '100%' }} 
+              />
+            </Col>
             <Col span={4}><Space><GlassButton type="primary" onClick={handleRequestNew}>提交</GlassButton><GlassButton onClick={() => setShowCustomInput(false)}>取消</GlassButton></Space></Col>
           </Row>
         </Card>
@@ -496,7 +593,7 @@ function NearbyInfoEditor({ attractions = [], transport = [], malls = [], onChan
           return {
             name: poi.name,
             address: poi.address || '',
-            distance: (poi.distance && !isNaN(parseFloat(poi.distance))) ? `${poi.distance}m` : '未知',
+            distance: (poi.distance && !isNaN(parseFloat(poi.distance))) ? `${poi.distance}米` : '未知',
             type: type
           }
         })
@@ -601,7 +698,38 @@ function HotelPreview({ data }) {
 
   const roomColumns = [
     { title: '房型名称', dataIndex: 'name', key: 'name' },
-    { title: '价格', dataIndex: 'price', key: 'price', render: (price) => <span style={{ color: '#f5222d', fontWeight: 600 }}>¥{price || 0}</span> },
+    { 
+      title: '价格', 
+      key: 'price', 
+      render: (_, record) => {
+        const price = Number(record.price) || 0
+        const discount = Number(record.discount_rate) || 0
+        let finalPrice = price
+        let discountText = ''
+
+        if (discount > 0 && discount <= 10) {
+          finalPrice = price * (discount / 10)
+          discountText = `${discount}折`
+        } else if (discount < 0) {
+          finalPrice = Math.max(0, price + discount)
+          discountText = `减¥${Math.abs(discount)}`
+        }
+        
+        finalPrice = Math.round(finalPrice * 100) / 100
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ color: '#f5222d', fontWeight: 600 }}>¥{finalPrice}</span>
+            {discount !== 0 && (
+              <span style={{ fontSize: 12, color: '#999' }}>
+                <span style={{ textDecoration: 'line-through', marginRight: 4 }}>¥{price}</span>
+                <Tag color="red" style={{ margin: 0, fontSize: 10, lineHeight: '16px', padding: '0 2px' }}>{discountText}</Tag>
+              </span>
+            )}
+          </div>
+        )
+      } 
+    },
     { title: '库存', dataIndex: 'stock', key: 'stock', render: (v) => v || 0 }
   ]
 

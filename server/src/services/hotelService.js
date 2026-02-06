@@ -30,7 +30,7 @@ const getLowestPrices = async (hotelIds) => {
 
   const { data: roomTypes } = await supabase
     .from('room_types')
-    .select('hotel_id, price')
+    .select('hotel_id, price, discount_rate')
     .in('hotel_id', hotelIds)
 
   const priceMap = {}
@@ -40,8 +40,20 @@ const getLowestPrices = async (hotelIds) => {
 
   if (roomTypes) {
     roomTypes.forEach((room) => {
-      if (priceMap[room.hotel_id] === null || room.price < priceMap[room.hotel_id]) {
-        priceMap[room.hotel_id] = room.price
+      let finalPrice = Number(room.price) || 0
+      const discount = Number(room.discount_rate) || 0
+
+      if (discount > 0 && discount <= 10) {
+        finalPrice = finalPrice * (discount / 10)
+      } else if (discount < 0) {
+        finalPrice = Math.max(0, finalPrice + discount)
+      }
+
+      // 保留两位小数
+      finalPrice = Math.round(finalPrice * 100) / 100
+
+      if (priceMap[room.hotel_id] === null || finalPrice < priceMap[room.hotel_id]) {
+        priceMap[room.hotel_id] = finalPrice
       }
     })
   }
@@ -106,8 +118,8 @@ const batchSetRoomDiscount = async ({ hotelIds, roomTypeName, quantity, discount
   const normalizedDiscount = normalizeNumber(discount)
   const normalizedQuantity = Math.max(normalizeNumber(quantity), 0)
 
-  if (normalizedDiscount < 0 || normalizedDiscount > 10) {
-    return { ok: false, status: 400, message: 'discount 取值应为 0-10' }
+  if (normalizedDiscount > 10) {
+    return { ok: false, status: 400, message: '折扣力度不能大于10' }
   }
 
   const { data: roomTypes, error } = await supabase
@@ -123,6 +135,11 @@ const batchSetRoomDiscount = async ({ hotelIds, roomTypeName, quantity, discount
   const isCancel = normalizedDiscount === 0
   const updates = await Promise.all(
     (roomTypes || []).map(async (room) => {
+      // 检查减免金额是否超过原价
+      if (normalizedDiscount < 0 && Math.abs(normalizedDiscount) > normalizeNumber(room.price)) {
+        return { ok: false, message: '减免金额不能大于房型原价' }
+      }
+
       const stock = normalizeNumber(room.stock)
       const used = normalizeNumber(room.used_stock)
       const offline = normalizeNumber(room.offline_stock)
@@ -147,6 +164,25 @@ const batchSetRoomDiscount = async ({ hotelIds, roomTypeName, quantity, discount
   )
 
   const successCount = updates.filter((item) => item.ok).length
+  
+  console.log(`[BatchSetDiscount] Success Count: ${successCount}, Filtered Hotel IDs: ${filteredHotelIds.join(',')}`)
+
+  // 重新计算受影响酒店的最优折扣（确保条件优惠能生效）
+  if (successCount > 0) {
+    const { data: hotelsWithPromotions } = await supabase
+      .from('hotels')
+      .select('id, promotions')
+      .in('id', filteredHotelIds)
+
+    if (hotelsWithPromotions && hotelsWithPromotions.length > 0) {
+      await Promise.all(
+        hotelsWithPromotions.map(hotel => 
+          applyPromotionsToRooms(hotel.id, hotel.promotions)
+        )
+      )
+    }
+  }
+
   return { ok: true, status: 200, data: { successCount, total: roomTypes?.length || 0 } }
 }
 
@@ -560,6 +596,20 @@ const createHotel = async ({ merchantId, payload }) => {
     return { ok: false, status: 500, message: '创建酒店失败：' + hotelError.message }
   }
 
+  // 计算最佳折扣
+  let bestDiscount = 0
+  const promoList = normalizeArray(promotions)
+  if (promoList.length > 0) {
+    const fixedDiscounts = promoList.filter(p => Number(p.value) < 0)
+    const rateDiscounts = promoList.filter(p => Number(p.value) > 0 && Number(p.value) <= 10)
+
+    if (fixedDiscounts.length > 0) {
+      bestDiscount = Math.min(...fixedDiscounts.map(p => Number(p.value)))
+    } else if (rateDiscounts.length > 0) {
+      bestDiscount = Math.min(...rateDiscounts.map(p => Number(p.value)))
+    }
+  }
+
   // 创建房型
   let createdRoomTypes = []
   if (Array.isArray(roomTypes) && roomTypes.length > 0) {
@@ -569,7 +619,9 @@ const createHotel = async ({ merchantId, payload }) => {
         hotel_id: newHotel.id,
         name: room.name,
         price: Number(room.price) || 0,
-        stock: Number(room.stock) || 0
+        stock: Number(room.stock) || 0,
+        discount_rate: bestDiscount, // 自动应用酒店优惠
+        discount_quota: bestDiscount !== 0 ? 999 : 0 // 有折扣时默认给配额
       }))
 
     if (roomTypesToInsert.length > 0) {
@@ -663,12 +715,19 @@ const updateHotel = async ({ merchantId, hotelId, payload }) => {
         hotel_id: hotelId,
         name: room.name,
         price: Number(room.price) || 0,
-        stock: Number(room.stock) || 0
+        stock: Number(room.stock) || 0,
+        discount_rate: Number(room.discount_rate) || 0,
+        discount_quota: Number(room.discount_quota) || 0
       }))
 
     if (roomTypesToInsert.length > 0) {
       await supabase.from('room_types').insert(roomTypesToInsert)
     }
+  }
+
+  // 如果更新了 promotions，执行智能价格计算
+  if (promotions !== undefined) {
+    await applyPromotionsToRooms(hotelId, promotions)
   }
 
   // 获取当前房型
@@ -678,6 +737,102 @@ const updateHotel = async ({ merchantId, hotelId, payload }) => {
     .eq('hotel_id', hotelId)
 
   return { ok: true, status: 200, data: { ...updatedHotel, roomTypes: currentRoomTypes || [] } }
+}
+
+// 应用优惠到房型
+const applyPromotionsToRooms = async (hotelId, promotions) => {
+  const promoList = normalizeArray(promotions)
+    
+  // 获取当前酒店的所有房型
+  const { data: allRoomTypes } = await supabase
+    .from('room_types')
+    .select('*')
+    .eq('hotel_id', hotelId)
+
+  if (allRoomTypes && allRoomTypes.length > 0) {
+    const updatesPromise = allRoomTypes.map(async (room) => {
+      const price = Number(room.price) || 0
+      if (price <= 0) return // 价格异常不处理
+
+      let bestDiscount = 0
+      let minFinalPrice = price // 默认原价
+
+      // 1. 没有任何优惠的情况
+      if (promoList.length === 0) {
+        bestDiscount = 0
+      } else {
+        // 2. 遍历所有优惠计算折后价
+        promoList.forEach(p => {
+          const val = Number(p.value)
+          let currentFinalPrice = price
+          let currentDiscount = 0
+
+          if (val > 0 && val <= 10) {
+            // 折扣率 (e.g. 8折)
+            currentFinalPrice = price * (val / 10)
+            currentDiscount = val
+          } else if (val < 0) {
+            // 固定减免 (e.g. -200)
+            currentFinalPrice = price + val // val is negative
+            currentDiscount = val
+          }
+
+          // 价格不能低于0
+          if (currentFinalPrice < 0) currentFinalPrice = 0
+
+          // 找到更低价格，更新最佳策略
+          // 如果价格相同，优先选固定减免（通常用户感知更强）
+          if (currentFinalPrice < minFinalPrice) {
+            minFinalPrice = currentFinalPrice
+            bestDiscount = currentDiscount
+          } else if (currentFinalPrice === minFinalPrice && bestDiscount > 0 && currentDiscount < 0) {
+            // 同价时优先选减免
+            bestDiscount = currentDiscount
+          }
+        })
+      }
+
+      // 获取当前房型已有的折扣价格（用户手动设置的或上次保存的）
+      const currentDiscount = Number(room.discount_rate) || 0
+      let currentPriceWithExistingDiscount = price
+      if (currentDiscount > 0 && currentDiscount <= 10) {
+          currentPriceWithExistingDiscount = price * (currentDiscount / 10)
+      } else if (currentDiscount < 0) {
+          currentPriceWithExistingDiscount = price + currentDiscount
+      }
+      if (currentPriceWithExistingDiscount < 0) currentPriceWithExistingDiscount = 0
+
+      // 策略优化：
+      // 1. 如果 Promotions 能提供比当前更低的价格，则应用 Promotions 的优惠。
+      // 2. 如果当前价格已经比 Promotions 提供的更低（说明用户手动设置了更大力度的折扣），则保留当前的，不更新。
+      // 3. 如果 Promotions 没有优惠 (bestDiscount === 0)，也不要强制覆盖为 0，以免清除用户手动设置的折扣。
+      
+      let shouldUpdate = false
+      if (minFinalPrice < currentPriceWithExistingDiscount) {
+          // Promotions 提供了更低价，应用它
+          shouldUpdate = true
+      } else {
+          shouldUpdate = false
+      }
+
+      // 仅当需要更新且折扣值确实不同时才执行数据库操作
+      if (shouldUpdate && room.discount_rate !== bestDiscount) {
+        // 如果当前房型有手动设置的配额(来自刚刚的Insert)，则保留它
+        // 如果没有(为0)，且我们要设置新的折扣(bestDiscount!=0)，则默认给999
+        const newQuota = room.discount_quota > 0 ? room.discount_quota : (bestDiscount !== 0 ? 999 : 0)
+
+        await supabase
+          .from('room_types')
+          .update({ 
+            discount_rate: bestDiscount,
+            discount_quota: newQuota 
+          })
+          .eq('id', room.id)
+      }
+    })
+
+    await Promise.all(updatesPromise)
+  }
 }
 
 // 商户酒店列表
@@ -1011,7 +1166,37 @@ const createPublicOrder = async ({ hotelId, payload }) => {
   }
 
   const pricePerNight = normalizeNumber(room.price)
-  const totalPrice = Math.round(pricePerNight * normalizedQuantity * nights * 100) / 100
+
+  // 计算批量折扣
+  const discountRate = Number(room.discount_rate) || 0
+  const discountQuota = Number(room.discount_quota) || 0
+  
+  // 折扣逻辑: 0 < rate <= 10 为折扣率(x折); rate < 0 为固定减免金额
+  const isPercentage = discountRate > 0 && discountRate <= 10
+  const isFixed = discountRate < 0
+  const hasDiscount = (isPercentage || isFixed) && discountQuota > 0
+
+  let totalPrice = 0
+  let discountCount = 0
+
+  if (hasDiscount) {
+    // 只有配额内的数量享受折扣
+    discountCount = Math.min(normalizedQuantity, discountQuota)
+    const normalCount = normalizedQuantity - discountCount
+    
+    let discountedPricePerNight = pricePerNight
+    if (isPercentage) {
+      discountedPricePerNight = Math.round(pricePerNight * discountRate * 10) / 100
+    } else if (isFixed) {
+      discountedPricePerNight = Math.max(0, pricePerNight + discountRate) // discountRate 为负数
+    }
+    
+    totalPrice = (discountedPricePerNight * discountCount + pricePerNight * normalCount) * nights
+  } else {
+    totalPrice = pricePerNight * normalizedQuantity * nights
+  }
+  
+  totalPrice = Math.round(totalPrice * 100) / 100
 
   const { data: order, error: orderError } = await supabase
     .from('orders')
@@ -1043,6 +1228,15 @@ const createPublicOrder = async ({ hotelId, payload }) => {
   if (updateError) {
     await supabase.from('orders').delete().eq('id', order.id)
     return { ok: false, status: 500, message: '更新库存失败：' + updateError.message }
+  }
+
+  // 如果使用了折扣配额，更新配额
+  if (discountCount > 0) {
+    const newQuota = Math.max(0, discountQuota - discountCount)
+    await supabase
+      .from('room_types')
+      .update({ discount_quota: newQuota })
+      .eq('id', room.id)
   }
 
   return { ok: true, status: 201, data: order }
@@ -1131,5 +1325,6 @@ module.exports = {
   getHotelRoomOverview,
   listHotelOrders,
   getHotelOrderStats,
-  getMerchantOverview
+  getMerchantOverview,
+  applyPromotionsToRooms
 }
