@@ -1,10 +1,12 @@
 # 易宿酒店预订平台 - 详细设计文档（SDD）
 
 ## 1. 技术栈与工程规范
-- 前端：React（PC），Taro/React（移动端）
-- 后端：Node.js（Express/Koa/NestJS）
+- 前端：React + Ant Design（PC 管理端），Taro + React + antd-mobile（移动端）
+- 后端：Node.js + Express
 - API：RESTful，JSON 传输
-- 安全：JWT 认证、角色鉴权
+- 数据库：Supabase（PostgreSQL）
+- 文档：Swagger（/api-docs）
+- 安全：JWT 认证、角色鉴权、密码加密存储
 
 ## 2. 数据模型设计
 ### 2.1 User
@@ -46,6 +48,10 @@
 | name | String | 房型名称 |
 | price | Number | 价格 |
 | stock | Number | 库存 |
+| used_stock | Number | 已用库存 |
+| offline_stock | Number | 下架库存 |
+| discount_rate | Number | 折扣（正数为折扣率，负数为直减） |
+| discount_quota | Number | 折扣配额 |
 | created_at | Date | 创建时间 |
 
 ### 2.4 Request（申请审核）
@@ -74,6 +80,23 @@
 | related_id | Number | 关联ID |
 | related_type | String | 关联类型 |
 | created_at | Date | 创建时间 |
+ 
+### 2.6 Order（订单）
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | Number | 主键 |
+| hotel_id | Number | 酒店ID |
+| merchant_id | Number | 商户用户ID |
+| room_type_id | Number | 房型ID |
+| room_type_name | String | 房型名称 |
+| quantity | Number | 预订数量 |
+| price_per_night | Number | 每晚单价 |
+| nights | Number | 入住间夜 |
+| total_price | Number | 订单总价 |
+| status | String | 订单状态 |
+| check_in | Date | 入住日期 |
+| check_out | Date | 离店日期 |
+| created_at | Date | 创建时间 |
 
 ## 3. 状态流转
 - pending：商户新建或更新后进入待审核
@@ -89,13 +112,30 @@
 - 分页字段：page、pageSize
 
 ### 4.2 认证模块
+#### POST /api/auth/sms/send
+请求：
+```json
+{
+  "username": "merchant001"
+}
+```
+响应：
+```json
+{
+  "message": "验证码已发送",
+  "code": "123456",
+  "expiresAt": "2026-02-06T10:00:00.000Z"
+}
+```
+
 #### POST /api/auth/register
 请求：
 ```json
 {
   "username": "merchant001",
   "password": "123456",
-  "role": "merchant"
+  "role": "merchant",
+  "code": "123456"
 }
 ```
 响应：
@@ -124,6 +164,10 @@
 ```
 
 ### 4.3 商户酒店管理（PC 端 - 商户）
+#### GET /api/merchant/hotels
+Query：status（可选）
+响应：酒店列表
+
 #### POST /api/merchant/hotels
 请求：
 ```json
@@ -164,6 +208,40 @@
 请求：同创建，可部分字段更新
 响应：最新酒店数据与房型列表
 
+#### GET /api/merchant/hotels/overview
+响应：商户工作台统计（酒店数量、房间概览、月度收入等）
+
+#### GET /api/merchant/hotels/room-type-stats
+Query：hotelIds（以逗号分隔）
+响应：房型库存统计列表
+
+#### POST /api/merchant/hotels/batch-discount
+请求：选择房型与折扣/数量
+响应：批量折扣更新结果
+
+#### POST /api/merchant/hotels/batch-room
+请求：批量下架/调整库存
+响应：批量更新结果
+
+#### GET /api/merchant/hotels/:id/overview
+响应：房间概览（总房间、已用、空闲、下架与占比）
+
+#### GET /api/merchant/hotels/:id/orders
+Query：page, pageSize
+响应：订单列表（分页）
+
+#### GET /api/merchant/hotels/:id/order-stats
+响应：订单统计与房型维度统计
+
+#### PATCH /api/merchant/hotels/:id/status
+请求：
+```json
+{
+  "action": "offline"
+}
+```
+响应：状态更新结果
+
 ### 4.4 管理员酒店管理（PC 端 - 管理员）
 #### GET /api/admin/hotels
 Query：status（可选）
@@ -184,6 +262,13 @@ Query：status（可选）
 }
 ```
 响应：更新后的酒店信息
+
+#### PUT /api/admin/hotels/:id/offline
+请求：{ "reason": "违规原因" }
+响应：状态更新结果
+
+#### PUT /api/admin/hotels/:id/restore
+响应：状态更新结果
 
 #### GET /api/admin/hotels/:id/overview
 响应：
@@ -206,16 +291,28 @@ Query：page, pageSize
 ```json
 {
   "totalOrders": 150,
-  "totalRevenue": 50000,
-  "statusDistribution": [...],
-  "monthlyRevenue": [...]
+  "revenue": 50000,
+  "statusStats": [...],
+  "monthly": [...]
 }
 ```
+
+#### GET /api/admin/hotels/room-type-stats
+Query：hotelIds（以逗号分隔）
+响应：房型库存统计列表
+
+#### POST /api/admin/hotels/batch-discount
+请求：选择房型与折扣/数量
+响应：批量折扣更新结果
+
+#### POST /api/admin/hotels/batch-room
+请求：批量下架/调整库存
+响应：批量更新结果
 
 ### 4.5 酒店查询（移动端）
 #### GET /api/hotels
 Query：
-city, keyword, checkIn, checkOut, sort, page, pageSize
+city, keyword, sort, page, pageSize
 
 响应：
 ```json
@@ -262,77 +359,112 @@ city, keyword, checkIn, checkOut, sort, page, pageSize
 }
 ```
 
-## 5. 前后端接口对齐清单
-- 认证：登录返回 userRole，用于前端自动跳转
-- 商户端：酒店创建/更新后状态统一为 pending
-- 管理端：审核支持 approve/reject/offline/restore
-- 移动端：列表仅展示 approved 酒店，详情房型价格升序
-
-## 6. 申请审核模块 API
-### 6.1 商户提交申请
-#### POST /api/requests
+#### POST /api/hotels/:id/orders
 请求：
 ```json
 {
-  "hotelId": 1,
-  "type": "facility",
-  "name": "私人泳池",
-  "data": {}
+  "roomTypeId": 1,
+  "quantity": 1,
+  "checkIn": "2026-02-06",
+  "checkOut": "2026-02-08"
 }
 ```
-响应：
-```json
-{
-  "id": 1,
-  "merchant_id": 2,
-  "type": "facility",
-  "name": "私人泳池",
-  "status": "pending"
-}
-```
+响应：订单信息
 
-### 6.2 商户获取申请列表
+### 4.6 预设数据（设施/房型/优惠/城市）
+#### GET /api/presets
+响应：预设数据合集（设施、房型、优惠、热门城市）
+
+#### GET /api/presets/facilities
+响应：设施列表
+
+#### GET /api/presets/room-types
+响应：房型模板列表
+
+#### GET /api/presets/promotion-types
+响应：优惠类型列表
+
+#### GET /api/presets/cities/hot
+响应：热门城市列表
+
+#### GET /api/presets/cities
+响应：全部城市列表
+
+#### POST /api/admin/presets/facilities
+#### POST /api/admin/presets/room-types
+#### POST /api/admin/presets/promotion-types
+#### POST /api/admin/presets/cities
+请求：新增预设数据（管理员）
+
+### 4.7 申请审核模块 API
+#### POST /api/requests
+请求：商户提交设施/房型/优惠申请
+响应：申请详情
+
 #### GET /api/requests
 Query：status、type（可选）
 响应：申请列表
 
-### 6.3 管理员获取待审核申请
 #### GET /api/admin/requests
-Query：type（可选）
+Query：type、status、hotelId（可选）
 响应：待审核申请列表（含商户和酒店信息）
 
-### 6.4 管理员审核申请
 #### PUT /api/admin/requests/:id/review
-请求：
-```json
-{
-  "action": "approve"
-}
-```
-或
-```json
-{
-  "action": "reject",
-  "rejectReason": "不符合规范"
-}
-```
-响应：{ "message": "已批准" } 或 { "message": "已拒绝" }
+请求：approve/reject 与驳回原因
+响应：审核结果
 
-## 7. 通知消息模块 API
-### 7.1 获取用户通知
-#### GET /api/requests/notifications
-Query：unreadOnly（可选，true/false）
+### 4.8 通知消息模块 API
+#### GET /api/notifications
+Query：unreadOnly（可选）
 响应：通知列表
 
-### 7.2 标记通知已读
-#### PUT /api/requests/notifications/:id/read
-响应：{ "message": "已标记为已读" }
+#### GET /api/notifications/unread-count
+响应：未读数量
 
-### 7.3 标记所有通知已读
-#### PUT /api/requests/notifications/read-all
-响应：{ "message": "已全部标记为已读" }
+#### PUT /api/notifications/:id/read
+响应：标记已读
 
-## 8. 预设数据配置
+#### PUT /api/notifications/read-all
+响应：全部已读
+
+### 4.9 地图服务 API
+#### GET /api/map/search
+Query：keyword、city
+响应：POI 列表
+
+#### GET /api/map/geocode
+Query：address、city
+响应：经纬度
+
+#### GET /api/map/regeocode
+Query：location
+响应：地址信息
+
+### 4.10 用户与商户管理
+#### GET /api/user/me
+响应：当前用户信息
+
+#### POST /api/user/change-password
+请求：旧密码与新密码
+响应：修改结果
+
+#### GET /api/user/merchants
+响应：商户列表（管理员）
+
+#### GET /api/user/merchants/:id
+响应：商户详情（管理员）
+
+#### POST /api/user/merchants/:id/reset-password
+响应：重置结果
+
+## 5. 前后端接口对齐清单
+- 认证：注册需要验证码，登录返回 userRole 用于前端自动跳转
+- 商户端：酒店创建/更新后状态统一为 pending
+- 管理端：审核支持 approve/reject/offline/restore
+- 移动端：列表仅展示 approved 酒店，详情房型价格升序
+- 通知中心：使用 /api/notifications 系列接口
+
+## 6. 预设数据配置
 ### 8.1 预设设施标签
 ```
 免费WiFi, 免费停车, 游泳池, 健身房, 餐厅, 会议室,
@@ -363,7 +495,7 @@ Query：unreadOnly（可选，true/false）
 | festival | 节日优惠 |
 | package | 套餐优惠 |
 
-## 9. PC 管理端模块实现（admin）
+## 7. PC 管理端模块实现（admin）
 ### 9.1 路由与权限入口
 - App.jsx 统一路由与面包屑配置，按角色渲染菜单
 - 登录态缺失自动跳转登录页，商户角色限制管理员路由访问
@@ -392,7 +524,7 @@ Query：unreadOnly（可选，true/false）
 - Account：账户信息与修改密码
 - Merchants / MerchantDetail：商户列表、详情、重置密码与酒店统计
 
-## 10. 服务端模块实现（server）
+## 8. 服务端模块实现（server）
 ### 10.1 入口与路由组织
 - app.js 统一挂载 /api、/status、/health 与 Swagger 文档
 - routes/index.js 维护鉴权与角色路由聚合
