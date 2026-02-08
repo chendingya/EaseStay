@@ -15,6 +15,46 @@ const defaultRoomTypes = [
 // 默认设施
 const defaultFacilities = ['免费WiFi', '停车场', '健身房', '餐厅', '会议室', '洗衣服务']
 
+const formatPeriodLabel = (periods) => {
+  const list = Array.isArray(periods) ? periods : []
+  if (!list.length) return '长期'
+  return list.map((p) => {
+    const start = p && p.start ? new Date(p.start) : null
+    const end = p && p.end ? new Date(p.end) : null
+    if (!start || !end) return ''
+    const pad = (n) => String(n).padStart(2, '0')
+    const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+    return `${fmt(start)}~${fmt(end)}`
+  }).filter(Boolean).join('，')
+}
+
+const isEffectiveNow = (periods) => {
+  const list = Array.isArray(periods) ? periods : []
+  if (!list.length) return true
+  const now = Date.now()
+  return list.some((p) => {
+    const start = p && p.start ? new Date(p.start).getTime() : null
+    const end = p && p.end ? new Date(p.end).getTime() : null
+    if (!start || !end) return false
+    return now >= start && now <= end
+  })
+}
+
+const applyPromotions = (price, promotions) => {
+  let final = Number(price) || 0
+  const list = Array.isArray(promotions) ? promotions : []
+  const effective = list.filter((p) => p && p.title && isEffectiveNow(p.periods))
+  effective.forEach((p) => {
+    const val = Number(p.value) || 0
+    if (val > 0 && val <= 10) {
+      final = final * (val / 10)
+    } else if (val < 0) {
+      final = Math.max(0, final + val)
+    }
+  })
+  return Math.round(final * 100) / 100
+}
+
 export default function Detail() {
   const router = useRouter()
   const { id, checkIn, checkOut } = router.params
@@ -212,11 +252,13 @@ export default function Detail() {
                 )
               }
               const label = promo.title || promo.type || '优惠'
-              const value = promo.value ? `${promo.value}折` : ''
+              const valNum = Number(promo.value) || 0
+              const value = valNum > 0 && valNum <= 10 ? `${valNum}折` : valNum < 0 ? `减¥${Math.abs(valNum)}` : ''
+              const periodLabel = formatPeriodLabel(promo.periods)
               return (
                 <View key={idx} className="promo-item">
                   <Text className="promo-tag">惠</Text>
-                  <Text className="promo-text">{label} {value}</Text>
+                  <Text className="promo-text">{label} {value} 有效期 {periodLabel}</Text>
                 </View>
               )
             })}
@@ -266,13 +308,13 @@ export default function Detail() {
                       const price = Number(room.price) || 0
                       const discount = Number(room.discount_rate) || 0
                       const quota = Number(room.discount_quota) || 0
-                      let finalPrice = price
-                      
-                      if (quota > 0) {
+                      let finalPrice = applyPromotions(price, hotel.promotions)
+                      const hasDiscount = quota > 0 && ((discount > 0 && discount <= 10) || discount < 0) && isEffectiveNow(room.discount_periods)
+                      if (hasDiscount) {
                         if (discount > 0 && discount <= 10) {
-                          finalPrice = price * (discount / 10)
+                          finalPrice = finalPrice * (discount / 10)
                         } else if (discount < 0) {
-                          finalPrice = Math.max(0, price + discount)
+                          finalPrice = Math.max(0, finalPrice + discount)
                         }
                       }
                       return Math.round(finalPrice * 100) / 100

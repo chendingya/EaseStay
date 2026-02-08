@@ -77,12 +77,13 @@ const roomTypeStats = async (req, res) => {
 }
 
 const batchDiscount = async (req, res) => {
-  const { hotelIds, roomTypeName, quantity, discount } = req.body || {}
+  const { hotelIds, roomTypeName, quantity, discount, periods } = req.body || {}
   const result = await batchSetRoomDiscount({
     hotelIds: Array.isArray(hotelIds) ? hotelIds : [],
     roomTypeName,
     quantity,
-    discount
+    discount,
+    periods
   })
   if (!result.ok) {
     res.status(result.status).json({ message: result.message })

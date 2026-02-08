@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, Descriptions, Tag, Image, Space, Typography, Table, Spin, Row, Col, Tabs, Progress, Statistic, Modal, Form, InputNumber, Radio } from 'antd'
+import { Card, Descriptions, Tag, Image, Space, Typography, Table, Spin, Row, Col, Tabs, Progress, Statistic, Modal, Form, InputNumber, Radio, DatePicker } from 'antd'
 import { StarFilled, EnvironmentOutlined, CalendarOutlined } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
+import dayjs from 'dayjs'
 import { api } from '../services/request'
 
 const statusMap = {
@@ -102,7 +103,17 @@ export default function HotelDetail() {
 
   const statusInfo = statusMap[hotel.status] || { color: 'default', label: hotel.status }
 
-  const promotionList = (hotel.promotions || []).filter((promo) => promo && promo.title)
+  const formatPeriodLabel = (periods) => {
+    const list = Array.isArray(periods) ? periods : []
+    if (!list.length) return '长期'
+    return list.map((p) => `${dayjs(p.start).format('YYYY-MM-DD HH:mm')}~${dayjs(p.end).format('YYYY-MM-DD HH:mm')}`).join('，')
+  }
+  const isPeriodEffective = (periods) => {
+    const list = Array.isArray(periods) ? periods : []
+    if (!list.length) return true
+    const now = dayjs()
+    return list.some((p) => now.isAfter(dayjs(p.start)) && now.isBefore(dayjs(p.end)))
+  }
 
   const openDiscountModal = (room) => {
     setSelectedRoom(room)
@@ -117,7 +128,8 @@ export default function HotelDetail() {
         hotelIds: [hotel.id],
         roomTypeName: selectedRoom.name,
         quantity: values.quantity,
-        discount: values.discount
+        discount: values.discount,
+        periods: values.periods
       })
       if (res && res.data && res.data.successCount === 0) {
           message.warning('设置折扣未生效，请检查是否超出限制')
@@ -173,21 +185,36 @@ export default function HotelDetail() {
         const basePrice = Number(price) || 0
         const discountRate = Number(record.discount_rate) || 0
         const discountQuota = Number(record.discount_quota) || 0
-        const hasDiscount = discountQuota > 0 && ((discountRate > 0 && discountRate <= 10) || discountRate < 0)
-        
+        const discountEffective = discountQuota > 0 && ((discountRate > 0 && discountRate <= 10) || discountRate < 0) && isPeriodEffective(record.discount_periods)
+        const now = dayjs()
+        const promotionList = (hotel.promotions || []).filter((p) => p && p.title)
+        const effectivePromos = promotionList.filter(p => {
+          const periods = Array.isArray(p.periods) ? p.periods : []
+          if (!periods.length) return true
+          return periods.some(r => now.isAfter(dayjs(r.start)) && now.isBefore(dayjs(r.end)))
+        })
         let discounted = basePrice
-        if (hasDiscount) {
-          if (discountRate > 0) {
-             discounted = Math.round(basePrice * discountRate * 10) / 100
-          } else {
-             discounted = Math.max(0, basePrice + discountRate)
+        effectivePromos.forEach(p => {
+          const val = Number(p.value) || 0
+          if (val > 0 && val <= 10) {
+            discounted = discounted * (val / 10)
+          } else if (val < 0) {
+            discounted = Math.max(0, discounted + val)
+          }
+        })
+        if (discountEffective) {
+          if (discountRate > 0 && discountRate <= 10) {
+            discounted = discounted * (discountRate / 10)
+          } else if (discountRate < 0) {
+            discounted = Math.max(0, discounted + discountRate)
           }
         }
+        discounted = Math.round(discounted * 100) / 100
 
         return (
           <div>
-            <div style={{ color: '#999', textDecoration: hasDiscount ? 'line-through' : 'none' }}>基础价 ¥{basePrice}</div>
-            <div style={{ color: '#f5222d', fontWeight: 600 }}>{hasDiscount ? '优惠价' : '当前售价'} ¥{discounted}</div>
+            <div style={{ color: '#999' }}>基础价 ¥{basePrice}</div>
+            <div style={{ color: '#f5222d', fontWeight: 600 }}>当前售价 ¥{discounted}</div>
           </div>
         )
       }
@@ -199,26 +226,24 @@ export default function HotelDetail() {
         const tags = []
         const discountRate = Number(record.discount_rate) || 0
         const discountQuota = Number(record.discount_quota) || 0
-        
-        if (discountQuota > 0) {
-          if (discountRate > 0 && discountRate <= 10) {
-            tags.push(
-              <Tag color="purple" key={`batch-${record.id || record.name}`}>
-                批量折扣 {discountRate}折 余{discountQuota}
-              </Tag>
-            )
-          } else if (discountRate < 0) {
-             tags.push(
-              <Tag color="purple" key={`batch-${record.id || record.name}`}>
-                立减 {Math.abs(discountRate)}元 余{discountQuota}
-              </Tag>
-            )
-          }
+        if (discountQuota > 0 && ((discountRate > 0 && discountRate <= 10) || discountRate < 0)) {
+          tags.push(
+            <Tag color="purple" key={`batch-${record.id || record.name}`}>
+              {discountRate > 0 ? `批量折扣 ${discountRate}折 余${discountQuota} 有效期 ${formatPeriodLabel(record.discount_periods)}` : `立减 ${Math.abs(discountRate)}元 余${discountQuota} 有效期 ${formatPeriodLabel(record.discount_periods)}`}
+            </Tag>
+          )
         }
-        promotionList.forEach((promo, index) => {
+        const now = dayjs()
+        const promotionList = (hotel.promotions || []).filter((p) => p && p.title)
+        const effectivePromos = promotionList.filter(p => {
+          const periods = Array.isArray(p.periods) ? p.periods : []
+          if (!periods.length) return true
+          return periods.some(r => now.isAfter(dayjs(r.start)) && now.isBefore(dayjs(r.end)))
+        })
+        effectivePromos.forEach((promo, index) => {
           tags.push(
             <Tag color="blue" key={`promo-${record.id || record.name}-${index}`}>
-              {promo.type ? `条件优惠 ${promo.type} ${promo.title}` : `条件优惠 ${promo.title}`}
+              {promo.type ? `条件优惠 ${promo.type} ${promo.title}` : `条件优惠 ${promo.title}`} 有效期 {formatPeriodLabel(promo.periods)}
             </Tag>
           )
         })
@@ -647,6 +672,11 @@ export default function HotelDetail() {
                     <Tag color="orange">{promo.type}</Tag>
                     <span>{promo.title}</span>
                     {promo.value && <span style={{ color: '#f5222d', marginLeft: 8 }}>{promo.value}折</span>}
+                    {Array.isArray(promo.periods) && promo.periods[0] && (
+                      <span style={{ marginLeft: 8, color: '#999' }}>
+                        {dayjs(promo.periods[0].start).format('YYYY-MM-DD HH:mm')} ~ {dayjs(promo.periods[0].end).format('YYYY-MM-DD HH:mm')}
+                      </span>
+                    )}
                   </div>
                 ))}
               </Space>
@@ -708,7 +738,7 @@ function DiscountModal({ open, selectedRoom, onClose, onSubmit, loading }) {
 
   useEffect(() => {
     if (open) {
-      form.setFieldsValue({ quantity: 1, discount: 9, type: 'rate', amount: 50 })
+      form.setFieldsValue({ quantity: 1, discount: 9, type: 'rate', amount: 50, periods: [] })
     }
   }, [open, form])
 
@@ -720,7 +750,10 @@ function DiscountModal({ open, selectedRoom, onClose, onSubmit, loading }) {
   const handleFinish = (values) => {
     const payload = {
       quantity: values.quantity,
-      discount: values.type === 'rate' ? values.discount : -Math.abs(values.amount)
+      discount: values.type === 'rate' ? values.discount : -Math.abs(values.amount),
+      periods: Array.isArray(values.periods) && values.periods.length === 2
+        ? [{ start: values.periods[0].toISOString(), end: values.periods[1].toISOString() }]
+        : []
     }
     onSubmit(payload)
   }
@@ -786,6 +819,9 @@ function DiscountModal({ open, selectedRoom, onClose, onSubmit, loading }) {
             />
           </Form.Item>
         )}
+        <Form.Item name="periods" label="生效时间">
+          <DatePicker.RangePicker showTime style={{ width: 360 }} />
+        </Form.Item>
 
         <Form.Item>
           <Space>

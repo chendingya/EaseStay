@@ -1,4 +1,4 @@
-import { Card, Col, Row, Statistic, Space, Typography, Modal, Form, InputNumber, Select, Table, Progress, Radio } from 'antd'
+import { Card, Col, Row, Statistic, Space, Typography, Modal, Form, InputNumber, Select, Table, Progress, Radio, DatePicker } from 'antd'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PercentageOutlined, EditOutlined, ShopOutlined } from '@ant-design/icons'
@@ -113,12 +113,16 @@ export default function Dashboard() {
       if (!isCancel) {
         finalDiscount = values.discountType === 'rate' ? values.discount : -Math.abs(values.amount)
       }
+      const periods = Array.isArray(values.periods) && values.periods.length === 2
+        ? [{ start: values.periods[0].toISOString(), end: values.periods[1].toISOString() }]
+        : []
 
       const data = await api.post(`${base}/batch-discount`, {
         hotelIds: targetHotels.map((h) => h.id),
         roomTypeName: values.roomTypeName,
         quantity: isCancel ? 0 : values.quantity,
-        discount: finalDiscount
+        discount: finalDiscount,
+        periods
       })
       message.success(`已为 ${data.successCount || 0} 个房型${isCancel ? '取消折扣' : '设置折扣'}`)
       setDiscountModal(false)
@@ -417,6 +421,9 @@ export default function Dashboard() {
                     />
                   </Form.Item>
                 )}
+                <Form.Item name="periods" label="生效时间">
+                  <DatePicker.RangePicker showTime style={{ width: 360 }} />
+                </Form.Item>
               </>
             )}
           </Form.Item>
