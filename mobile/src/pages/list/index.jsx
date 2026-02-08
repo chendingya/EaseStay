@@ -16,6 +16,8 @@ export default function List() {
   const [keyword, setKeyword] = useState(params.keyword ? decodeURIComponent(params.keyword) : '')
   const [checkIn, setCheckIn] = useState(params.checkIn || '')
   const [checkOut, setCheckOut] = useState(params.checkOut || '')
+  const [minPrice, setMinPrice] = useState(params.minPrice || '')
+  const [maxPrice, setMaxPrice] = useState(params.maxPrice || '')
 
   // Data State
   const [list, setList] = useState([])
@@ -24,7 +26,7 @@ export default function List() {
   
   // Filter State
   const [sort, setSort] = useState('recommend') // recommend, price_asc, price_desc, star
-  const [selectedStars, setSelectedStars] = useState([])
+  const [selectedStars, setSelectedStars] = useState(params.stars ? params.stars.split(',') : [])
   
   const dropdownRef = useRef(null)
   const isFirstLoad = useRef(true)
@@ -38,6 +40,8 @@ export default function List() {
       if (keyword) queryParams.append('keyword', keyword)
       if (checkIn) queryParams.append('checkIn', checkIn)
       if (checkOut) queryParams.append('checkOut', checkOut)
+      if (minPrice) queryParams.append('minPrice', minPrice)
+      if (maxPrice) queryParams.append('maxPrice', maxPrice)
       if (sort) queryParams.append('sort', sort)
       if (selectedStars.length > 0) queryParams.append('stars', selectedStars.join(','))
       
@@ -73,7 +77,7 @@ export default function List() {
     // Actually, setting hasMore=true and list=[] usually triggers InfiniteScroll.
     // However, to be safe and avoid double fetch or no fetch, we can manually call loadMore(1) if we managed the state manually,
     // but with InfiniteScroll component, we just reset state.
-  }, [sort, selectedStars, city, keyword]) // checkIn/checkOut usually don't change in list page interaction unless we add date picker
+  }, [sort, selectedStars, city, keyword, minPrice, maxPrice]) // checkIn/checkOut usually don't change in list page interaction unless we add date picker
 
   // Handle Search Bar Click -> Go back to search or expand
   const handleSearchClick = () => {
@@ -118,6 +122,44 @@ export default function List() {
                   <Radio value='price_asc'>价格低到高</Radio>
                   <Radio value='price_desc'>价格高到低</Radio>
                   <Radio value='star'>星级高到低</Radio>
+                </Space>
+              </Radio.Group>
+            </View>
+          </Dropdown.Item>
+
+          <Dropdown.Item key="price" title={
+            (minPrice || maxPrice) ? '价格(已选)' : '价格范围'
+          }>
+            <View className="dropdown-content">
+              <Radio.Group 
+                value={
+                  minPrice === '1000' && !maxPrice ? '1000+' :
+                  minPrice && maxPrice ? `${minPrice}-${maxPrice}` : 
+                  'unlimited'
+                }
+                onChange={(val) => {
+                  if (val === 'unlimited') {
+                    setMinPrice('')
+                    setMaxPrice('')
+                  } else if (val === '1000+') {
+                    setMinPrice('1000')
+                    setMaxPrice('')
+                  } else {
+                    const [min, max] = val.split('-')
+                    setMinPrice(min)
+                    setMaxPrice(max)
+                  }
+                  dropdownRef.current?.close()
+                }}
+              >
+                <Space direction='vertical' block>
+                  <Radio value='unlimited'>不限</Radio>
+                  <Radio value='0-150'>¥150以下</Radio>
+                  <Radio value='150-300'>¥150-300</Radio>
+                  <Radio value='300-450'>¥300-450</Radio>
+                  <Radio value='450-600'>¥450-600</Radio>
+                  <Radio value='600-1000'>¥600-1000</Radio>
+                  <Radio value='1000+'>¥1000以上</Radio>
                 </Space>
               </Radio.Group>
             </View>

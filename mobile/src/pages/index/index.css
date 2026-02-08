@@ -29,7 +29,7 @@
 
 /* 搜索卡片 */
 .search-card {
-  margin: 12px 16px 0 !important; /* Separated from banner for better responsiveness */
+  margin: -40px 16px 0 !important; /* Negative margin to pull up over banner */
   border-radius: 12px !important;
   position: relative;
   z-index: 10;

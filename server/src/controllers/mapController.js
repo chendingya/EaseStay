@@ -86,7 +86,11 @@ async function regeocode(req, res) {
   if (!AMAP_KEY) {
     return res.json({ 
       success: true, 
-      data: { formatted_address: '上海市浦东新区', city: '上海市' }
+      data: { 
+          formatted_address: '上海市浦东新区', 
+          city: '上海市',
+          addressComponent: { city: '上海市', province: '上海市', district: '浦东新区' }
+      }
     })
   }
 
@@ -101,9 +105,7 @@ async function regeocode(req, res) {
         success: true, 
         data: { 
           formatted_address,
-          city: addressComponent?.city || '',
-          district: addressComponent?.district || '',
-          province: addressComponent?.province || ''
+          addressComponent // Pass full addressComponent to frontend
         }
       })
     } else {
