@@ -1,260 +1,211 @@
-import { View, Text, Image, ScrollView } from '@tarojs/components'
+import { View, Text } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import { NavBar, Dropdown, InfiniteScroll, Radio, Checkbox, Button, Empty, SearchBar, Space } from 'antd-mobile'
+import { SearchOutline } from 'antd-mobile-icons'
 import { api } from '../../services/request'
+import HotelCard from '../../components/HotelCard'
 import './index.css'
-
-// 排序选项
-const sortOptions = [
-  { value: 'recommend', label: '推荐' },
-  { value: 'price_asc', label: '价格↑' },
-  { value: 'price_desc', label: '价格↓' },
-  { value: 'star', label: '星级' },
-]
-
-// 快捷筛选
-const filterTags = ['不限', '五星', '四星', '亲子', '含早', '免费停车']
 
 export default function List() {
   const router = useRouter()
-  const { city = '', keyword = '', checkIn = '', checkOut = '' } = router.params || {}
+  const params = router.params || {}
   
-  const decodeValue = (value) => {
-    if (!value) return ''
-    try {
-      return decodeURIComponent(value)
-    } catch {
-      return value
-    }
-  }
+  // URL Params
+  const [city, setCity] = useState(params.city ? decodeURIComponent(params.city) : '')
+  const [keyword, setKeyword] = useState(params.keyword ? decodeURIComponent(params.keyword) : '')
+  const [checkIn, setCheckIn] = useState(params.checkIn || '')
+  const [checkOut, setCheckOut] = useState(params.checkOut || '')
+  const [minPrice, setMinPrice] = useState(params.minPrice || '')
+  const [maxPrice, setMaxPrice] = useState(params.maxPrice || '')
 
-  const displayCity = decodeValue(city)
-  const displayKeyword = decodeValue(keyword)
-  const displayCheckIn = decodeValue(checkIn)
-  const displayCheckOut = decodeValue(checkOut)
-  const headerTitle = displayCity || displayKeyword || '全部城市'
-
-  const [hotels, setHotels] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [page, setPage] = useState(1)
+  // Data State
+  const [list, setList] = useState([])
   const [hasMore, setHasMore] = useState(true)
-  const [total, setTotal] = useState(0)
-  const [sort, setSort] = useState('recommend')
-  const [activeFilters, setActiveFilters] = useState(['不限'])
+  const [page, setPage] = useState(1)
+  
+  // Filter State
+  const [sort, setSort] = useState('recommend') // recommend, price_asc, price_desc, star
+  const [selectedStars, setSelectedStars] = useState(params.stars ? params.stars.split(',') : [])
+  
+  const dropdownRef = useRef(null)
+  const isFirstLoad = useRef(true)
 
-  const fetchHotels = useCallback(async (pageNum = 1, append = false) => {
-    if (loading) return
-    setLoading(true)
-    
+  // Fetch Data
+  async function loadMore() {
     try {
-      const params = new URLSearchParams()
-      if (displayCity) params.append('city', displayCity)
-      if (displayKeyword) params.append('keyword', displayKeyword)
-      if (displayCheckIn) params.append('checkIn', displayCheckIn)
-      if (displayCheckOut) params.append('checkOut', displayCheckOut)
-      if (sort) params.append('sort', sort)
-      params.append('page', pageNum)
-      params.append('pageSize', 10)
+      const nextPage = page
+      const queryParams = new URLSearchParams()
+      if (city) queryParams.append('city', city)
+      if (keyword) queryParams.append('keyword', keyword)
+      if (checkIn) queryParams.append('checkIn', checkIn)
+      if (checkOut) queryParams.append('checkOut', checkOut)
+      if (minPrice) queryParams.append('minPrice', minPrice)
+      if (maxPrice) queryParams.append('maxPrice', maxPrice)
+      if (sort) queryParams.append('sort', sort)
+      if (selectedStars.length > 0) queryParams.append('stars', selectedStars.join(','))
+      
+      queryParams.append('page', nextPage)
+      queryParams.append('pageSize', 10)
 
-      const data = await api.get(`/api/hotels?${params.toString()}`)
-
-      if (data) {
-        const { list = [], total: t = 0 } = data
-        setTotal(t)
-        setHotels((prev) => append ? [...prev, ...list] : list)
-        setHasMore(list.length === 10)
-        setPage(pageNum)
+      const res = await api.get(`/api/hotels?${queryParams.toString()}`)
+      
+      if (res && res.list) {
+        setList(prev => nextPage === 1 ? res.list : [...prev, ...res.list])
+        setHasMore(res.list.length >= 10)
+        setPage(nextPage + 1)
+      } else {
+        setHasMore(false)
       }
-    } catch (err) {} finally {
-      setLoading(false)
+    } catch (e) {
+      console.error(e)
+      setHasMore(false)
     }
-  }, [displayCity, displayKeyword, displayCheckIn, displayCheckOut, sort, loading])
+  }
 
+  // Reset and Reload when filters change
   useEffect(() => {
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false
+      return
+    }
     setPage(1)
-    setHotels([])
-    fetchHotels(1, false)
-  }, [sort, displayCity, displayKeyword, displayCheckIn, displayCheckOut, fetchHotels])
+    setList([])
+    setHasMore(true)
+    // InfiniteScroll will trigger loadMore automatically when hasMore is true and content is short, 
+    // but we need to reset page state carefully. 
+    // Actually, setting hasMore=true and list=[] usually triggers InfiniteScroll.
+    // However, to be safe and avoid double fetch or no fetch, we can manually call loadMore(1) if we managed the state manually,
+    // but with InfiniteScroll component, we just reset state.
+  }, [sort, selectedStars, city, keyword, minPrice, maxPrice]) // checkIn/checkOut usually don't change in list page interaction unless we add date picker
 
-  const handleLoadMore = () => {
-    if (hasMore && !loading) {
-      fetchHotels(page + 1, true)
-    }
+  // Handle Search Bar Click -> Go back to search or expand
+  const handleSearchClick = () => {
+    Taro.navigateBack()
   }
-
-  const handleHotelClick = (id) => {
-    Taro.navigateTo({
-      url: `/pages/detail/index?id=${id}&checkIn=${checkIn}&checkOut=${checkOut}`
-    })
-  }
-
-  const handleSortChange = (value) => {
-    setSort(value)
-    setPage(1)
-    setHotels([])
-  }
-
-  const nights = () => {
-    if (!displayCheckIn || !displayCheckOut) return 1
-    const diff = (new Date(displayCheckOut) - new Date(displayCheckIn)) / (1000 * 60 * 60 * 24)
-    return Math.max(1, diff)
-  }
-
-  const applyFilter = (list) => {
-    if (!activeFilters.length || activeFilters.includes('不限')) return list
-    return activeFilters.reduce((filtered, filterTag) => {
-      if (filterTag === '五星' || filterTag === '四星') {
-        const target = filterTag === '五星' ? 5 : 4
-        return filtered.filter((hotel) => Number(hotel.star_rating) === target)
-      }
-      if (filterTag === '含早') {
-        return filtered.filter((hotel) => {
-          const facilities = hotel.facilities || []
-          return facilities.includes('含早') || facilities.includes('早餐') || facilities.includes('含早餐')
-        })
-      }
-      if (filterTag === '免费停车') {
-        return filtered.filter((hotel) => {
-          const facilities = hotel.facilities || []
-          return facilities.includes('免费停车') || facilities.includes('停车场')
-        })
-      }
-      return filtered.filter((hotel) => {
-        const facilities = hotel.facilities || []
-        return facilities.includes(filterTag) || hotel.name?.includes(filterTag) || hotel.name_en?.includes(filterTag)
-      })
-    }, list)
-  }
-
-  const applySort = (list) => {
-    if (sort === 'price_asc') {
-      return [...list].sort((a, b) => (Number(a.lowestPrice) || 0) - (Number(b.lowestPrice) || 0))
-    }
-    if (sort === 'price_desc') {
-      return [...list].sort((a, b) => (Number(b.lowestPrice) || 0) - (Number(a.lowestPrice) || 0))
-    }
-    if (sort === 'star') {
-      return [...list].sort((a, b) => (Number(b.star_rating) || 0) - (Number(a.star_rating) || 0))
-    }
-    return list
-  }
-
-  const displayHotels = applySort(applyFilter(hotels))
 
   return (
     <View className="list-page">
-      <View className="list-topbar">
-        <View className="topbar-left" onClick={() => Taro.navigateBack()}>
-          <Text className="topbar-back">‹</Text>
-        </View>
-        <Text className="topbar-title">酒店列表</Text>
-        <View className="topbar-right"></View>
-      </View>
-
-      <View className="list-header">
-        <View className="header-content">
-          <Text className="header-title">{headerTitle}</Text>
-          <Text className="header-subtitle">
-            {displayCheckIn || '选择日期'} - {displayCheckOut || '选择日期'} · {nights()}晚
-          </Text>
-        </View>
-        {!!displayKeyword && displayKeyword !== headerTitle && <Text className="header-tag">{displayKeyword}</Text>}
-      </View>
-
-      {/* 排序和筛选 */}
-      <View className="filter-bar">
-        <View className="sort-tabs">
-          {sortOptions.map(opt => (
-            <View
-              key={opt.value}
-              className={`sort-tab ${sort === opt.value ? 'active' : ''}`}
-              onClick={() => handleSortChange(opt.value)}
-            >
-              {opt.label}
-            </View>
-          ))}
-        </View>
-        <ScrollView scrollX className="filter-scroll">
-          {filterTags.map((tag, idx) => (
-            <View
-              key={idx}
-              className={`filter-tag ${activeFilters.includes(tag) ? 'active' : ''}`}
-              onClick={() => {
-                if (tag === '不限') {
-                  setActiveFilters(['不限'])
-                  return
-                }
-                const next = activeFilters.includes(tag)
-                  ? activeFilters.filter((item) => item !== tag)
-                  : [...activeFilters.filter((item) => item !== '不限'), tag]
-                setActiveFilters(next.length ? next : ['不限'])
-              }}
-            >
-              {tag}
-            </View>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* 酒店列表 */}
-      <ScrollView
-        scrollY
-        className="hotel-list"
-        onScrollToLower={handleLoadMore}
-        lowerThreshold={100}
-      >
-        {displayHotels.map(hotel => (
-          <View key={hotel.id} className="hotel-card glass-card" onClick={() => handleHotelClick(hotel.id)}>
-            <View className="hotel-img-wrap">
-              {hotel.images && hotel.images[0] ? (
-                <Image className="hotel-img" src={hotel.images[0]} mode="aspectFill" />
-              ) : (
-                <View className="hotel-img-placeholder" />
-              )}
-              {hotel.star_rating && (
-                <View className="hotel-star">{hotel.star_rating}星</View>
-              )}
-            </View>
-            <View className="hotel-info">
-              <Text className="hotel-name">{hotel.name}</Text>
-              {hotel.name_en && <Text className="hotel-name-en">{hotel.name_en}</Text>}
-              <View className="hotel-meta">
-                <Text className="hotel-city">{hotel.city}</Text>
-                {hotel.opening_time && <Text className="hotel-opening">· {hotel.opening_time.split('-')[0]}年开业</Text>}
-              </View>
-              {hotel.facilities && hotel.facilities.length > 0 && (
-                <View className="hotel-tags">
-                  {hotel.facilities.slice(0, 3).map((f, i) => (
-                    <Text key={i} className="hotel-tag">{f}</Text>
-                  ))}
-                </View>
-              )}
-              <View className="hotel-bottom">
-                {hotel.lowestPrice ? (
-                  <View className="hotel-price">
-                    <Text className="price-symbol">¥</Text>
-                    <Text className="price-num">{hotel.lowestPrice}</Text>
-                    <Text className="price-unit">起</Text>
-                  </View>
-                ) : (
-                  <Text className="price-empty">暂无报价</Text>
-                )}
-              </View>
-            </View>
+      {/* Custom Header */}
+      <View className="list-header-wrapper">
+        <NavBar 
+          onBack={() => Taro.navigateBack()}
+          className="list-navbar"
+          backArrow={<View className="nav-back-icon">‹</View>}
+        >
+          <View className="header-search-box" onClick={handleSearchClick}>
+            <SearchOutline className="search-icon" />
+            <Text className="search-text">
+              {city} · {keyword || '搜索酒店'}
+            </Text>
+            <Text className="search-date">
+              {checkIn && checkOut ? `${checkIn.slice(5).replace('-','/')} - ${checkOut.slice(5).replace('-','/')}` : ''}
+            </Text>
           </View>
-        ))}
+        </NavBar>
 
-        {/* 加载状态 */}
-        {loading && (
-          <View className="loading-tip">加载中...</View>
+        {/* Filter Bar */}
+        <Dropdown ref={dropdownRef} className="filter-dropdown">
+          <Dropdown.Item key="sort" title={
+            sort === 'recommend' ? '推荐排序' : 
+            sort === 'price_asc' ? '价格低→高' : 
+            sort === 'price_desc' ? '价格高→低' : 
+            sort === 'star' ? '星级高→低' : '排序'
+          }>
+            <View className="dropdown-content">
+              <Radio.Group value={sort} onChange={(val) => {
+                setSort(val)
+                dropdownRef.current?.close()
+              }}>
+                <Space direction='vertical' block>
+                  <Radio value='recommend'>推荐排序</Radio>
+                  <Radio value='price_asc'>价格低到高</Radio>
+                  <Radio value='price_desc'>价格高到低</Radio>
+                  <Radio value='star'>星级高到低</Radio>
+                </Space>
+              </Radio.Group>
+            </View>
+          </Dropdown.Item>
+
+          <Dropdown.Item key="price" title={
+            (minPrice || maxPrice) ? '价格(已选)' : '价格范围'
+          }>
+            <View className="dropdown-content">
+              <Radio.Group 
+                value={
+                  minPrice === '1000' && !maxPrice ? '1000+' :
+                  minPrice && maxPrice ? `${minPrice}-${maxPrice}` : 
+                  'unlimited'
+                }
+                onChange={(val) => {
+                  if (val === 'unlimited') {
+                    setMinPrice('')
+                    setMaxPrice('')
+                  } else if (val === '1000+') {
+                    setMinPrice('1000')
+                    setMaxPrice('')
+                  } else {
+                    const [min, max] = val.split('-')
+                    setMinPrice(min)
+                    setMaxPrice(max)
+                  }
+                  dropdownRef.current?.close()
+                }}
+              >
+                <Space direction='vertical' block>
+                  <Radio value='unlimited'>不限</Radio>
+                  <Radio value='0-150'>¥150以下</Radio>
+                  <Radio value='150-300'>¥150-300</Radio>
+                  <Radio value='300-450'>¥300-450</Radio>
+                  <Radio value='450-600'>¥450-600</Radio>
+                  <Radio value='600-1000'>¥600-1000</Radio>
+                  <Radio value='1000+'>¥1000以上</Radio>
+                </Space>
+              </Radio.Group>
+            </View>
+          </Dropdown.Item>
+          
+          <Dropdown.Item key="filter" title={selectedStars.length ? `星级(${selectedStars.length})` : '星级筛选'}>
+            <View className="dropdown-content">
+              <View className="filter-section-title">星级</View>
+              <Checkbox.Group value={selectedStars} onChange={val => setSelectedStars(val)}>
+                <Space direction='vertical' block>
+                  <Checkbox value='3'>三星级</Checkbox>
+                  <Checkbox value='4'>四星级</Checkbox>
+                  <Checkbox value='5'>五星级</Checkbox>
+                </Space>
+              </Checkbox.Group>
+              <Button 
+                block 
+                color='primary' 
+                style={{ marginTop: 16 }}
+                onClick={() => dropdownRef.current?.close()}
+              >
+                确定
+              </Button>
+            </View>
+          </Dropdown.Item>
+        </Dropdown>
+      </View>
+
+      {/* List Content */}
+      <View className="list-content">
+        {list.map(hotel => (
+          <HotelCard 
+            key={hotel.id} 
+            hotel={hotel} 
+            onClick={() => Taro.navigateTo({
+              url: `/pages/detail/index?id=${hotel.id}&checkIn=${checkIn}&checkOut=${checkOut}`
+            })} 
+          />
+        ))}
+        
+        <InfiniteScroll loadMore={loadMore} hasMore={hasMore} />
+        
+        {!hasMore && list.length === 0 && (
+          <Empty description="暂无符合条件的酒店" />
         )}
-        {!loading && !hasMore && hotels.length > 0 && (
-          <View className="loading-tip">没有更多了</View>
-        )}
-        {!loading && displayHotels.length === 0 && (
-          <View className="empty-tip">暂无酒店数据</View>
-        )}
-      </ScrollView>
+      </View>
     </View>
   )
 }

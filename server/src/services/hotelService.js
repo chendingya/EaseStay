@@ -1010,6 +1010,9 @@ const listPublicHotels = async ({ query }) => {
     sort,
     checkIn,
     checkOut,
+    stars, // comma separated strings '3,4,5'
+    minPrice,
+    maxPrice,
     page = 1,
     pageSize = 10
   } = query || {}
@@ -1018,10 +1021,48 @@ const listPublicHotels = async ({ query }) => {
   const normalizedPageSize = Math.max(Number(pageSize) || 10, 1)
   const offset = (normalizedPage - 1) * normalizedPageSize
 
+  // 1. 如果有价格筛选，先找出符合价格范围的酒店 ID
+  let priceFilteredIds = null
+  if (minPrice || maxPrice) {
+    let priceQuery = supabase.from('room_types').select('hotel_id')
+    
+    // 简化处理：只筛选原始价格，不考虑复杂的折扣计算（性能考量）
+    // 若要严谨，需使用数据库函数或存储过程计算最终价格
+    if (minPrice) {
+      priceQuery = priceQuery.gte('price', Number(minPrice))
+    }
+    if (maxPrice) {
+      priceQuery = priceQuery.lte('price', Number(maxPrice))
+    }
+    
+    const { data: rooms, error: priceError } = await priceQuery
+    if (!priceError && rooms) {
+      priceFilteredIds = [...new Set(rooms.map(r => r.hotel_id))]
+    }
+  }
+
   let dbQuery = supabase
     .from('hotels')
     .select('*', { count: 'exact' })
     .eq('status', 'approved')
+
+  // 如果有价格筛选结果，应用 ID 过滤
+  if (priceFilteredIds !== null) {
+    if (priceFilteredIds.length === 0) {
+      // 没有匹配价格的酒店，直接返回空
+      return {
+        ok: true,
+        status: 200,
+        data: {
+          page: normalizedPage,
+          pageSize: normalizedPageSize,
+          total: 0,
+          list: []
+        }
+      }
+    }
+    dbQuery = dbQuery.in('id', priceFilteredIds)
+  }
 
   if (city) {
     dbQuery = dbQuery.ilike('city', `%${city}%`)
@@ -1029,6 +1070,13 @@ const listPublicHotels = async ({ query }) => {
 
   if (keyword) {
     dbQuery = dbQuery.or(`name.ilike.%${keyword}%,name_en.ilike.%${keyword}%,address.ilike.%${keyword}%`)
+  }
+
+  if (stars) {
+    const starList = stars.split(',').map(Number).filter(n => !isNaN(n))
+    if (starList.length > 0) {
+      dbQuery = dbQuery.in('star_rating', starList)
+    }
   }
 
   const { data: hotels, error, count } = await dbQuery.range(offset, offset + normalizedPageSize - 1)

@@ -22,7 +22,9 @@ export default function HotelCard({ hotel, onClick }) {
             <View className="hotel-name">{hotel.name}</View>
             <View className="hotel-meta">
               <Text>{hotel.city}</Text>
-              <Text className="hotel-score">4.8分</Text>
+              <Text className="hotel-score">
+                {hotel.star_rating ? `${hotel.star_rating}星` : '暂无评级'}
+              </Text>
             </View>
             <View className="hotel-price">
                <Text className="price-symbol">¥</Text>
