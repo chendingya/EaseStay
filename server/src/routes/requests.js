@@ -7,7 +7,7 @@ const { authRequired } = require('../middleware/auth')
  * @swagger
  * /api/requests:
  *   post:
- *     summary: 商家提交申请（设施/房型/优惠）
+ *     summary: 商家提交申请（设施/房型/优惠/删除酒店）
  *     tags: [Requests]
  *     security:
  *       - bearerAuth: []
@@ -25,7 +25,7 @@ const { authRequired } = require('../middleware/auth')
  *                 type: integer
  *               type:
  *                 type: string
- *                 enum: [facility, room_type, promotion]
+ *               enum: [facility, room_type, promotion, hotel_delete]
  *               name:
  *                 type: string
  *               data:
@@ -54,7 +54,7 @@ router.post('/', authRequired, requestController.createRequest)
  *         name: type
  *         schema:
  *           type: string
- *           enum: [facility, room_type, promotion]
+ *           enum: [facility, room_type, promotion, hotel_delete]
  *     responses:
  *       200:
  *         description: 申请列表

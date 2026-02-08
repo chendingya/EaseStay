@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  Form, Input, InputNumber, Select, Radio, Space, Typography, Divider, DatePicker,
-  Row, Col, Spin, Image, Tag, Table, Descriptions, Tabs, Upload, Modal, Badge, Card, Popover
+  Form, Input, InputNumber, Select, Space, Typography, Divider, DatePicker,
+  Row, Col, Spin, Image, Tag, Table, Descriptions, Tabs, Upload, Modal, Badge, Card
 } from 'antd'
 import {
   EyeOutlined, EditOutlined, StarFilled, EnvironmentOutlined, CalendarOutlined,
-  PlusOutlined, DeleteOutlined, SearchOutlined, PercentageOutlined
+  PlusOutlined, DeleteOutlined, SearchOutlined
 } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
 import { api } from '../services/request'
@@ -274,22 +274,7 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
   const handleChange = (index, field, val) => {
     const newValue = [...value]
     const currentRoom = newValue[index]
-    const updates = { [field]: val }
-    
-    // 自动设置/清除配额
-    if (field === 'discount_rate') {
-      if (val && val !== 0) {
-        // 如果设置了折扣且当前没有配额，自动填充满库存
-        if (!currentRoom.discount_quota) {
-          updates.discount_quota = currentRoom.stock || 999
-        }
-      } else {
-        // 如果清除了折扣，清除配额
-        updates.discount_quota = 0
-      }
-    }
-
-    newValue[index] = { ...currentRoom, ...updates }
+    newValue[index] = { ...currentRoom, [field]: val }
     onChange?.(newValue)
   }
 
@@ -308,70 +293,6 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
           <Col span={7}><Input value={room.name} onChange={(e) => handleChange(index, 'name', e.target.value)} placeholder="房型名称" /></Col>
           <Col span={5}><InputNumber value={room.price} onChange={(val) => handleChange(index, 'price', val)} min={0} style={{ width: '100%' }} prefix="¥" /></Col>
           <Col span={4}><InputNumber value={room.stock} onChange={(val) => handleChange(index, 'stock', val)} min={0} style={{ width: '100%' }} /></Col>
-          <Col span={4}>
-            <Popover
-              content={
-                <div style={{ padding: 8, width: 280 }}>
-                  <Typography.Text strong style={{ display: 'block', marginBottom: 12 }}>单房型优惠设置</Typography.Text>
-                  
-                  <div style={{ marginBottom: 12 }}>
-                    <div style={{ marginBottom: 8 }}>优惠方式:</div>
-                    <Radio.Group 
-                      value={room._discountType || (room.discount_rate < 0 ? 'amount' : 'rate')} 
-                      onChange={(e) => {
-                        const newType = e.target.value
-                        // 更新UI类型状态
-                        handleChange(index, '_discountType', newType)
-                        // 更新数值符号
-                        const currentVal = Math.abs(room.discount_rate || 0)
-                        const newVal = newType === 'amount' ? -currentVal : currentVal
-                        handleChange(index, 'discount_rate', newVal)
-                      }}
-                      style={{ marginBottom: 12, display: 'flex' }}
-                      optionType="button"
-                      buttonStyle="solid"
-                    >
-                      <Radio.Button value="rate">折扣 (折)</Radio.Button>
-                      <Radio.Button value="amount">减免 (元)</Radio.Button>
-                    </Radio.Group>
-
-                    <div style={{ marginBottom: 4 }}>优惠力度:</div>
-                    <InputNumber 
-                      value={room.discount_rate < 0 ? Math.abs(room.discount_rate) : room.discount_rate} 
-                      onChange={(val) => {
-                        const type = room._discountType || (room.discount_rate < 0 ? 'amount' : 'rate')
-                        const newVal = type === 'amount' ? -Math.abs(val) : Math.abs(val)
-                        handleChange(index, 'discount_rate', newVal)
-                      }}
-                      placeholder={room._discountType === 'amount' || room.discount_rate < 0 ? "输入减免金额" : "输入折扣 (0-10)"}
-                      step={0.5}
-                      style={{ width: '100%' }}
-                      addonAfter={room._discountType === 'amount' || room.discount_rate < 0 ? '元' : '折'}
-                    />
-                    <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
-                      {room.discount_rate < 0 ? `固定减免 ${Math.abs(room.discount_rate)} 元` : (room.discount_rate > 0 && room.discount_rate <= 10 ? `${room.discount_rate} 折优惠` : '无折扣')}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div style={{ marginBottom: 4 }}>优惠配额 (间):</div>
-                    <InputNumber 
-                      value={room.discount_quota} 
-                      onChange={(val) => handleChange(index, 'discount_quota', val)}
-                      min={0}
-                      style={{ width: '100%' }} 
-                    />
-                  </div>
-                </div>
-              }
-              title={null}
-              trigger="click"
-            >
-              <GlassButton type={room.discount_rate ? 'primary' : 'default'} ghost={!!room.discount_rate} size="small" icon={<PercentageOutlined />}>
-                {room.discount_rate ? '已设优惠' : '优惠'}
-              </GlassButton>
-            </Popover>
-          </Col>
           <Col span={4}><GlassButton type="link" danger icon={<DeleteOutlined />} onClick={() => handleRemove(index)}>删除</GlassButton></Col>
         </Row>
       ))}

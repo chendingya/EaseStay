@@ -2,10 +2,60 @@ const supabase = require('../config/supabase')
 const { sendNotification, NotificationTemplates } = require('./notificationService')
 const { applyPromotionsToRooms } = require('./hotelService')
 
-// 创建申请
+const allowedRequestTypes = ['facility', 'room_type', 'promotion', 'hotel_delete']
+
 const createRequest = async ({ merchantId, hotelId, type, name, data }) => {
-  if (!type || !name) {
-    return { ok: false, status: 400, message: 'type 和 name 为必填项' }
+  if (!type) {
+    return { ok: false, status: 400, message: 'type 为必填项' }
+  }
+  if (!allowedRequestTypes.includes(type)) {
+    return { ok: false, status: 400, message: 'type 不合法' }
+  }
+  if (type !== 'hotel_delete' && !name) {
+    return { ok: false, status: 400, message: 'name 为必填项' }
+  }
+
+  let finalName = name
+  let finalData = data || {}
+  if (type === 'hotel_delete') {
+    if (!hotelId) {
+      return { ok: false, status: 400, message: 'hotelId 为必填项' }
+    }
+    const { data: hotel, error: hotelError } = await supabase
+      .from('hotels')
+      .select('id, name, merchant_id')
+      .eq('id', hotelId)
+      .single()
+
+    if (hotelError || !hotel) {
+      return { ok: false, status: 404, message: '酒店不存在' }
+    }
+    if (hotel.merchant_id !== merchantId) {
+      return { ok: false, status: 403, message: '无权操作该酒店' }
+    }
+    const { data: pendingDelete } = await supabase
+      .from('requests')
+      .select('id')
+      .eq('hotel_id', hotelId)
+      .eq('type', 'hotel_delete')
+      .eq('status', 'pending')
+
+    if (pendingDelete && pendingDelete.length > 0) {
+      return { ok: false, status: 400, message: '该酒店已有删除申请在审核中' }
+    }
+    const { error: updateHotelError } = await supabase
+      .from('hotels')
+      .update({
+        status: 'offline',
+        reject_reason: '申请删除中'
+      })
+      .eq('id', hotelId)
+
+    if (updateHotelError) {
+      return { ok: false, status: 500, message: '更新酒店状态失败：' + updateHotelError.message }
+    }
+    finalName = hotel.name
+    finalData = { ...(data || {}), hotelName: hotel.name }
   }
 
   const { data: request, error } = await supabase
@@ -14,8 +64,8 @@ const createRequest = async ({ merchantId, hotelId, type, name, data }) => {
       merchant_id: merchantId,
       hotel_id: hotelId || null,
       type,
-      name,
-      data: data || {},
+      name: finalName,
+      data: finalData,
       status: 'pending'
     })
     .select()
@@ -78,6 +128,36 @@ const getPendingRequests = async ({ type, status, hotelId }) => {
   return { ok: true, data: data || [] }
 }
 
+// 管理员获取待审核统计
+const getAdminPendingSummary = async () => {
+  const { count: hotelCount, error: hotelError } = await supabase
+    .from('hotels')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending')
+
+  if (hotelError) {
+    return { ok: false, status: 500, message: '获取待审核酒店数量失败：' + hotelError.message }
+  }
+
+  const { count: requestCount, error: requestError } = await supabase
+    .from('requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending')
+
+  if (requestError) {
+    return { ok: false, status: 500, message: '获取待审核申请数量失败：' + requestError.message }
+  }
+
+  return {
+    ok: true,
+    status: 200,
+    data: {
+      pendingHotels: hotelCount || 0,
+      pendingRequests: requestCount || 0
+    }
+  }
+}
+
 // 审核申请（管理员）
 const reviewRequest = async ({ requestId, action, rejectReason }) => {
   if (!['approve', 'reject'].includes(action)) {
@@ -101,21 +181,76 @@ const reviewRequest = async ({ requestId, action, rejectReason }) => {
 
   const newStatus = action === 'approve' ? 'approved' : 'rejected'
 
-  // 更新申请状态
-  const { error: updateError } = await supabase
-    .from('requests')
-    .update({
-      status: newStatus,
-      reject_reason: action === 'reject' ? rejectReason : null,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', requestId)
+  if (action === 'approve' && request.type === 'hotel_delete') {
+    if (!request.hotel_id) {
+      return { ok: false, status: 400, message: 'hotelId 不存在' }
+    }
+    const { data: hotel, error: hotelError } = await supabase
+      .from('hotels')
+      .select('id, name, merchant_id')
+      .eq('id', request.hotel_id)
+      .single()
 
-  if (updateError) {
-    return { ok: false, status: 500, message: '更新申请状态失败' }
+    if (hotelError || !hotel) {
+      return { ok: false, status: 404, message: '酒店不存在' }
+    }
+    if (hotel.merchant_id !== request.merchant_id) {
+      return { ok: false, status: 403, message: '无权操作该酒店' }
+    }
+
+    await supabase
+      .from('requests')
+      .update({ hotel_id: null })
+      .eq('hotel_id', hotel.id)
+      .neq('id', requestId)
+
+    await supabase
+      .from('room_types')
+      .delete()
+      .eq('hotel_id', hotel.id)
+
+    await supabase
+      .from('orders')
+      .delete()
+      .eq('hotel_id', hotel.id)
+
+    const { error: deleteError } = await supabase
+      .from('hotels')
+      .delete()
+      .eq('id', hotel.id)
+
+    if (deleteError) {
+      return { ok: false, status: 500, message: '删除酒店失败：' + deleteError.message }
+    }
+
+    const { error: updateError } = await supabase
+      .from('requests')
+      .update({
+        status: newStatus,
+        reject_reason: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', requestId)
+
+    if (updateError) {
+      return { ok: false, status: 500, message: '更新申请状态失败' }
+    }
+  } else {
+    const { error: updateError } = await supabase
+      .from('requests')
+      .update({
+        status: newStatus,
+        reject_reason: action === 'reject' ? rejectReason : null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', requestId)
+
+    if (updateError) {
+      return { ok: false, status: 500, message: '更新申请状态失败' }
+    }
   }
 
-  if (action === 'approve' && request.hotel_id) {
+  if (action === 'approve' && request.hotel_id && request.type !== 'hotel_delete') {
     const { data: hotel } = await supabase
       .from('hotels')
       .select('facilities, promotions')
@@ -162,9 +297,13 @@ const reviewRequest = async ({ requestId, action, rejectReason }) => {
 
   // 使用通知服务发送通知给商家
   const typeLabel = getTypeLabel(request.type)
-  const notification = action === 'approve'
-    ? NotificationTemplates.requestApproved(typeLabel, request.name, request.hotel_id)
-    : NotificationTemplates.requestRejected(typeLabel, request.name, request.hotel_id, rejectReason)
+  const notification = request.type === 'hotel_delete'
+    ? (action === 'approve'
+      ? NotificationTemplates.hotelDeleteApproved(request.name, request.hotel_id)
+      : NotificationTemplates.hotelDeleteRejected(request.name, request.hotel_id, rejectReason))
+    : (action === 'approve'
+      ? NotificationTemplates.requestApproved(typeLabel, request.name, request.hotel_id)
+      : NotificationTemplates.requestRejected(typeLabel, request.name, request.hotel_id, rejectReason))
 
   await sendNotification({
     userId: request.merchant_id,
@@ -179,7 +318,8 @@ const getTypeLabel = (type) => {
   const labels = {
     facility: '设施',
     room_type: '房型',
-    promotion: '优惠'
+    promotion: '优惠',
+    hotel_delete: '酒店删除'
   }
   return labels[type] || type
 }
@@ -188,5 +328,6 @@ module.exports = {
   createRequest,
   getMerchantRequests,
   getPendingRequests,
-  reviewRequest
+  reviewRequest,
+  getAdminPendingSummary
 }

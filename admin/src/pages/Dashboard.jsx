@@ -25,7 +25,6 @@ export default function Dashboard() {
   const [overviewLoading, setOverviewLoading] = useState(false)
 
   const discountScope = Form.useWatch('scope', discountForm)
-  const discountType = Form.useWatch('discountType', discountForm)
   const discountRoomType = Form.useWatch('roomTypeName', discountForm)
   const roomTypeName = Form.useWatch('roomTypeName', roomForm)
 

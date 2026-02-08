@@ -19,9 +19,13 @@ const templateFields = [
   { field: 'city', label: '城市', required: true, example: '杭州' },
   { field: 'address', label: '地址', required: true, example: '西湖区北山街89号' },
   { field: 'star_rating', label: '星级（1-5）', required: false, example: '5' },
-  { field: 'opening_time', label: '开业时间', required: false, example: '2020-01-01' },
+  { field: 'opening_time', label: '开业时间（YYYY-MM-DD 或 YYYY/MM/DD）', required: false, example: '2020-01-01' },
   { field: 'description', label: '酒店描述', required: false, example: '坐落于西湖畔的豪华酒店' },
-  { field: 'facilities', label: '设施（逗号分隔）', required: false, example: '免费WiFi,停车场,游泳池' },
+  { field: 'facilities', label: '设施（用 | 或逗号分隔）', required: false, example: '免费WiFi|停车场|游泳池' },
+  { field: 'images', label: '图片链接（用 | 或逗号分隔）', required: false, example: 'https://img/1.jpg|https://img/2.jpg' },
+  { field: 'nearby_attractions', label: '附近景点（用 | 或逗号分隔）', required: false, example: '西湖|断桥' },
+  { field: 'nearby_transport', label: '交通出行（用 | 或逗号分隔）', required: false, example: '地铁1号线|机场大巴' },
+  { field: 'nearby_malls', label: '购物商场（用 | 或逗号分隔）', required: false, example: '银泰城|万象城' },
 ]
 
 // 生成CSV模板
@@ -42,25 +46,55 @@ const generateTemplate = () => {
 const parseCSV = (text) => {
   const lines = text.trim().split('\n')
   if (lines.length < 2) return []
-  
+
   const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''))
   const data = []
-  
+  const listFields = new Set(['facilities', 'images', 'nearby_attractions', 'nearby_transport', 'nearby_malls'])
+  const parseList = (val) => val ? val.split(/[|,，]/).map(s => s.trim()).filter(Boolean) : []
+
   for (let i = 1; i < lines.length; i++) {
     const values = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || []
+    const hasValue = values.some(v => v && v.trim() !== '')
+    if (!hasValue) {
+      continue
+    }
     const row = {}
     headers.forEach((h, idx) => {
       let val = values[idx]?.trim().replace(/^"|"$/g, '') || ''
-      // 处理设施字段为数组
-      if (h === 'facilities' && val) {
-        row[h] = val.split(/[,，]/).map(s => s.trim()).filter(Boolean)
+      if (listFields.has(h)) {
+        row[h] = parseList(val)
       } else if (h === 'star_rating' && val) {
         row[h] = parseInt(val) || 0
       } else {
         row[h] = val
       }
     })
-    if (row.name) data.push(row)
+    const errors = []
+    templateFields.forEach((field) => {
+      if (field.required) {
+        const value = row[field.field]
+        const valid = Array.isArray(value) ? value.length > 0 : !!String(value || '').trim()
+        if (!valid) {
+          errors.push(`缺少必填字段：${field.label}`)
+        }
+      }
+    })
+    if (row.star_rating !== undefined && row.star_rating !== '') {
+      const rating = Number(row.star_rating)
+      if (!Number.isFinite(rating) || rating < 0 || rating > 5) {
+        errors.push('星级需为 0-5 的数字')
+      }
+    }
+    if (row.opening_time) {
+      const normalizedOpeningTime = row.opening_time.replace(/\//g, '-')
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(normalizedOpeningTime)) {
+        errors.push('开业时间格式需为 YYYY-MM-DD 或 YYYY/MM/DD')
+      } else {
+        row.opening_time = normalizedOpeningTime
+      }
+    }
+    row._errors = errors
+    data.push(row)
   }
   return data
 }
@@ -80,6 +114,11 @@ export default function Hotels() {
   const [importModalOpen, setImportModalOpen] = useState(false)
   const [importData, setImportData] = useState([])
   const [importing, setImporting] = useState(false)
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleteNameFirst, setDeleteNameFirst] = useState('')
+  const [deleteNameSecond, setDeleteNameSecond] = useState('')
+  const [deleting, setDeleting] = useState(false)
 
   const fetchHotels = async () => {
     setLoading(true)
@@ -142,7 +181,8 @@ export default function Hotels() {
           return
         }
         setImportData(data)
-        message.success(`解析成功，共 ${data.length} 条数据`)
+        const validCount = data.filter(item => !item._errors || item._errors.length === 0).length
+        message.success(`解析成功，共 ${data.length} 条数据（可导入 ${validCount} 条）`)
       } catch (error) {
         console.error('解析导入文件失败:', error)
         message.error('文件解析失败，请检查格式')
@@ -154,7 +194,8 @@ export default function Hotels() {
 
   // 执行导入
   const handleImport = async () => {
-    if (importData.length === 0) {
+    const validData = importData.filter(item => !item._errors || item._errors.length === 0)
+    if (validData.length === 0) {
       message.warning('没有可导入的数据')
       return
     }
@@ -163,7 +204,7 @@ export default function Hotels() {
     let successCount = 0
     let failCount = 0
     
-    for (const hotel of importData) {
+    for (const hotel of validData) {
       try {
         await api.post('/api/merchant/hotels', hotel)
         successCount++
@@ -176,7 +217,8 @@ export default function Hotels() {
     setImporting(false)
     
     if (successCount > 0) {
-      message.success(`导入完成：成功 ${successCount} 条${failCount > 0 ? `，失败 ${failCount} 条` : ''}`)
+      const ignoredCount = importData.length - validData.length
+      message.success(`导入完成：成功 ${successCount} 条${failCount > 0 ? `，失败 ${failCount} 条` : ''}${ignoredCount > 0 ? `，已跳过 ${ignoredCount} 条无效数据` : ''}`)
       setImportModalOpen(false)
       setImportData([])
       fetchHotels()
@@ -185,9 +227,75 @@ export default function Hotels() {
     }
   }
 
+  const openDeleteModal = (record) => {
+    setDeleteTarget(record)
+    setDeleteNameFirst('')
+    setDeleteNameSecond('')
+    setDeleteModalOpen(true)
+  }
+
+  const closeDeleteModal = () => {
+    setDeleteModalOpen(false)
+    setDeleteTarget(null)
+    setDeleteNameFirst('')
+    setDeleteNameSecond('')
+  }
+
+  const handleDeleteRequest = async () => {
+    if (!deleteTarget) {
+      return
+    }
+    const targetName = deleteTarget.name || ''
+    if (deleteNameFirst.trim() !== targetName || deleteNameSecond.trim() !== targetName) {
+      message.warning('请两次输入正确的酒店名称以确认删除')
+      return
+    }
+    setDeleting(true)
+    try {
+      await api.post('/api/requests', {
+        hotelId: deleteTarget.id,
+        type: 'hotel_delete',
+        name: targetName,
+        data: { hotelName: targetName }
+      })
+      message.success('已提交删除申请，等待管理员审核')
+      closeDeleteModal()
+      fetchHotels()
+    } catch (error) {
+      console.error('提交删除申请失败:', error)
+      message.error('提交删除申请失败，请重试')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const exportHotels = () => {
+    if (filteredHotels.length === 0) {
+      message.warning('暂无可导出的酒店数据')
+      return
+    }
+    const headers = templateFields.map(f => f.field).join(',')
+    const rows = filteredHotels.map((hotel) => {
+      return templateFields.map((field) => {
+        const value = hotel[field.field]
+        const normalized = Array.isArray(value) ? value.join('|') : (value ?? '')
+        const safe = String(normalized).replace(/"/g, '""')
+        return `"${safe}"`
+      }).join(',')
+    })
+    const csv = `${headers}\n${rows.join('\n')}`
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = '酒店导出.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const columns = [
-    { title: '酒店名称', dataIndex: 'name', ellipsis: true },
-    { title: '英文名', dataIndex: 'name_en', ellipsis: true },
+    { title: '酒店名称', dataIndex: 'name', width: 180, ellipsis: true },
+    { title: '英文名', dataIndex: 'name_en', width: 220, ellipsis: true },
     { title: '城市', dataIndex: 'city', width: 80 },
     { title: '星级', dataIndex: 'star_rating', width: 60 },
     { title: '最低价', dataIndex: 'lowestPrice', width: 80, render: (v) => v ? `¥${v}` : '-' },
@@ -203,7 +311,8 @@ export default function Hotels() {
     },
     {
       title: '操作',
-      width: 180,
+      width: 200,
+      fixed: 'right',
       render: (_, record) => (
         <Space size="small">
           {record.status === 'approved' && (
@@ -226,6 +335,7 @@ export default function Hotels() {
             </Typography.Text>
           )}
           <GlassButton type="link" size="small" onClick={() => navigate(`/hotels/edit/${record.id}`)}>编辑</GlassButton>
+          <GlassButton type="link" size="small" danger onClick={() => openDeleteModal(record)}>删除</GlassButton>
         </Space>
       )
     }
@@ -238,6 +348,7 @@ export default function Hotels() {
     { title: '地址', dataIndex: 'address', ellipsis: true },
     { title: '星级', dataIndex: 'star_rating', width: 60 },
     { title: '设施', dataIndex: 'facilities', render: (v) => v?.join('、') || '-', ellipsis: true },
+    { title: '校验结果', dataIndex: '_errors', render: (v) => v?.length ? v.join('；') : '通过', width: 200 }
   ]
 
   return (
@@ -246,6 +357,7 @@ export default function Hotels() {
       extra={
         <Space>
           <GlassButton icon={<UploadOutlined />} onClick={() => setImportModalOpen(true)}>批量导入</GlassButton>
+          <GlassButton icon={<DownloadOutlined />} onClick={exportHotels}>批量导出</GlassButton>
           <GlassButton type="primary" onClick={() => navigate('/hotels/new')}>新增酒店</GlassButton>
         </Space>
       }
@@ -297,6 +409,7 @@ export default function Hotels() {
         loading={loading}
         pagination={{ pageSize: 8 }}
         size="middle"
+        scroll={{ x: 980 }}
       />
 
       {/* 导入弹窗 */}
@@ -308,26 +421,27 @@ export default function Hotels() {
           setImportData([])
         }}
         width={800}
-        footer={[
-          <GlassButton key="template" icon={<DownloadOutlined />} onClick={generateTemplate}>
-            下载模板
-          </GlassButton>,
-          <GlassButton key="cancel" onClick={() => {
-            setImportModalOpen(false)
-            setImportData([])
-          }}>
-            取消
-          </GlassButton>,
-          <GlassButton
-            key="import"
-            type="primary"
-            loading={importing}
-            disabled={importData.length === 0}
-            onClick={handleImport}
-          >
-            确认导入 ({importData.length})
-          </GlassButton>
-        ]}
+        footer={
+          <Space>
+            <GlassButton icon={<DownloadOutlined />} onClick={generateTemplate}>
+              下载模板
+            </GlassButton>
+            <GlassButton onClick={() => {
+              setImportModalOpen(false)
+              setImportData([])
+            }}>
+              取消
+            </GlassButton>
+            <GlassButton
+              type="primary"
+              loading={importing}
+              disabled={importData.length === 0 || importData.every(item => item._errors && item._errors.length > 0)}
+              onClick={handleImport}
+            >
+              确认导入 ({importData.length})
+            </GlassButton>
+          </Space>
+        }
       >
         <Alert
           type="info"
@@ -339,6 +453,7 @@ export default function Hotels() {
               <p style={{ margin: '4px 0' }}>1. 请先下载模板，按照模板格式填写酒店信息</p>
               <p style={{ margin: '4px 0' }}>2. 支持 CSV 格式文件，编码为 UTF-8</p>
               <p style={{ margin: '4px 0' }}>3. 必填字段：酒店名称（中文）、城市、地址</p>
+              <p style={{ margin: '4px 0' }}>4. 列表字段可使用 | 或逗号分隔</p>
             </div>
           }
         />
@@ -371,6 +486,41 @@ export default function Hotels() {
             />
           </>
         )}
+      </Modal>
+
+      <Modal
+        title="删除酒店"
+        open={deleteModalOpen}
+        onCancel={closeDeleteModal}
+        onOk={handleDeleteRequest}
+        okText="提交审核"
+        okButtonProps={{ danger: true, disabled: deleting }}
+        confirmLoading={deleting}
+      >
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 12 }}
+          title="删除需管理员审核，审核通过后才会删除"
+        />
+        <Typography.Text>
+          请输入酒店名称以确认删除：
+        </Typography.Text>
+        <Input
+          style={{ marginTop: 8 }}
+          placeholder="第一次输入酒店名称"
+          value={deleteNameFirst}
+          onChange={(e) => setDeleteNameFirst(e.target.value)}
+        />
+        <Input
+          style={{ marginTop: 8 }}
+          placeholder="第二次输入酒店名称"
+          value={deleteNameSecond}
+          onChange={(e) => setDeleteNameSecond(e.target.value)}
+        />
+        <Typography.Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
+          需两次输入完全一致且与酒店名称相同才可提交
+        </Typography.Text>
       </Modal>
     </Card>
   )
