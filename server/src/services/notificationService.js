@@ -198,6 +198,20 @@ const NotificationTemplates = {
     relatedId: hotelId,
     relatedType: RelatedType.HOTEL
   }),
+  hotelDeleteApproved: (hotelName, hotelId) => ({
+    title: '删除酒店申请已通过',
+    content: `您的酒店「${hotelName}」删除申请已通过，酒店已删除`,
+    type: NotificationType.SUCCESS,
+    relatedId: hotelId,
+    relatedType: RelatedType.REQUEST
+  }),
+  hotelDeleteRejected: (hotelName, hotelId, reason) => ({
+    title: '删除酒店申请被驳回',
+    content: `您的酒店「${hotelName}」删除申请被驳回${reason ? `，原因：${reason}` : ''}`,
+    type: NotificationType.WARNING,
+    relatedId: hotelId,
+    relatedType: RelatedType.REQUEST
+  }),
 
   // 申请已通过
   requestApproved: (type, name, hotelId) => ({

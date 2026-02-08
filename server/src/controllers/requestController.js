@@ -51,6 +51,17 @@ const getPendingRequests = async (req, res) => {
   res.json(result.data)
 }
 
+// 管理员获取待审核汇总
+const getAdminPendingSummary = async (req, res) => {
+  const result = await requestService.getAdminPendingSummary()
+
+  if (!result.ok) {
+    return res.status(result.status).json({ message: result.message })
+  }
+
+  res.json(result.data)
+}
+
 // 管理员审核申请
 const reviewRequest = async (req, res) => {
   const { id } = req.params
@@ -121,6 +132,7 @@ module.exports = {
   getMerchantRequests,
   getPendingRequests,
   reviewRequest,
+  getAdminPendingSummary,
   getNotifications,
   markNotificationRead,
   markAllNotificationsRead

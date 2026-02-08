@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { 
   CheckCircleOutlined, CloseCircleOutlined, ShopOutlined, 
-  AppstoreOutlined, HomeOutlined, GiftOutlined, ArrowLeftOutlined
+  AppstoreOutlined, HomeOutlined, GiftOutlined, ArrowLeftOutlined, DeleteOutlined
 } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
 import { api } from '../services/request'
@@ -11,7 +11,8 @@ import { api } from '../services/request'
 const typeMap = {
   facility: { label: '设施申请', icon: <AppstoreOutlined />, color: 'blue' },
   room_type: { label: '房型申请', icon: <HomeOutlined />, color: 'purple' },
-  promotion: { label: '优惠申请', icon: <GiftOutlined />, color: 'orange' }
+  promotion: { label: '优惠申请', icon: <GiftOutlined />, color: 'orange' },
+  hotel_delete: { label: '删除酒店申请', icon: <DeleteOutlined />, color: 'red' }
 }
 
 const statusMap = {
@@ -106,6 +107,14 @@ export default function RequestAudit() {
         </Descriptions>
       )
     }
+    if (type === 'hotel_delete') {
+      return (
+        <Descriptions column={1} bordered size="small">
+          <Descriptions.Item label="酒店名称">{name || data?.hotelName || '-'}</Descriptions.Item>
+          <Descriptions.Item label="处理说明">审核通过后将永久删除酒店及相关数据</Descriptions.Item>
+        </Descriptions>
+      )
+    }
 
     return null
   }
@@ -189,7 +198,8 @@ export default function RequestAudit() {
     { key: 'all', label: '全部申请' },
     { key: 'facility', label: '设施申请' },
     { key: 'room_type', label: '房型申请' },
-    { key: 'promotion', label: '优惠申请' }
+    { key: 'promotion', label: '优惠申请' },
+    { key: 'hotel_delete', label: '删除酒店申请' }
   ]
 
   return (
@@ -268,16 +278,18 @@ export default function RequestAudit() {
         open={!!detailModal}
         onCancel={() => setDetailModal(null)}
         footer={
-          detailModal?.status === 'pending' ? [
-            <GlassButton key="reject" danger onClick={() => { setDetailModal(null); setRejecting(detailModal) }}>
-              拒绝
-            </GlassButton>,
-            <GlassButton key="approve" type="primary" onClick={() => { handleReview(detailModal.id, 'approve'); setDetailModal(null) }}>
-              通过
-            </GlassButton>
-          ] : [
-            <GlassButton key="close" onClick={() => setDetailModal(null)}>关闭</GlassButton>
-          ]
+          detailModal?.status === 'pending' ? (
+            <Space>
+              <GlassButton danger onClick={() => { setDetailModal(null); setRejecting(detailModal) }}>
+                拒绝
+              </GlassButton>
+              <GlassButton type="primary" onClick={() => { handleReview(detailModal.id, 'approve'); setDetailModal(null) }}>
+                通过
+              </GlassButton>
+            </Space>
+          ) : (
+            <GlassButton onClick={() => setDetailModal(null)}>关闭</GlassButton>
+          )
         }
         width={500}
       >

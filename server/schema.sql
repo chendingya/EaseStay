@@ -76,7 +76,7 @@ CREATE TABLE requests (
   id SERIAL PRIMARY KEY,
   merchant_id INT NOT NULL REFERENCES users(id),
   hotel_id INT REFERENCES hotels(id) ON DELETE CASCADE,
-  type VARCHAR(50) NOT NULL CHECK (type IN ('facility', 'room_type', 'promotion')),
+  type VARCHAR(50) NOT NULL CHECK (type IN ('facility', 'room_type', 'promotion', 'hotel_delete')),
   name VARCHAR(200) NOT NULL,
   data JSONB DEFAULT '{}',
   status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
@@ -227,6 +227,7 @@ CREATE INDEX idx_notifications_is_read ON notifications(is_read);
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE hotels ENABLE ROW LEVEL SECURITY;
 ALTER TABLE room_types ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sms_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
@@ -259,6 +260,12 @@ CREATE POLICY "room_types_public_read" ON room_types
 CREATE POLICY "room_types_no_anon_insert" ON room_types FOR INSERT WITH CHECK (false);
 CREATE POLICY "room_types_no_anon_update" ON room_types FOR UPDATE USING (false) WITH CHECK (false);
 CREATE POLICY "room_types_no_anon_delete" ON room_types FOR DELETE USING (false);
+
+-- orders 表：禁止匿名访问
+CREATE POLICY "orders_no_anon_select" ON orders FOR SELECT USING (false);
+CREATE POLICY "orders_no_anon_insert" ON orders FOR INSERT WITH CHECK (false);
+CREATE POLICY "orders_no_anon_update" ON orders FOR UPDATE USING (false) WITH CHECK (false);
+CREATE POLICY "orders_no_anon_delete" ON orders FOR DELETE USING (false);
 
 -- sms_codes 表：禁止匿名访问
 CREATE POLICY "sms_codes_no_anon_select" ON sms_codes FOR SELECT USING (false);
@@ -298,3 +305,15 @@ CREATE POLICY "preset_cities_public_read" ON preset_cities FOR SELECT USING (is_
 CREATE POLICY "preset_cities_no_anon_insert" ON preset_cities FOR INSERT WITH CHECK (false);
 CREATE POLICY "preset_cities_no_anon_update" ON preset_cities FOR UPDATE USING (false) WITH CHECK (false);
 CREATE POLICY "preset_cities_no_anon_delete" ON preset_cities FOR DELETE USING (false);
+
+
+-- 新增、修改sql写入以下位置：
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "orders_no_anon_select" ON orders FOR SELECT USING (false);
+CREATE POLICY "orders_no_anon_insert" ON orders FOR INSERT WITH CHECK (false);
+CREATE POLICY "orders_no_anon_update" ON orders FOR UPDATE USING (false) WITH CHECK (false);
+CREATE POLICY "orders_no_anon_delete" ON orders FOR DELETE USING (false);
+
+ALTER TABLE requests DROP CONSTRAINT requests_type_check;
+ALTER TABLE requests ADD CONSTRAINT requests_type_check
+  CHECK (type IN ('facility', 'room_type', 'promotion', 'hotel_delete'));

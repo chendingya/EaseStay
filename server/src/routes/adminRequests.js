@@ -15,12 +15,13 @@ const requestController = require('../controllers/requestController')
  *         name: type
  *         schema:
  *           type: string
- *           enum: [facility, room_type, promotion]
+ *           enum: [facility, room_type, promotion, hotel_delete]
  *     responses:
  *       200:
  *         description: 待审核申请列表
  */
 router.get('/', requestController.getPendingRequests)
+router.get('/summary', requestController.getAdminPendingSummary)
 
 /**
  * @swagger

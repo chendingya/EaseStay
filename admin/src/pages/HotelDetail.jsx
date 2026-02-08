@@ -704,13 +704,11 @@ export default function HotelDetail() {
 
 function DiscountModal({ open, selectedRoom, onClose, onSubmit, loading }) {
   const [form] = Form.useForm()
-  const [discountType, setDiscountType] = useState('rate')
   const formDiscountType = Form.useWatch('type', form) || 'rate'
 
   useEffect(() => {
     if (open) {
       form.setFieldsValue({ quantity: 1, discount: 9, type: 'rate', amount: 50 })
-      setDiscountType('rate')
     }
   }, [open, form])
 
@@ -746,7 +744,7 @@ function DiscountModal({ open, selectedRoom, onClose, onSubmit, loading }) {
         </Form.Item>
 
         <Form.Item name="type" label="折扣类型" rules={[{ required: true }]}>
-          <Radio.Group onChange={(e) => setDiscountType(e.target.value)}>
+          <Radio.Group>
             <Radio value="rate">折扣率</Radio>
             <Radio value="amount">固定减免</Radio>
           </Radio.Group>

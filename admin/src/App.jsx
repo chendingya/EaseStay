@@ -4,6 +4,7 @@ import { HomeOutlined, SettingOutlined, UserOutlined, TeamOutlined, BellOutlined
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { getUnreadCount, onUnreadCountChange } from './services/notificationService'
+import { api } from './services/request'
 import Login from './pages/Login.jsx'
 import Hotels from './pages/Hotels.jsx'
 import HotelDetail from './pages/HotelDetail.jsx'
@@ -109,6 +110,7 @@ function App() {
     username: localStorage.getItem('username')
   }))
   const [unreadCount, setUnreadCount] = useState(0)
+  const [adminPending, setAdminPending] = useState({ pendingHotels: 0, pendingRequests: 0 })
 
   useEffect(() => {
     if (!auth.token && location.pathname !== '/login') {
@@ -137,6 +139,48 @@ function App() {
       return unsubscribe
     }
   }, [auth.token]) // Remove location.pathname dependency as we now have real-time updates via subscription
+
+  useEffect(() => {
+    if (auth.token && auth.role === 'admin') {
+      let timerId
+      const fetchSummary = async () => {
+        try {
+          const [hotels, requests] = await Promise.all([
+            api.get('/api/admin/hotels?status=pending'),
+            api.get('/api/admin/requests?status=pending')
+          ])
+          setAdminPending({
+            pendingHotels: Array.isArray(hotels) ? hotels.length : 0,
+            pendingRequests: Array.isArray(requests) ? requests.length : 0
+          })
+        } catch (error) {
+          console.error('获取待审核汇总失败:', error)
+        }
+      }
+      fetchSummary()
+      timerId = setInterval(fetchSummary, 30000)
+      return () => clearInterval(timerId)
+    }
+  }, [auth.token, auth.role])
+
+  const pendingTotal = adminPending.pendingHotels + adminPending.pendingRequests
+  const adminTooltipTitle = (
+    <div>
+      <div>待审核酒店：{adminPending.pendingHotels} 条</div>
+      <div>待审核申请：{adminPending.pendingRequests} 条</div>
+    </div>
+  )
+  const handleAdminNotificationClick = () => {
+    if (adminPending.pendingHotels > 0) {
+      navigate('/audit')
+      return
+    }
+    if (adminPending.pendingRequests > 0) {
+      navigate('/requests')
+      return
+    }
+    navigate('/messages')
+  }
 
   const menuItems = useMemo(() => {
     const items = [{ key: 'dashboard', icon: <HomeOutlined />, label: '工作台' }]
@@ -219,16 +263,28 @@ function App() {
         <Layout.Header className="header">
           <Typography.Title level={4} className="header-title">酒店管理后台</Typography.Title>
           <Space className="header-actions">
-            <Tooltip title="消息中心">
-              <Badge count={unreadCount} overflowCount={99} size="small" offset={[-2, 2]}>
-                <Button 
-                  type="text" 
-                  size="small"
-                  icon={<BellOutlined style={{ fontSize: 16 }} />} 
-                  onClick={() => navigate('/messages')}
-                  style={{ marginRight: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                />
-              </Badge>
+            <Tooltip title={auth.role === 'admin' ? adminTooltipTitle : '消息中心'}>
+              {auth.role === 'admin' ? (
+                <Badge dot={pendingTotal > 0} offset={[-2, 2]}>
+                  <Button 
+                    type="text" 
+                    size="small"
+                    icon={<BellOutlined style={{ fontSize: 16 }} />} 
+                    onClick={handleAdminNotificationClick}
+                    style={{ marginRight: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  />
+                </Badge>
+              ) : (
+                <Badge count={unreadCount} overflowCount={99} size="small" offset={[-2, 2]}>
+                  <Button 
+                    type="text" 
+                    size="small"
+                    icon={<BellOutlined style={{ fontSize: 16 }} />} 
+                    onClick={() => navigate('/messages')}
+                    style={{ marginRight: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  />
+                </Badge>
+              )}
             </Tooltip>
             {auth.role ? <Tag color="blue">{auth.role === 'admin' ? '管理员' : '商户'}</Tag> : null}
             <Button size="small" onClick={handleLogout}>退出登录</Button>

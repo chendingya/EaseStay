@@ -568,12 +568,26 @@ const createHotel = async ({ merchantId, payload }) => {
     return { ok: false, status: 400, message: 'name、address、city 为必填项' }
   }
 
+  const normalizedName = String(name).trim()
+  const { data: existingHotel, error: existingError } = await supabase
+    .from('hotels')
+    .select('id')
+    .ilike('name', normalizedName)
+    .limit(1)
+
+  if (existingError) {
+    return { ok: false, status: 500, message: '校验酒店名称失败：' + existingError.message }
+  }
+  if (existingHotel && existingHotel.length > 0) {
+    return { ok: false, status: 400, message: '酒店名称已存在' }
+  }
+
   // 创建酒店
   const { data: newHotel, error: hotelError } = await supabase
     .from('hotels')
     .insert({
       merchant_id: merchantId,
-      name,
+      name: normalizedName,
       name_en: name_en || '',
       address,
       city,
@@ -671,13 +685,35 @@ const updateHotel = async ({ merchantId, hotelId, payload }) => {
     roomTypes
   } = payload || {}
 
+  if (name !== undefined) {
+    const normalizedName = String(name).trim()
+    if (!normalizedName) {
+      return { ok: false, status: 400, message: 'name 不能为空' }
+    }
+    if (normalizedName !== hotel.name) {
+      const { data: existingHotel, error: existingError } = await supabase
+        .from('hotels')
+        .select('id')
+        .ilike('name', normalizedName)
+        .neq('id', hotelId)
+        .limit(1)
+
+      if (existingError) {
+        return { ok: false, status: 500, message: '校验酒店名称失败：' + existingError.message }
+      }
+      if (existingHotel && existingHotel.length > 0) {
+        return { ok: false, status: 400, message: '酒店名称已存在' }
+      }
+    }
+  }
+
   // 构建更新对象
   const updates = {
     status: 'pending',
     reject_reason: ''
   }
 
-  if (name !== undefined) updates.name = name
+  if (name !== undefined) updates.name = String(name).trim()
   if (name_en !== undefined) updates.name_en = name_en
   if (address !== undefined) updates.address = address
   if (city !== undefined) updates.city = city
@@ -918,9 +954,30 @@ const listAdminHotels = async ({ status }) => {
   }
 
   const hotelIds = hotels.map((h) => h.id)
-  const priceMap = await getLowestPrices(hotelIds)
+  let filteredHotels = hotels
 
-  const enriched = hotels.map((hotel) => ({
+  if (hotelIds.length) {
+    const { data: deleteRequests, error: deleteError } = await supabase
+      .from('requests')
+      .select('hotel_id, status')
+      .eq('type', 'hotel_delete')
+      .in('status', ['pending'])
+      .in('hotel_id', hotelIds)
+
+    if (deleteError) {
+      return { ok: false, status: 500, message: '查询删除申请失败：' + deleteError.message }
+    }
+
+    if (deleteRequests && deleteRequests.length > 0) {
+      const excludeIds = new Set(deleteRequests.map((req) => req.hotel_id).filter(Boolean))
+      filteredHotels = hotels.filter((hotel) => !excludeIds.has(hotel.id))
+    }
+  }
+
+  const filteredHotelIds = filteredHotels.map((h) => h.id)
+  const priceMap = await getLowestPrices(filteredHotelIds)
+
+  const enriched = filteredHotels.map((hotel) => ({
     ...hotel,
     lowestPrice: priceMap[hotel.id]
   }))

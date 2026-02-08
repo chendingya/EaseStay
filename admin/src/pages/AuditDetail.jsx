@@ -20,7 +20,8 @@ const statusMap = {
 const requestTypeMap = {
   facility: '设施',
   room_type: '房型',
-  promotion: '优惠'
+  promotion: '优惠',
+  hotel_delete: '酒店删除'
 }
 
 export default function AuditDetail() {
