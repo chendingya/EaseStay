@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS room_types (
   offline_stock INT DEFAULT 0,
   discount_rate DECIMAL,
   discount_quota INT DEFAULT 0,
+  discount_periods JSONB DEFAULT '[]',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -317,3 +318,5 @@ CREATE POLICY "orders_no_anon_delete" ON orders FOR DELETE USING (false);
 ALTER TABLE requests DROP CONSTRAINT requests_type_check;
 ALTER TABLE requests ADD CONSTRAINT requests_type_check
   CHECK (type IN ('facility', 'room_type', 'promotion', 'hotel_delete'));
+
+ALTER TABLE room_types ADD COLUMN IF NOT EXISTS discount_periods JSONB DEFAULT '[]';

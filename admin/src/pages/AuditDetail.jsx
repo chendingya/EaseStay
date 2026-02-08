@@ -184,11 +184,9 @@ export default function AuditDetail() {
           return periods.some(r => now.isAfter(dayjs(r.start)) && now.isBefore(dayjs(r.end)))
         })
         effectivePromos.forEach((promo, index) => {
-          const valText = getValueLabel(promo.value)
-          const periodText = formatPeriodLabel(promo.periods)
           tags.push(
             <Tag color="orange" key={`promo-${index}`}>
-              {promo.type ? `${promo.type} · ` : ''}{promo.title}{valText ? ` · ${valText}` : ''}{periodText ? ` · ${periodText}` : ''}
+              {promo.title || promo.type || '优惠'}
             </Tag>
           )
         })

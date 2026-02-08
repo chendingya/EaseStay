@@ -57,7 +57,7 @@ const getLowestPrices = async (hotelIds) => {
 
   const { data: roomTypes } = await supabase
     .from('room_types')
-    .select('hotel_id, price, discount_rate, discount_quota')
+    .select('hotel_id, price, discount_rate, discount_quota, discount_periods')
     .in('hotel_id', hotelIds)
 
   const { data: hotels } = await supabase
@@ -82,7 +82,7 @@ const getLowestPrices = async (hotelIds) => {
       let finalPrice = applyPromotions(base, promos)
       const discount = Number(room.discount_rate) || 0
       const quota = Number(room.discount_quota) || 0
-      const hasDiscount = quota > 0 && ((discount > 0 && discount <= 10) || discount < 0)
+      const hasDiscount = quota > 0 && ((discount > 0 && discount <= 10) || discount < 0) && isEffectiveNow(room.discount_periods)
 
       if (hasDiscount) {
         if (discount > 0 && discount <= 10) {
@@ -160,6 +160,7 @@ const batchSetRoomDiscount = async ({ hotelIds, roomTypeName, quantity, discount
 
   const normalizedDiscount = normalizeNumber(discount)
   const normalizedQuantity = Math.max(normalizeNumber(quantity), 0)
+  const normalizedPeriods = normalizeArray(periods).filter((p) => p && p.start && p.end)
 
   if (normalizedDiscount > 10) {
     return { ok: false, status: 400, message: '折扣力度不能大于10' }
@@ -193,7 +194,8 @@ const batchSetRoomDiscount = async ({ hotelIds, roomTypeName, quantity, discount
         .from('room_types')
         .update({
           discount_rate: isCancel ? 0 : normalizedDiscount,
-          discount_quota: quota
+          discount_quota: quota,
+          discount_periods: isCancel ? [] : normalizedPeriods
         })
         .eq('id', room.id)
         .select()
@@ -786,7 +788,8 @@ const updateHotel = async ({ merchantId, hotelId, payload }) => {
         price: Number(room.price) || 0,
         stock: Number(room.stock) || 0,
         discount_rate: Number(room.discount_rate) || 0,
-        discount_quota: Number(room.discount_quota) || 0
+        discount_quota: Number(room.discount_quota) || 0,
+        discount_periods: normalizeArray(room.discount_periods)
       }))
 
     if (roomTypesToInsert.length > 0) {

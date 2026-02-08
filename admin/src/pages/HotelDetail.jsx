@@ -243,7 +243,7 @@ export default function HotelDetail() {
         effectivePromos.forEach((promo, index) => {
           tags.push(
             <Tag color="blue" key={`promo-${record.id || record.name}-${index}`}>
-              {promo.type ? `条件优惠 ${promo.type} ${promo.title}` : `条件优惠 ${promo.title}`} 有效期 {formatPeriodLabel(promo.periods)}
+              {promo.title || promo.type || '优惠'}
             </Tag>
           )
         })
