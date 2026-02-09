@@ -524,6 +524,7 @@ export default function AdminHotelDetail() {
                       dataSource={hotel.roomTypes || []}
                       rowKey="id"
                       pagination={false}
+                      scroll={{ x: 'max-content' }}
                       locale={{ emptyText: '暂无房型信息' }}
                     />
                   </Card>
@@ -545,6 +546,7 @@ export default function AdminHotelDetail() {
                         total: ordersTotal,
                         onChange: (page) => setOrdersPage(page)
                       }}
+                      scroll={{ x: 'max-content' }}
                       locale={{ emptyText: '暂无订单' }}
                     />
                   </Card>
