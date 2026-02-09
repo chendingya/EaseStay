@@ -52,6 +52,13 @@
 | offline_stock | Number | 下架库存 |
 | discount_rate | Number | 折扣（正数为折扣率，负数为直减） |
 | discount_quota | Number | 折扣配额 |
+| discount_periods | Array[Object] | 折扣生效区间（按增量新增） |
+| capacity | Number | 可住人数（默认 2） |
+| bed_width | Number | 床宽（cm，默认 180） |
+| area | Number | 面积（㎡，默认 20） |
+| ceiling_height | Number | 层高（m，默认 2.8） |
+| wifi | Boolean | 是否提供 WiFi（默认 true） |
+| breakfast_included | Boolean | 是否含早餐（默认 false） |
 | created_at | Date | 创建时间 |
 
 ### 2.4 Request（申请审核）
@@ -60,7 +67,7 @@
 | id | Number | 主键 |
 | merchant_id | Number | 商户用户ID |
 | hotel_id | Number | 关联酒店ID（可空） |
-| type | Enum('facility','room_type','promotion') | 申请类型 |
+| type | Enum('facility','room_type','promotion','hotel_delete') | 申请类型 |
 | name | String | 申请名称 |
 | data | Object | 附加数据（价格、库存等） |
 | status | Enum('pending','approved','rejected') | 状态 |
@@ -188,7 +195,17 @@ Query：status（可选）
     { "type": "festival", "title": "节日 8 折", "value": 0.8 }
   ],
   "roomTypes": [
-    { "name": "豪华大床房", "price": 399, "stock": 10 }
+    {
+      "name": "豪华大床房",
+      "price": 399,
+      "stock": 10,
+      "capacity": 2,
+      "bed_width": 180,
+      "area": 20,
+      "ceiling_height": 2.8,
+      "wifi": true,
+      "breakfast_included": false
+    }
   ]
 }
 ```

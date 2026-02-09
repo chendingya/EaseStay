@@ -3,8 +3,8 @@
 ## 1. 架构风格
 - B/S 架构，前后端分离
 - 前端：移动端（Taro/React 或 React Native），PC 管理端（React + Ant Design）
-- 后端：Node.js（NestJS/Express/Koa），RESTful API
-- 数据库：MySQL（或可选 MongoDB）
+- 后端：Node.js（Express），RESTful API
+- 数据库：Supabase（PostgreSQL）
 - 文件服务：图片上传（Banner、实景图），后期可接对象存储
 
 ## 2. 逻辑分层
