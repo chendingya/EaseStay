@@ -20,6 +20,8 @@ import AdminHotelDetail from './pages/AdminHotelDetail.jsx'
 import MerchantDetail from './pages/MerchantDetail.jsx'
 import { routeConfig } from './routes/routeConfig'
 
+const appPerfStart = import.meta.env.DEV ? performance.now() : 0
+
 // 面包屑组件
 function AppBreadcrumb() {
   const location = useLocation()
@@ -196,6 +198,13 @@ function App() {
   }))
   const [unreadCount, setUnreadCount] = useState(0)
   const [adminPending, setAdminPending] = useState({ pendingHotels: 0, pendingRequests: 0 })
+
+  useEffect(() => {
+    if (import.meta.env.DEV && appPerfStart) {
+      const duration = Math.round(performance.now() - appPerfStart)
+      console.info(`[perf] app-mounted ${duration}ms`)
+    }
+  }, [])
 
   // Fetch unread count and subscribe to changes
   useEffect(() => {

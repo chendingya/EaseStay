@@ -10,6 +10,9 @@ const request = axios.create({
 
 request.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
+  if (import.meta.env.DEV) {
+    config.metadata = { start: performance.now() }
+  }
   if (token) {
     config.headers = config.headers || {}
     config.headers.Authorization = `Bearer ${token}`
@@ -19,6 +22,13 @@ request.interceptors.request.use((config) => {
 
 request.interceptors.response.use(
   (response) => {
+    if (import.meta.env.DEV) {
+      const duration = performance.now() - (response.config?.metadata?.start || performance.now())
+      const url = response.config?.url || ''
+      const method = response.config?.method?.toUpperCase() || 'GET'
+      const status = response.status
+      console.info(`[perf] ${method} ${url} ${status} ${Math.round(duration)}ms`)
+    }
     const data = response?.data
     if (data && data.success === false) {
       message.error(data.message || '请求失败')
@@ -27,6 +37,13 @@ request.interceptors.response.use(
     return response
   },
   (error) => {
+    if (import.meta.env.DEV) {
+      const duration = performance.now() - (error?.config?.metadata?.start || performance.now())
+      const url = error?.config?.url || ''
+      const method = error?.config?.method?.toUpperCase() || 'GET'
+      const status = error?.response?.status || 'ERR'
+      console.info(`[perf] ${method} ${url} ${status} ${Math.round(duration)}ms`)
+    }
     const msg = error?.response?.data?.message || error?.message || '请求失败'
     message.error(msg)
     return Promise.reject(error)
