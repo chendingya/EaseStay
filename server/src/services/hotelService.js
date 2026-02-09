@@ -663,8 +663,14 @@ const createHotel = async ({ merchantId, payload }) => {
         name: room.name,
         price: Number(room.price) || 0,
         stock: Number(room.stock) || 0,
-        discount_rate: bestDiscount, // 自动应用酒店优惠
-        discount_quota: bestDiscount !== 0 ? 999 : 0 // 有折扣时默认给配额
+        discount_rate: bestDiscount,
+        discount_quota: bestDiscount !== 0 ? 999 : 0,
+        capacity: room.capacity !== undefined ? Number(room.capacity) || 0 : undefined,
+        bed_width: room.bed_width !== undefined ? Number(room.bed_width) || 0 : undefined,
+        area: room.area !== undefined ? Number(room.area) || 0 : undefined,
+        ceiling_height: room.ceiling_height !== undefined ? Number(room.ceiling_height) || 0 : undefined,
+        wifi: room.wifi !== undefined ? !!room.wifi : undefined,
+        breakfast_included: room.breakfast_included !== undefined ? !!room.breakfast_included : undefined
       }))
 
     if (roomTypesToInsert.length > 0) {
@@ -789,7 +795,13 @@ const updateHotel = async ({ merchantId, hotelId, payload }) => {
         stock: Number(room.stock) || 0,
         discount_rate: Number(room.discount_rate) || 0,
         discount_quota: Number(room.discount_quota) || 0,
-        discount_periods: normalizeArray(room.discount_periods)
+        discount_periods: normalizeArray(room.discount_periods),
+        capacity: room.capacity !== undefined ? Number(room.capacity) || 0 : undefined,
+        bed_width: room.bed_width !== undefined ? Number(room.bed_width) || 0 : undefined,
+        area: room.area !== undefined ? Number(room.area) || 0 : undefined,
+        ceiling_height: room.ceiling_height !== undefined ? Number(room.ceiling_height) || 0 : undefined,
+        wifi: room.wifi !== undefined ? !!room.wifi : undefined,
+        breakfast_included: room.breakfast_included !== undefined ? !!room.breakfast_included : undefined
       }))
 
     if (roomTypesToInsert.length > 0) {

@@ -273,7 +273,13 @@ const reviewRequest = async ({ requestId, action, rejectReason }) => {
             hotel_id: request.hotel_id,
             name: request.name,
             price: request.data?.price || 0,
-            stock: request.data?.stock || 0
+            stock: request.data?.stock || 0,
+            capacity: request.data?.capacity,
+            bed_width: request.data?.bed_width,
+            area: request.data?.area,
+            ceiling_height: request.data?.ceiling_height,
+            wifi: request.data?.wifi,
+            breakfast_included: request.data?.breakfast_included
           })
       } else if (request.type === 'promotion') {
         const promotions = hotel.promotions || []

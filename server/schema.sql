@@ -118,6 +118,12 @@ CREATE TABLE preset_room_types (
   name VARCHAR(100) NOT NULL UNIQUE,
   default_price DECIMAL(10, 2) NOT NULL,
   description TEXT,
+  capacity INT DEFAULT 2,
+  bed_width INT DEFAULT 180,
+  area DECIMAL(10, 2) DEFAULT 20,
+  ceiling_height DECIMAL(10, 2) DEFAULT 2.8,
+  wifi BOOLEAN DEFAULT TRUE,
+  breakfast_included BOOLEAN DEFAULT FALSE,
   sort_order INT DEFAULT 0,
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -320,3 +326,16 @@ ALTER TABLE requests ADD CONSTRAINT requests_type_check
   CHECK (type IN ('facility', 'room_type', 'promotion', 'hotel_delete'));
 
 ALTER TABLE room_types ADD COLUMN IF NOT EXISTS discount_periods JSONB DEFAULT '[]';
+ALTER TABLE room_types ADD COLUMN IF NOT EXISTS capacity INT DEFAULT 2;
+ALTER TABLE room_types ADD COLUMN IF NOT EXISTS bed_width INT DEFAULT 180;
+ALTER TABLE room_types ADD COLUMN IF NOT EXISTS area DECIMAL(10, 2) DEFAULT 20;
+ALTER TABLE room_types ADD COLUMN IF NOT EXISTS ceiling_height DECIMAL(10, 2) DEFAULT 2.8;
+ALTER TABLE room_types ADD COLUMN IF NOT EXISTS wifi BOOLEAN DEFAULT TRUE;
+ALTER TABLE room_types ADD COLUMN IF NOT EXISTS breakfast_included BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE preset_room_types ADD COLUMN IF NOT EXISTS capacity INT DEFAULT 2;
+ALTER TABLE preset_room_types ADD COLUMN IF NOT EXISTS bed_width INT DEFAULT 180;
+ALTER TABLE preset_room_types ADD COLUMN IF NOT EXISTS area DECIMAL(10, 2) DEFAULT 20;
+ALTER TABLE preset_room_types ADD COLUMN IF NOT EXISTS ceiling_height DECIMAL(10, 2) DEFAULT 2.8;
+ALTER TABLE preset_room_types ADD COLUMN IF NOT EXISTS wifi BOOLEAN DEFAULT TRUE;
+ALTER TABLE preset_room_types ADD COLUMN IF NOT EXISTS breakfast_included BOOLEAN DEFAULT FALSE;

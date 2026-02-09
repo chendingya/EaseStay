@@ -185,6 +185,10 @@ export default function AdminHotelDetail() {
   // Columns definitions
   const roomColumns = [
     { title: '房型名称', dataIndex: 'name', key: 'name' },
+    { title: '可住', dataIndex: 'capacity', key: 'capacity', width: 80, render: (v) => v ? `${v}人` : '-' },
+    { title: '床宽', dataIndex: 'bed_width', key: 'bed_width', width: 80, render: (v) => v ? `${v}cm` : '-' },
+    { title: '面积', dataIndex: 'area', key: 'area', width: 80, render: (v) => v ? `${v}㎡` : '-' },
+    { title: '层高', dataIndex: 'ceiling_height', key: 'ceiling_height', width: 80, render: (v) => v ? `${v}m` : '-' },
     {
       title: '价格',
       dataIndex: 'price',
@@ -256,6 +260,8 @@ export default function AdminHotelDetail() {
       }
     },
     { title: '库存', dataIndex: 'stock', key: 'stock' },
+    { title: 'WiFi', dataIndex: 'wifi', key: 'wifi', width: 70, render: (v) => v === true ? '有' : v === false ? '无' : '-' },
+    { title: '含早', dataIndex: 'breakfast_included', key: 'breakfast_included', width: 70, render: (v) => v === true ? '是' : v === false ? '否' : '-' },
     {
       title: '已用',
       dataIndex: 'used_stock',

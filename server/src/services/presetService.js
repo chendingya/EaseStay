@@ -25,7 +25,7 @@ async function getPresetFacilities() {
 async function getPresetRoomTypes() {
   const { data, error } = await supabase
     .from('preset_room_types')
-    .select('id, name, default_price, description')
+    .select('id, name, default_price, description, capacity, bed_width, area, ceiling_height, wifi, breakfast_included')
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
 
@@ -112,10 +112,21 @@ async function addPresetFacility(name, category, icon) {
 /**
  * 添加新预设房型（管理员）
  */
-async function addPresetRoomType(name, defaultPrice, description) {
+async function addPresetRoomType(name, defaultPrice, description, extras = {}) {
+  const payload = {
+    name,
+    default_price: defaultPrice,
+    description
+  }
+  if (extras.capacity !== undefined) payload.capacity = extras.capacity
+  if (extras.bed_width !== undefined) payload.bed_width = extras.bed_width
+  if (extras.area !== undefined) payload.area = extras.area
+  if (extras.ceiling_height !== undefined) payload.ceiling_height = extras.ceiling_height
+  if (extras.wifi !== undefined) payload.wifi = extras.wifi
+  if (extras.breakfast_included !== undefined) payload.breakfast_included = extras.breakfast_included
   const { data, error } = await supabase
     .from('preset_room_types')
-    .insert({ name, default_price: defaultPrice, description })
+    .insert(payload)
     .select()
     .single()
 
