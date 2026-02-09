@@ -9,15 +9,25 @@ import './index.css'
 
 export default function List() {
   const router = useRouter()
-  const params = router.params || {}
+  // Use a ref to ensure we parse params only once and correctly on mount
+  const paramsRef = useRef(router.params || {})
   
-  // URL Params
-  const [city, setCity] = useState(params.city ? decodeURIComponent(params.city) : '')
-  const [keyword, setKeyword] = useState(params.keyword ? decodeURIComponent(params.keyword) : '')
-  const [checkIn, setCheckIn] = useState(params.checkIn || '')
-  const [checkOut, setCheckOut] = useState(params.checkOut || '')
-  const [minPrice, setMinPrice] = useState(params.minPrice || '')
-  const [maxPrice, setMaxPrice] = useState(params.maxPrice || '')
+  // URL Params - use safe decoding
+  const safeDecode = (str) => {
+    if (!str) return ''
+    try {
+      return decodeURIComponent(str)
+    } catch (e) {
+      return str
+    }
+  }
+
+  const [city, setCity] = useState(() => safeDecode(paramsRef.current.city))
+  const [keyword, setKeyword] = useState(() => safeDecode(paramsRef.current.keyword))
+  const [checkIn, setCheckIn] = useState(() => paramsRef.current.checkIn || '')
+  const [checkOut, setCheckOut] = useState(() => paramsRef.current.checkOut || '')
+  const [minPrice, setMinPrice] = useState(() => paramsRef.current.minPrice || '')
+  const [maxPrice, setMaxPrice] = useState(() => paramsRef.current.maxPrice || '')
 
   // Data State
   const [list, setList] = useState([])
@@ -26,27 +36,40 @@ export default function List() {
   
   // Filter State
   const [sort, setSort] = useState('recommend') // recommend, price_asc, price_desc, star
-  const [selectedStars, setSelectedStars] = useState(params.stars ? params.stars.split(',') : [])
+  const [selectedStars, setSelectedStars] = useState(() => paramsRef.current.stars ? paramsRef.current.stars.split(',') : [])
   
   const dropdownRef = useRef(null)
   const isFirstLoad = useRef(true)
 
+  // Use refs for current search params to avoid stale closures in loadMore if called async
+  const searchParamsRef = useRef({ city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars })
+
+  // Sync refs with state
+  useEffect(() => {
+    searchParamsRef.current = { city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars }
+  }, [city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars])
+
   // Fetch Data
   async function loadMore() {
     try {
-      const nextPage = page
+      // Use ref values to ensure latest params
+      const currentParams = searchParamsRef.current
+      const nextPage = page // Use state page, assuming it's managed correctly with setPage
+      
       const queryParams = new URLSearchParams()
-      if (city) queryParams.append('city', city)
-      if (keyword) queryParams.append('keyword', keyword)
-      if (checkIn) queryParams.append('checkIn', checkIn)
-      if (checkOut) queryParams.append('checkOut', checkOut)
-      if (minPrice) queryParams.append('minPrice', minPrice)
-      if (maxPrice) queryParams.append('maxPrice', maxPrice)
-      if (sort) queryParams.append('sort', sort)
-      if (selectedStars.length > 0) queryParams.append('stars', selectedStars.join(','))
+      if (currentParams.city) queryParams.append('city', currentParams.city)
+      if (currentParams.keyword) queryParams.append('keyword', currentParams.keyword)
+      if (currentParams.checkIn) queryParams.append('checkIn', currentParams.checkIn)
+      if (currentParams.checkOut) queryParams.append('checkOut', currentParams.checkOut)
+      if (currentParams.minPrice) queryParams.append('minPrice', currentParams.minPrice)
+      if (currentParams.maxPrice) queryParams.append('maxPrice', currentParams.maxPrice)
+      if (currentParams.sort) queryParams.append('sort', currentParams.sort)
+      if (currentParams.selectedStars.length > 0) queryParams.append('stars', currentParams.selectedStars.join(','))
       
       queryParams.append('page', nextPage)
       queryParams.append('pageSize', 10)
+
+      console.log('Fetching hotels with params:', queryParams.toString())
 
       const res = await api.get(`/api/hotels?${queryParams.toString()}`)
       
@@ -67,16 +90,15 @@ export default function List() {
   useEffect(() => {
     if (isFirstLoad.current) {
       isFirstLoad.current = false
+      // Don't return here! InfiniteScroll might not trigger if content is empty initially?
+      // Actually InfiniteScroll usually triggers loadMore on mount if hasMore is true.
+      // But let's verify if we need manual trigger.
+      // For now, standard InfiniteScroll behavior is enough.
       return
     }
     setPage(1)
     setList([])
-    setHasMore(true)
-    // InfiniteScroll will trigger loadMore automatically when hasMore is true and content is short, 
-    // but we need to reset page state carefully. 
-    // Actually, setting hasMore=true and list=[] usually triggers InfiniteScroll.
-    // However, to be safe and avoid double fetch or no fetch, we can manually call loadMore(1) if we managed the state manually,
-    // but with InfiniteScroll component, we just reset state.
+    setHasMore(true) // This should trigger InfiniteScroll to call loadMore
   }, [sort, selectedStars, city, keyword, minPrice, maxPrice]) // checkIn/checkOut usually don't change in list page interaction unless we add date picker
 
   // Handle Search Bar Click -> Go back to search or expand
@@ -170,6 +192,9 @@ export default function List() {
               <View className="filter-section-title">星级</View>
               <Checkbox.Group value={selectedStars} onChange={val => setSelectedStars(val)}>
                 <Space direction='vertical' block>
+                  <Checkbox value='0'>未评级</Checkbox>
+                  <Checkbox value='1'>一星级</Checkbox>
+                  <Checkbox value='2'>二星级</Checkbox>
                   <Checkbox value='3'>三星级</Checkbox>
                   <Checkbox value='4'>四星级</Checkbox>
                   <Checkbox value='5'>五星级</Checkbox>

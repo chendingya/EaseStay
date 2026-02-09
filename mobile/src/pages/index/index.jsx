@@ -1,10 +1,11 @@
 import { View, Image, Text, Map } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useEffect, useState } from 'react'
-import { Swiper, Button, Card, SearchBar, Tag, Space, Toast, CalendarPicker, Picker, Popup } from 'antd-mobile'
+import { Swiper, Button, Card, SearchBar, Tag, Space, Toast, CalendarPicker, Picker, Popup, Cascader } from 'antd-mobile'
 import { SearchOutline, CalendarOutline, EnvironmentOutline } from 'antd-mobile-icons'
 import { api } from '../../services/request'
 import HotelCard from '../../components/HotelCard'
+import { cityData } from '../../utils/cityData'
 import './index.css'
 
 // 轮播 Banner 数据
@@ -14,8 +15,8 @@ const bannerList = [
   { id: 3, title: '亲子酒店推荐', color: '#FF8C00' },
 ]
 
-// 快捷标签
-const quickTags = ['亲子', '免费停车', '高评分', '近地铁', '含早餐', '海景房']
+// 快捷标签 - remove hardcoded
+// const quickTags = ['亲子', '免费停车', '高评分', '近地铁', '含早餐', '海景房']
 
 const formatDate = (date) => {
   if (!date || Number.isNaN(date.getTime())) return ''
@@ -30,6 +31,7 @@ const AMAP_KEY = 'ddced92dcf9226be15b73e95708224f9' // 请替换为您的高德�
 export default function Index() {
   const [city, setCity] = useState('上海')
   const [keyword, setKeyword] = useState('')
+  const [quickTags, setQuickTags] = useState([]) // Load from backend
   
   // Initialize with valid dates to prevent flash of empty/NaN content
   const [checkIn, setCheckIn] = useState(() => {
@@ -53,10 +55,49 @@ export default function Index() {
   const [mapInstance, setMapInstance] = useState(null)
   const [markerInstance, setMarkerInstance] = useState(null)
   const [selectedAddress, setSelectedAddress] = useState('')
+  const [cityPickerVisible, setCityPickerVisible] = useState(false)
+  const [locationCity, setLocationCity] = useState('') // Store GPS location city separately
+  // const [cityList, setCityList] = useState([]) // Deprecated in favor of static cityData for hierarchy
 
   useEffect(() => {
     fetchHotHotels()
+    fetchQuickTags()
+    // fetchCities() // No longer needed
   }, [])
+
+  /*
+  const fetchCities = async () => {
+    try {
+      const res = await api.get('/api/presets/cities')
+      if (res && res.success && Array.isArray(res.data)) {
+         // Format for Picker: [[{ label: 'Shanghai', value: 'Shanghai' }, ...]]
+         const formatted = res.data.map(c => ({ label: c.name, value: c.name }))
+         setCityList([formatted])
+      }
+    } catch (e) {
+      console.error('Fetch cities failed', e)
+    }
+  }
+  */
+
+  const fetchQuickTags = async () => {
+    try {
+      // Fetch preset facilities as quick tags
+      const res = await api.get('/api/presets/facilities')
+      if (res && res.success && Array.isArray(res.data)) {
+         // Filter or pick top 6-8 tags
+         // Assuming data is [{name: 'WiFi', ...}, ...]
+         const tags = res.data.slice(0, 8).map(item => item.name)
+         setQuickTags(tags)
+      } else {
+         // Fallback
+         setQuickTags(['亲子', '免费停车', '高评分', '近地铁', '含早餐', '海景房'])
+      }
+    } catch (e) {
+      console.error('Fetch tags failed', e)
+      setQuickTags(['亲子', '免费停车', '高评分', '近地铁', '含早餐', '海景房'])
+    }
+  }
 
   useEffect(() => {
     if (mapVisible && process.env.TARO_ENV === 'h5') {
@@ -190,8 +231,12 @@ export default function Index() {
   }
 
   const handleLocation = () => {
+    // Determine the type parameter based on environment
+    // H5 only supports 'wgs84', while Weapp supports 'gcj02'
+    const type = process.env.TARO_ENV === 'h5' ? 'wgs84' : 'gcj02'
+
     Taro.getLocation({
-      type: 'gcj02', // Use gcj02 for Amap/Tencent map compatibility
+      type: type, 
       success: async function (res) {
         const { latitude, longitude } = res
         setLatitude(latitude)
@@ -215,7 +260,9 @@ export default function Index() {
                 cityName = city
             }
             // Remove '市' suffix for display if desired, but keep full name is also fine.
-            setCity(cityName || '未知')
+            const finalCity = cityName || '未知'
+            setCity(finalCity)
+            setLocationCity(finalCity) // Also update location city record
             Toast.show({ content: '定位成功', icon: 'success' })
           } else {
             Toast.show({ content: '获取位置信息失败', icon: 'fail' })
@@ -227,13 +274,18 @@ export default function Index() {
       },
       fail: function (err) {
         console.error('Location failed:', err)
-        Toast.show({ content: '定位失败，请检查权限', icon: 'fail' })
+        // If H5 geolocation is blocked or fails (e.g. non-HTTPS), show friendly message
+        if (process.env.TARO_ENV === 'h5' && window.location.protocol !== 'https:') {
+             Toast.show({ content: 'H5定位需HTTPS环境', icon: 'fail' })
+        } else {
+             Toast.show({ content: '定位失败，请检查权限', icon: 'fail' })
+        }
       }
     })
   }
 
   const handleSearch = () => {
-    let url = `/pages/list/index?city=${city}&keyword=${keyword}&checkIn=${checkIn}&checkOut=${checkOut}`
+    let url = `/pages/list/index?city=${encodeURIComponent(city)}&keyword=${encodeURIComponent(keyword)}&checkIn=${checkIn}&checkOut=${checkOut}`
     if (selectedStar) {
       url += `&stars=${selectedStar}`
     }
@@ -254,7 +306,7 @@ export default function Index() {
   }
 
   const handleTagClick = (tag) => {
-    let url = `/pages/list/index?city=${city}&keyword=${tag}&checkIn=${checkIn}&checkOut=${checkOut}`
+    let url = `/pages/list/index?city=${encodeURIComponent(city)}&keyword=${encodeURIComponent(tag)}&checkIn=${checkIn}&checkOut=${checkOut}`
     if (selectedStar) {
       url += `&stars=${selectedStar}`
     }
@@ -326,14 +378,26 @@ export default function Index() {
       {/* 携程风搜索卡片 */}
       <Card className="search-card">
         {/* 城市选择与地图入口 */}
-        <View style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-           <View className="search-row" onClick={handleLocation} style={{ flex: 1 }}>
-             <View style={{ display: 'flex', alignItems: 'center', fontSize: 18, fontWeight: 'bold' }}>
-               <EnvironmentOutline style={{ marginRight: 4, color: '#0086F6' }} />
-               {city}
-               <Tag color="primary" fill="outline" style={{ marginLeft: 8, fontSize: 10 }}>当前位置</Tag>
+        <View className="search-row">
+           <View style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+             <View 
+               style={{ display: 'flex', alignItems: 'center' }}
+               onClick={() => setCityPickerVisible(true)}
+             >
+               <EnvironmentOutline style={{ marginRight: 4, color: '#0086F6', fontSize: 22 }} />
+               <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#333' }}>{city}</Text>
              </View>
-             <View style={{ fontSize: 12, color: '#999' }}>点击刷新定位</View>
+             <View 
+                style={{ display: 'flex', alignItems: 'center', marginTop: 6, paddingLeft: 4 }}
+                onClick={handleLocation}
+              >
+                <Tag color="primary" fill="outline" style={{ marginRight: 8, fontSize: 10 }}>
+                  {city === locationCity && locationCity ? '当前位置' : '我的位置'}
+                </Tag>
+                <Text style={{ fontSize: 12, color: '#999' }}>
+                  {locationCity && city !== locationCity ? `${locationCity} (点击切换)` : '点击刷新定位'}
+                </Text>
+              </View>
            </View>
            
            <View 
@@ -457,6 +521,20 @@ export default function Index() {
           </Space>
         </View>
       )}
+
+      {/* 城市选择弹窗 - 使用级联选择器 */}
+      <Cascader
+        options={cityData}
+        visible={cityPickerVisible}
+        onClose={() => setCityPickerVisible(false)}
+        value={[]}
+        onConfirm={v => {
+          // v is array of values, e.g. ['江苏省', '南京市']
+          // We usually want the last selected item as the city
+          const selected = v[v.length - 1]
+          if (selected) setCity(selected)
+        }}
+      />
 
       {/* 日期选择弹窗 */}
       <CalendarPicker
