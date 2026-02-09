@@ -58,6 +58,7 @@ export default function RequestAudit() {
     try {
       await api.put(`/api/admin/requests/${id}/review`, { action, rejectReason })
       message.success(action === 'approve' ? '已通过申请并通知商户' : '已拒绝申请并通知商户')
+      window.dispatchEvent(new Event('admin-pending-update'))
       setRejecting(null)
       rejectForm.resetFields()
       fetchRequests(activeTab)

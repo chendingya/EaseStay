@@ -1,8 +1,8 @@
 import './App.css'
 import { Layout, Menu, Space, Typography, Tag, Button, Breadcrumb, Badge, Tooltip, Result } from 'antd'
-import { HomeOutlined, SettingOutlined, UserOutlined, TeamOutlined, BellOutlined, FileSearchOutlined, ShopOutlined } from '@ant-design/icons'
+import { HomeOutlined, SettingOutlined, UserOutlined, TeamOutlined, BellOutlined, FileSearchOutlined, ShopOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
 import { Routes, Route, useLocation, useNavigate, Navigate, Outlet } from 'react-router-dom'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getUnreadCount, onUnreadCountChange, api } from './services'
 import Login from './pages/Login.jsx'
 import Hotels from './pages/Hotels.jsx'
@@ -18,6 +18,7 @@ import Messages from './pages/Messages.jsx'
 import AdminHotels from './pages/AdminHotels.jsx'
 import AdminHotelDetail from './pages/AdminHotelDetail.jsx'
 import MerchantDetail from './pages/MerchantDetail.jsx'
+import OrderStats from './pages/OrderStats.jsx'
 import { routeConfig } from './routes/routeConfig'
 
 const appPerfStart = import.meta.env.DEV ? performance.now() : 0
@@ -29,6 +30,8 @@ function AppBreadcrumb() {
   
   const breadcrumbItems = useMemo(() => {
     const path = location.pathname
+    const idMatch = path.match(/\/(hotels|admin-hotels)\/(\d+)/)
+    const currentId = idMatch?.[2]
     
     // 匹配当前路由
     let matchedRoute = routeConfig[path]
@@ -37,10 +40,14 @@ function AppBreadcrumb() {
     if (!matchedRoute) {
       if (path.match(/^\/hotels\/edit\/\d+$/)) {
         matchedRoute = routeConfig['/hotels/edit/:id']
+      } else if (path.match(/^\/hotels\/\d+\/stats$/)) {
+        matchedRoute = routeConfig['/hotels/:id/stats']
       } else if (path.match(/^\/hotels\/\d+$/)) {
         matchedRoute = routeConfig['/hotels/:id']
       } else if (path.match(/^\/audit\/\d+$/)) {
         matchedRoute = routeConfig['/audit/:id']
+      } else if (path.match(/^\/admin-hotels\/\d+\/stats$/)) {
+        matchedRoute = routeConfig['/admin-hotels/:id/stats']
       } else if (path.match(/^\/admin-hotels\/\d+$/)) {
         matchedRoute = routeConfig['/admin-hotels/:id']
       } else if (path.match(/^\/merchants\/\d+$/)) {
@@ -61,8 +68,11 @@ function AppBreadcrumb() {
     if (matchedRoute.parent) {
       const parentRoute = routeConfig[matchedRoute.parent]
       if (parentRoute) {
+        const parentPath = matchedRoute.parent.includes(':id') && currentId
+          ? matchedRoute.parent.replace(':id', currentId)
+          : matchedRoute.parent
         items.push({
-          title: <a onClick={() => navigate(matchedRoute.parent)} style={{ color: '#666' }}>{parentRoute.title}</a>
+          title: <a onClick={() => navigate(parentPath)} style={{ color: '#666' }}>{parentRoute.title}</a>
         })
       }
     }
@@ -127,13 +137,15 @@ function NotFound({ homePath }) {
 
 function AppLayout({ auth, menuItems, selectedKey, pendingTotal, adminTooltipTitle, unreadCount, onLogout, onAdminNotificationClick }) {
   const navigate = useNavigate()
+  const [collapsed, setCollapsed] = useState(false)
   return (
     <Layout className="app">
-      <Layout.Sider width={220} className="sider">
-        <div className="logo">易宿管理端</div>
+      <Layout.Sider width={220} collapsedWidth={72} collapsible collapsed={collapsed} trigger={null} className="sider">
+        <div className="logo">{collapsed ? '易宿' : '易宿管理端'}</div>
         <Menu
           theme="dark"
           mode="inline"
+          inlineCollapsed={collapsed}
           selectedKeys={[selectedKey]}
           items={menuItems}
           onClick={({ key }) => {
@@ -150,7 +162,17 @@ function AppLayout({ auth, menuItems, selectedKey, pendingTotal, adminTooltipTit
       </Layout.Sider>
       <Layout>
         <Layout.Header className="header">
-          <Typography.Title level={4} className="header-title">酒店管理后台</Typography.Title>
+          <Space size={12} align="center" style={{ display: 'flex', alignItems: 'center' }}>
+            <Button
+              type="text"
+              icon={collapsed ? <MenuUnfoldOutlined style={{ fontSize: 16 }} /> : <MenuFoldOutlined style={{ fontSize: 16 }} />}
+              onClick={() => setCollapsed((prev) => !prev)}
+              style={{ height: 32, width: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            />
+            <Typography.Title level={4} className="header-title" style={{ margin: 0, lineHeight: 1 }}>
+              酒店管理后台
+            </Typography.Title>
+          </Space>
           <Space className="header-actions">
             <Tooltip title={auth.role === 'admin' ? adminTooltipTitle : '消息中心'}>
               {auth.role === 'admin' ? (
@@ -220,28 +242,41 @@ function App() {
     }
   }, [auth.token]) // Remove location.pathname dependency as we now have real-time updates via subscription
 
+  const fetchAdminPending = useCallback(async () => {
+    if (!auth.token || auth.role !== 'admin') return
+    try {
+      const [hotels, requests] = await Promise.all([
+        api.get('/api/admin/hotels?status=pending'),
+        api.get('/api/admin/requests?status=pending')
+      ])
+      setAdminPending({
+        pendingHotels: Array.isArray(hotels) ? hotels.length : 0,
+        pendingRequests: Array.isArray(requests) ? requests.length : 0
+      })
+    } catch (error) {
+      console.error('获取待审核汇总失败:', error)
+    }
+  }, [auth.role, auth.token])
+
   useEffect(() => {
     if (auth.token && auth.role === 'admin') {
-      let timerId
-      const fetchSummary = async () => {
-        try {
-          const [hotels, requests] = await Promise.all([
-            api.get('/api/admin/hotels?status=pending'),
-            api.get('/api/admin/requests?status=pending')
-          ])
-          setAdminPending({
-            pendingHotels: Array.isArray(hotels) ? hotels.length : 0,
-            pendingRequests: Array.isArray(requests) ? requests.length : 0
-          })
-        } catch (error) {
-          console.error('获取待审核汇总失败:', error)
-        }
+      const initialId = setTimeout(fetchAdminPending, 0)
+      const timerId = setInterval(fetchAdminPending, 30000)
+      return () => {
+        clearTimeout(initialId)
+        clearInterval(timerId)
       }
-      fetchSummary()
-      timerId = setInterval(fetchSummary, 30000)
-      return () => clearInterval(timerId)
     }
-  }, [auth.token, auth.role])
+  }, [auth.token, auth.role, fetchAdminPending])
+
+  useEffect(() => {
+    if (auth.role !== 'admin') return
+    const handler = () => {
+      fetchAdminPending()
+    }
+    window.addEventListener('admin-pending-update', handler)
+    return () => window.removeEventListener('admin-pending-update', handler)
+  }, [auth.role, fetchAdminPending])
 
   const pendingTotal = adminPending.pendingHotels + adminPending.pendingRequests
   const adminTooltipTitle = (
@@ -336,10 +371,12 @@ function App() {
             <Route path="/hotels/new" element={<HotelEdit />} />
             <Route path="/hotels/edit/:id" element={<HotelEdit />} />
             <Route path="/hotels/:id" element={<HotelDetail />} />
+            <Route path="/hotels/:id/stats" element={<OrderStats />} />
           </Route>
           <Route element={<RequireRole role={auth.role} allow="admin" />}>
             <Route path="/admin-hotels" element={<AdminHotels />} />
             <Route path="/admin-hotels/:id" element={<AdminHotelDetail />} />
+            <Route path="/admin-hotels/:id/stats" element={<OrderStats />} />
             <Route path="/audit" element={<Audit />} />
             <Route path="/audit/:id" element={<AuditDetail />} />
             <Route path="/requests" element={<RequestAudit />} />

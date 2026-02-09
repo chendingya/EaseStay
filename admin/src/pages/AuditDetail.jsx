@@ -76,6 +76,7 @@ export default function AuditDetail() {
         : status === 'offline' ? '已下线，已通知商户'
         : '操作成功'
       )
+      window.dispatchEvent(new Event('admin-pending-update'))
       setRejecting(false)
       setOfflineModal(false)
       rejectForm.resetFields()

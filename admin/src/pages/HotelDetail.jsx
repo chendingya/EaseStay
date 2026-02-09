@@ -23,8 +23,6 @@ export default function HotelDetail() {
   const [ordersTotal, setOrdersTotal] = useState(0)
   const [ordersPage, setOrdersPage] = useState(1)
   const [ordersLoading, setOrdersLoading] = useState(false)
-  const [orderStats, setOrderStats] = useState(null)
-  const [statsLoading, setStatsLoading] = useState(false)
   const [discountModal, setDiscountModal] = useState(false)
   const [selectedRoom, setSelectedRoom] = useState(null)
   const [discountLoading, setDiscountLoading] = useState(false)
@@ -72,21 +70,8 @@ export default function HotelDetail() {
       }
     }
 
-    const fetchOrderStats = async () => {
-      setStatsLoading(true)
-      try {
-        const data = await api.get(`/api/merchant/hotels/${id}/order-stats`)
-        setOrderStats(data)
-      } catch (error) {
-        console.error('获取订单统计失败:', error)
-      } finally {
-        setStatsLoading(false)
-      }
-    }
-
     fetchOverview()
     fetchOrders()
-    fetchOrderStats()
   }, [id, ordersPage])
 
   if (loading) {
@@ -343,67 +328,6 @@ export default function HotelDetail() {
   const usedPercent = overviewTotal ? Math.round((computedOverview.used / overviewTotal) * 100) : 0
   const availablePercent = overviewTotal ? Math.round((computedOverview.available / overviewTotal) * 100) : 0
   const offlinePercent = overviewTotal ? Math.round((computedOverview.offline / overviewTotal) * 100) : 0
-  const roomTypeSummary = orderStats?.roomTypeSummary || []
-  const roomTypeDaily = orderStats?.roomTypeDaily || []
-  const roomTypeMonthly = orderStats?.roomTypeMonthly || []
-  const totalRoomNights = roomTypeSummary.reduce((sum, item) => sum + (Number(item.nights) || 0), 0)
-
-  const roomTypeSummaryColumns = [
-    { title: '房型', dataIndex: 'roomTypeName', key: 'roomTypeName' },
-    { title: '入住间夜', dataIndex: 'nights', key: 'nights', width: 90 },
-    {
-      title: '入住率',
-      dataIndex: 'occupancyRate',
-      key: 'occupancyRate',
-      width: 90,
-      render: (value) => `${value || 0}%`
-    },
-    {
-      title: '收入',
-      dataIndex: 'revenue',
-      key: 'revenue',
-      render: (value) => `¥${value || 0}`
-    }
-  ]
-
-  const roomTypeDailyColumns = [
-    { title: '日期', dataIndex: 'date', key: 'date', width: 120 },
-    { title: '房型', dataIndex: 'roomTypeName', key: 'roomTypeName' },
-    { title: '入住间夜', dataIndex: 'nights', key: 'nights', width: 90 },
-    {
-      title: '入住率',
-      dataIndex: 'occupancyRate',
-      key: 'occupancyRate',
-      width: 90,
-      render: (value) => `${value || 0}%`
-    },
-    {
-      title: '订单金额',
-      dataIndex: 'revenue',
-      key: 'revenue',
-      render: (value) => `¥${value || 0}`
-    }
-  ]
-
-  const roomTypeMonthlyColumns = [
-    { title: '月份', dataIndex: 'month', key: 'month', width: 120 },
-    { title: '房型', dataIndex: 'roomTypeName', key: 'roomTypeName' },
-    { title: '入住间夜', dataIndex: 'nights', key: 'nights', width: 90 },
-    {
-      title: '入住率',
-      dataIndex: 'occupancyRate',
-      key: 'occupancyRate',
-      width: 90,
-      render: (value) => `${value || 0}%`
-    },
-    {
-      title: '订单金额',
-      dataIndex: 'revenue',
-      key: 'revenue',
-      render: (value) => `¥${value || 0}`
-    }
-  ]
-
   return (
     <>
       {/* 页面标题和操作按钮 */}
@@ -419,9 +343,11 @@ export default function HotelDetail() {
             <Typography.Text type="secondary">{hotel.name_en}</Typography.Text>
           )}
         </div>
-        <GlassButton type="primary" onClick={() => navigate(`/hotels/edit/${hotel.id}`)}>
-          编辑酒店
-        </GlassButton>
+        <Space>
+          <GlassButton type="primary" onClick={() => navigate(`/hotels/edit/${hotel.id}`)}>
+            编辑酒店
+          </GlassButton>
+        </Space>
       </div>
 
       {/* 头部大图 */}
@@ -522,7 +448,17 @@ export default function HotelDetail() {
                 key: 'orders',
                 label: '订单展示',
                 children: (
-                  <Card title="订单列表" style={{ marginBottom: 24 }}>
+                  <Card
+                    title={(
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>订单列表</span>
+                        <GlassButton type="primary" onClick={() => navigate(`/hotels/${hotel.id}/stats`)}>
+                          订单统计
+                        </GlassButton>
+                      </div>
+                    )}
+                    style={{ marginBottom: 24 }}
+                  >
                     <Table
                       columns={orderColumns}
                       dataSource={orders}
@@ -540,101 +476,7 @@ export default function HotelDetail() {
                   </Card>
                 )
               },
-              {
-                key: 'stats',
-                label: '订单统计',
-                children: (
-                  <Card loading={statsLoading} style={{ marginBottom: 24 }}>
-                    <Row gutter={16}>
-                      <Col span={8}>
-                        <Statistic title="订单总量" value={orderStats?.totalOrders || 0} />
-                      </Col>
-                      <Col span={8}>
-                        <Statistic title="订单收入" value={orderStats?.revenue || 0} prefix="¥" />
-                      </Col>
-                      <Col span={8}>
-                        <Statistic title="状态种类" value={orderStats?.statusStats?.length || 0} />
-                      </Col>
-                    </Row>
-                    <Row gutter={16} style={{ marginTop: 16 }}>
-                      <Col span={8}>
-                        <Statistic title="房型数" value={roomTypeSummary.length} />
-                      </Col>
-                      <Col span={8}>
-                        <Statistic title="入住间夜" value={totalRoomNights} />
-                      </Col>
-                      <Col span={8}>
-                        <Statistic title="统计记录" value={(roomTypeDaily.length || 0) + (roomTypeMonthly.length || 0)} />
-                      </Col>
-                    </Row>
-                    <Row gutter={16} style={{ marginTop: 16 }}>
-                      <Col span={12}>
-                        <Typography.Title level={5} style={{ marginTop: 0 }}>订单状态分布</Typography.Title>
-                        <Table
-                          columns={[
-                            { title: '状态', dataIndex: 'status', key: 'status' },
-                            { title: '数量', dataIndex: 'count', key: 'count' }
-                          ]}
-                          dataSource={orderStats?.statusStats || []}
-                          rowKey="status"
-                          pagination={false}
-                          size="small"
-                        />
-                      </Col>
-                      <Col span={12}>
-                        <Typography.Title level={5} style={{ marginTop: 0 }}>月度收入</Typography.Title>
-                        <Table
-                          columns={[
-                            { title: '月份', dataIndex: 'month', key: 'month' },
-                            { title: '收入', dataIndex: 'revenue', key: 'revenue', render: (v) => `¥${v}` }
-                          ]}
-                          dataSource={orderStats?.monthly || []}
-                          rowKey="month"
-                          pagination={false}
-                          size="small"
-                        />
-                      </Col>
-                    </Row>
-                    <Row gutter={16} style={{ marginTop: 16 }}>
-                      <Col span={24}>
-                        <Typography.Title level={5} style={{ marginTop: 0 }}>房型汇总</Typography.Title>
-                        <Table
-                          columns={roomTypeSummaryColumns}
-                          dataSource={roomTypeSummary}
-                          rowKey={(record) => `${record.roomTypeName}-${record.nights}-${record.revenue}`}
-                          pagination={{ pageSize: 6 }}
-                          size="small"
-                          locale={{ emptyText: '暂无统计数据' }}
-                        />
-                      </Col>
-                    </Row>
-                    <Row gutter={16} style={{ marginTop: 16 }}>
-                      <Col span={12}>
-                        <Typography.Title level={5} style={{ marginTop: 0 }}>房型日度表现</Typography.Title>
-                        <Table
-                          columns={roomTypeDailyColumns}
-                          dataSource={roomTypeDaily}
-                          rowKey={(record) => `${record.date}-${record.roomTypeName}`}
-                          pagination={{ pageSize: 6 }}
-                          size="small"
-                          locale={{ emptyText: '暂无统计数据' }}
-                        />
-                      </Col>
-                      <Col span={12}>
-                        <Typography.Title level={5} style={{ marginTop: 0 }}>房型月度表现</Typography.Title>
-                        <Table
-                          columns={roomTypeMonthlyColumns}
-                          dataSource={roomTypeMonthly}
-                          rowKey={(record) => `${record.month}-${record.roomTypeName}`}
-                          pagination={{ pageSize: 6 }}
-                          size="small"
-                          locale={{ emptyText: '暂无统计数据' }}
-                        />
-                      </Col>
-                    </Row>
-                  </Card>
-                )
-              }
+              
             ]}
           />
 
