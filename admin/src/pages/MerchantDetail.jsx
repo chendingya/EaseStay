@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Card, Descriptions, Tag, Space, Typography, Table, Spin, Row, Col, Statistic, Modal, Form, Input } from 'antd'
 import { UserOutlined, ShopOutlined, CalendarOutlined, KeyOutlined, StarFilled, EnvironmentOutlined } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
-import { api } from '../services/request'
+import { api } from '../services'
 
 const statusMap = {
   pending: { color: 'orange', label: '待审核' },

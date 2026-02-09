@@ -1,10 +1,9 @@
 import './App.css'
-import { Layout, Menu, Space, Typography, Tag, Button, Breadcrumb, Badge, Tooltip } from 'antd'
+import { Layout, Menu, Space, Typography, Tag, Button, Breadcrumb, Badge, Tooltip, Result } from 'antd'
 import { HomeOutlined, SettingOutlined, UserOutlined, TeamOutlined, BellOutlined, FileSearchOutlined, ShopOutlined } from '@ant-design/icons'
-import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
+import { Routes, Route, useLocation, useNavigate, Navigate, Outlet } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
-import { getUnreadCount, onUnreadCountChange } from './services/notificationService'
-import { api } from './services/request'
+import { getUnreadCount, onUnreadCountChange, api } from './services'
 import Login from './pages/Login.jsx'
 import Hotels from './pages/Hotels.jsx'
 import HotelDetail from './pages/HotelDetail.jsx'
@@ -19,24 +18,7 @@ import Messages from './pages/Messages.jsx'
 import AdminHotels from './pages/AdminHotels.jsx'
 import AdminHotelDetail from './pages/AdminHotelDetail.jsx'
 import MerchantDetail from './pages/MerchantDetail.jsx'
-
-// 路由配置 - 用于生成面包屑
-const routeConfig = {
-  '/': { title: '工作台', icon: <HomeOutlined /> },
-  '/hotels': { title: '我的酒店', icon: <SettingOutlined /> },
-  '/hotels/new': { title: '新增酒店', parent: '/hotels' },
-  '/hotels/edit/:id': { title: '编辑酒店', parent: '/hotels' },
-  '/hotels/:id': { title: '酒店详情', parent: '/hotels' },
-  '/admin-hotels': { title: '酒店管理', icon: <ShopOutlined /> },
-  '/admin-hotels/:id': { title: '酒店详情', parent: '/admin-hotels' },
-  '/audit': { title: '酒店审核', icon: <SettingOutlined /> },
-  '/audit/:id': { title: '审核详情', parent: '/audit' },
-  '/requests': { title: '申请审核', icon: <FileSearchOutlined /> },
-  '/messages': { title: '消息中心', icon: <BellOutlined /> },
-  '/account': { title: '账户管理', icon: <UserOutlined /> },
-  '/merchants': { title: '商户管理', icon: <TeamOutlined /> },
-  '/merchants/:id': { title: '商户详情', parent: '/merchants' }
-}
+import { routeConfig } from './routes/routeConfig'
 
 // 面包屑组件
 function AppBreadcrumb() {
@@ -101,6 +83,109 @@ function AppBreadcrumb() {
   )
 }
 
+function RequireAuth({ token }) {
+  const location = useLocation()
+  if (!token) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+  }
+  return <Outlet />
+}
+
+function RequireRole({ role, allow }) {
+  const location = useLocation()
+  if (allow && role !== allow) {
+    return <Navigate to="/unauthorized" replace state={{ from: location.pathname }} />
+  }
+  return <Outlet />
+}
+
+function Unauthorized({ homePath }) {
+  const navigate = useNavigate()
+  return (
+    <Result
+      status="403"
+      title="无权访问"
+      subTitle="当前账号无权限访问该页面"
+      extra={<Button type="primary" onClick={() => navigate(homePath)}>返回首页</Button>}
+    />
+  )
+}
+
+function NotFound({ homePath }) {
+  const navigate = useNavigate()
+  return (
+    <Result
+      status="404"
+      title="页面不存在"
+      subTitle="访问的页面不存在或已被移动"
+      extra={<Button type="primary" onClick={() => navigate(homePath)}>返回首页</Button>}
+    />
+  )
+}
+
+function AppLayout({ auth, menuItems, selectedKey, pendingTotal, adminTooltipTitle, unreadCount, onLogout, onAdminNotificationClick }) {
+  const navigate = useNavigate()
+  return (
+    <Layout className="app">
+      <Layout.Sider width={220} className="sider">
+        <div className="logo">易宿管理端</div>
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={[selectedKey]}
+          items={menuItems}
+          onClick={({ key }) => {
+            if (key === 'hotels') navigate('/hotels')
+            else if (key === 'admin-hotels') navigate('/admin-hotels')
+            else if (key === 'audit') navigate('/audit')
+            else if (key === 'requests') navigate('/requests')
+            else if (key === 'messages') navigate('/messages')
+            else if (key === 'merchants') navigate('/merchants')
+            else if (key === 'account') navigate('/account')
+            else navigate('/')
+          }}
+        />
+      </Layout.Sider>
+      <Layout>
+        <Layout.Header className="header">
+          <Typography.Title level={4} className="header-title">酒店管理后台</Typography.Title>
+          <Space className="header-actions">
+            <Tooltip title={auth.role === 'admin' ? adminTooltipTitle : '消息中心'}>
+              {auth.role === 'admin' ? (
+                <Badge dot={pendingTotal > 0} offset={[-2, 2]}>
+                  <Button 
+                    type="text" 
+                    size="small"
+                    icon={<BellOutlined style={{ fontSize: 16 }} />} 
+                    onClick={onAdminNotificationClick}
+                    style={{ marginRight: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  />
+                </Badge>
+              ) : (
+                <Badge count={unreadCount} overflowCount={99} size="small" offset={[-2, 2]}>
+                  <Button 
+                    type="text" 
+                    size="small"
+                    icon={<BellOutlined style={{ fontSize: 16 }} />} 
+                    onClick={() => navigate('/messages')}
+                    style={{ marginRight: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  />
+                </Badge>
+              )}
+            </Tooltip>
+            {auth.role ? <Tag color="blue">{auth.role === 'admin' ? '管理员' : '商户'}</Tag> : null}
+            <Button size="small" onClick={onLogout}>退出登录</Button>
+          </Space>
+        </Layout.Header>
+        <Layout.Content className="content">
+          <AppBreadcrumb />
+          <Outlet />
+        </Layout.Content>
+      </Layout>
+    </Layout>
+  )
+}
+
 function App() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -111,20 +196,6 @@ function App() {
   }))
   const [unreadCount, setUnreadCount] = useState(0)
   const [adminPending, setAdminPending] = useState({ pendingHotels: 0, pendingRequests: 0 })
-
-  useEffect(() => {
-    if (!auth.token && location.pathname !== '/login') {
-      navigate('/login')
-    }
-    if (auth.token && location.pathname === '/login') {
-      if (auth.role === 'admin') navigate('/audit')
-      else if (auth.role === 'merchant') navigate('/hotels')
-      else navigate('/')
-    }
-    if (auth.token && auth.role === 'merchant' && (location.pathname.startsWith('/audit') || location.pathname.startsWith('/requests') || location.pathname.startsWith('/merchants') || location.pathname.startsWith('/admin-hotels'))) {
-      navigate('/hotels')
-    }
-  }, [auth, location.pathname, navigate])
 
   // Fetch unread count and subscribe to changes
   useEffect(() => {
@@ -230,87 +301,49 @@ function App() {
     navigate('/login')
   }
 
-  if (location.pathname === '/login') {
-    return (
-      <Routes>
-        <Route path="/login" element={<Login onLoggedIn={handleLoggedIn} />} />
-      </Routes>
-    )
-  }
+  const homePath = auth.role === 'admin' ? '/audit' : auth.role === 'merchant' ? '/hotels' : '/'
 
   return (
-    <Layout className="app">
-      <Layout.Sider width={220} className="sider">
-        <div className="logo">易宿管理端</div>
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={[selectedKey]}
-          items={menuItems}
-          onClick={({ key }) => {
-            if (key === 'hotels') navigate('/hotels')
-            else if (key === 'admin-hotels') navigate('/admin-hotels')
-            else if (key === 'audit') navigate('/audit')
-            else if (key === 'requests') navigate('/requests')
-            else if (key === 'messages') navigate('/messages')
-            else if (key === 'merchants') navigate('/merchants')
-            else if (key === 'account') navigate('/account')
-            else navigate('/')
-          }}
-        />
-      </Layout.Sider>
-      <Layout>
-        <Layout.Header className="header">
-          <Typography.Title level={4} className="header-title">酒店管理后台</Typography.Title>
-          <Space className="header-actions">
-            <Tooltip title={auth.role === 'admin' ? adminTooltipTitle : '消息中心'}>
-              {auth.role === 'admin' ? (
-                <Badge dot={pendingTotal > 0} offset={[-2, 2]}>
-                  <Button 
-                    type="text" 
-                    size="small"
-                    icon={<BellOutlined style={{ fontSize: 16 }} />} 
-                    onClick={handleAdminNotificationClick}
-                    style={{ marginRight: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  />
-                </Badge>
-              ) : (
-                <Badge count={unreadCount} overflowCount={99} size="small" offset={[-2, 2]}>
-                  <Button 
-                    type="text" 
-                    size="small"
-                    icon={<BellOutlined style={{ fontSize: 16 }} />} 
-                    onClick={() => navigate('/messages')}
-                    style={{ marginRight: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  />
-                </Badge>
-              )}
-            </Tooltip>
-            {auth.role ? <Tag color="blue">{auth.role === 'admin' ? '管理员' : '商户'}</Tag> : null}
-            <Button size="small" onClick={handleLogout}>退出登录</Button>
-          </Space>
-        </Layout.Header>
-        <Layout.Content className="content">
-          <AppBreadcrumb />
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
+    <Routes>
+      <Route path="/login" element={auth.token ? <Navigate to={homePath} replace /> : <Login onLoggedIn={handleLoggedIn} />} />
+      <Route element={<RequireAuth token={auth.token} />}>
+        <Route
+          element={
+            <AppLayout
+              auth={auth}
+              menuItems={menuItems}
+              selectedKey={selectedKey}
+              pendingTotal={pendingTotal}
+              adminTooltipTitle={adminTooltipTitle}
+              unreadCount={unreadCount}
+              onLogout={handleLogout}
+              onAdminNotificationClick={handleAdminNotificationClick}
+            />
+          }
+        >
+          <Route path="/" element={<Dashboard />} />
+          <Route element={<RequireRole role={auth.role} allow="merchant" />}>
             <Route path="/hotels" element={<Hotels />} />
             <Route path="/hotels/new" element={<HotelEdit />} />
             <Route path="/hotels/edit/:id" element={<HotelEdit />} />
             <Route path="/hotels/:id" element={<HotelDetail />} />
+          </Route>
+          <Route element={<RequireRole role={auth.role} allow="admin" />}>
             <Route path="/admin-hotels" element={<AdminHotels />} />
             <Route path="/admin-hotels/:id" element={<AdminHotelDetail />} />
             <Route path="/audit" element={<Audit />} />
             <Route path="/audit/:id" element={<AuditDetail />} />
             <Route path="/requests" element={<RequestAudit />} />
-            <Route path="/messages" element={<Messages />} />
-            <Route path="/account" element={<Account />} />
             <Route path="/merchants" element={<Merchants />} />
             <Route path="/merchants/:id" element={<MerchantDetail />} />
-          </Routes>
-        </Layout.Content>
-      </Layout>
-    </Layout>
+          </Route>
+          <Route path="/messages" element={<Messages />} />
+          <Route path="/account" element={<Account />} />
+          <Route path="/unauthorized" element={<Unauthorized homePath={homePath} />} />
+          <Route path="*" element={<NotFound homePath={homePath} />} />
+        </Route>
+      </Route>
+    </Routes>
   )
 }
 

@@ -4,7 +4,7 @@ import { Card, Descriptions, Tag, Image, Space, Typography, Table, Spin, Row, Co
 import { StarFilled, EnvironmentOutlined, CalendarOutlined } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
 import dayjs from 'dayjs'
-import { api } from '../services/request'
+import { api } from '../services'
 
 const statusMap = {
   pending: { color: 'orange', label: '待审核' },

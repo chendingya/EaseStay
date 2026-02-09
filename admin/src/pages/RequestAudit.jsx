@@ -6,7 +6,7 @@ import {
   AppstoreOutlined, HomeOutlined, GiftOutlined, ArrowLeftOutlined, DeleteOutlined
 } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
-import { api } from '../services/request'
+import { api } from '../services'
 
 const typeMap = {
   facility: { label: '设施申请', icon: <AppstoreOutlined />, color: 'blue' },

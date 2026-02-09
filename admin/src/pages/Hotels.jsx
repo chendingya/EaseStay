@@ -1,9 +1,9 @@
 import { Card, Table, Tag, Space, Typography, Input, Select, Modal, Upload, Alert, Row, Col, Popconfirm } from 'antd'
-import { useEffect, useState, useMemo } from 'react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SearchOutlined, UploadOutlined, DownloadOutlined, InboxOutlined, StopOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
-import { api } from '../services/request'
+import { api } from '../services'
 
 const statusMap = {
   pending: { color: 'orange', label: '待审核' },
@@ -120,7 +120,7 @@ export default function Hotels() {
   const [deleteNameSecond, setDeleteNameSecond] = useState('')
   const [deleting, setDeleting] = useState(false)
 
-  const fetchHotels = async () => {
+  const fetchHotels = useCallback(async () => {
     setLoading(true)
     try {
       const data = await api.get('/api/merchant/hotels')
@@ -131,13 +131,13 @@ export default function Hotels() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     if (role === 'merchant') {
       fetchHotels()
     }
-  }, [role])
+  }, [role, fetchHotels])
 
   // 获取城市列表
   const cityOptions = useMemo(() => {

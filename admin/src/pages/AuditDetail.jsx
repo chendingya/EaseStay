@@ -8,7 +8,7 @@ import {
   ExclamationCircleOutlined
 } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
-import { api } from '../services/request'
+import { api } from '../services'
 import dayjs from 'dayjs'
 
 const statusMap = {

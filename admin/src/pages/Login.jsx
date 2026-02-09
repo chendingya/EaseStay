@@ -2,7 +2,7 @@ import { ConfigProvider, Form, Input, Select, Tabs, Typography, theme } from 'an
 import { LockOutlined, MobileOutlined, UserOutlined } from '@ant-design/icons'
 import { useEffect, useState } from 'react'
 import { GlassButton, glassMessage as message } from '../components'
-import { api } from '../services/request'
+import { api } from '../services'
 import './Login.css'
 
 export default function Login({ onLoggedIn }) {

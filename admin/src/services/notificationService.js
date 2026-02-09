@@ -39,14 +39,9 @@ const notifyUnreadUpdate = async () => {
  * @returns {Promise<Array>} 通知列表
  */
 export const getNotifications = async ({ unreadOnly = false } = {}) => {
-  try {
-    const query = unreadOnly ? '?unreadOnly=true' : ''
-    const data = await api.get(`/api/notifications${query}`)
-    return Array.isArray(data) ? data : []
-  } catch (error) {
-    console.error('获取通知列表失败:', error)
-    return []
-  }
+  const query = unreadOnly ? '?unreadOnly=true' : ''
+  const data = await api.get(`/api/notifications${query}`)
+  return Array.isArray(data) ? data : []
 }
 
 /**

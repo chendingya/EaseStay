@@ -1,11 +1,11 @@
 import { Card, Typography, Tag, Empty, Badge, Tabs, Spin } from 'antd'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { 
   BellOutlined, CheckCircleOutlined, CloseCircleOutlined, 
   InfoCircleOutlined, WarningOutlined, DeleteOutlined
 } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
-import { getNotifications, markAsRead as markNotificationAsRead, formatNotificationTime } from '../services/notificationService'
+import { getNotifications, markAsRead as markNotificationAsRead, formatNotificationTime } from '../services'
 
 const typeConfig = {
   success: { icon: <CheckCircleOutlined />, color: 'green', bg: '#f6ffed' },
@@ -20,7 +20,7 @@ export default function Messages() {
   const [activeTab, setActiveTab] = useState('all')
   const [unreadCount, setUnreadCount] = useState(0)
 
-  const fetchNotifications = async (unreadOnly = false) => {
+  const fetchNotifications = useCallback(async (unreadOnly = false) => {
     setLoading(true)
     try {
       const data = await getNotifications({ unreadOnly })
@@ -28,15 +28,14 @@ export default function Messages() {
       setUnreadCount(data.filter(n => !n.is_read).length)
     } catch (error) {
       console.error('获取消息失败:', error)
-      message.error('获取消息失败')
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     fetchNotifications(activeTab === 'unread')
-  }, [activeTab])
+  }, [activeTab, fetchNotifications])
 
   const handleMarkAsRead = async (id) => {
     const success = await markNotificationAsRead(id)
