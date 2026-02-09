@@ -26,5 +26,9 @@
 - mobile：Taro + React + Ant Design 移动端（H5）
 - docs：需求/架构/详细设计文档
 
+## 数据库与服务
+- 数据库：Supabase（PostgreSQL）
+- 接口文档：Swagger（/api-docs）
+
 ## 文档
 - 文档索引见 [docs/README.md](./docs/README.md)

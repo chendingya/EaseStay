@@ -8,7 +8,8 @@ import {
   ExclamationCircleOutlined
 } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
-import { api } from '../services/request'
+import { api } from '../services'
+import dayjs from 'dayjs'
 
 const statusMap = {
   pending: { color: 'orange', label: '待审核' },
@@ -100,38 +101,121 @@ export default function AuditDetail() {
     })
   }
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
-        <Spin size="large" />
-      </div>
-    )
+  const promotionList = (hotel?.promotions || []).filter((promo) => promo && promo.title)
+  const formatPeriodLabel = (periods) => {
+    const list = Array.isArray(periods) ? periods : []
+    if (!list.length) return '长期'
+    return list.map((p) => `${dayjs(p.start).format('YYYY-MM-DD HH:mm')}~${dayjs(p.end).format('YYYY-MM-DD HH:mm')}`).join('，')
   }
-
-  if (!hotel) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 100 }}>
-        <Empty description="酒店不存在" />
-        <GlassButton style={{ marginTop: 16 }} onClick={() => navigate('/audit')}>返回列表</GlassButton>
-      </div>
-    )
+  const isPeriodEffective = (periods) => {
+    const list = Array.isArray(periods) ? periods : []
+    if (!list.length) return true
+    const now = dayjs()
+    return list.some((p) => now.isAfter(dayjs(p.start)) && now.isBefore(dayjs(p.end)))
+  }
+  const getValueLabel = (promoValue) => {
+    const val = Number(promoValue) || 0
+    if (val < 0) return `减免 ${Math.abs(val)} 元`
+    if (val > 10) return `减免 ${val} 元`
+    if (val > 0) return `${val} 折`
+    return ''
   }
 
   const roomColumns = [
     { title: '房型名称', dataIndex: 'name', key: 'name' },
+    { title: '可住', dataIndex: 'capacity', key: 'capacity', width: 80, render: (v) => v ? `${v}人` : '-' },
+    { title: '床宽', dataIndex: 'bed_width', key: 'bed_width', width: 80, render: (v) => v ? `${v}cm` : '-' },
+    { title: '面积', dataIndex: 'area', key: 'area', width: 80, render: (v) => v ? `${v}㎡` : '-' },
+    { title: '层高', dataIndex: 'ceiling_height', key: 'ceiling_height', width: 80, render: (v) => v ? `${v}m` : '-' },
     { 
       title: '价格', 
       dataIndex: 'price', 
       key: 'price',
-      render: (v) => <span style={{ color: '#f5222d', fontWeight: 600 }}>¥{v || 0}</span>
+      render: (price, record) => {
+        const basePrice = Number(price) || 0
+        const discountRate = Number(record.discount_rate) || 0
+        const discountQuota = Number(record.discount_quota) || 0
+        const discountEffective = discountQuota > 0 && ((discountRate > 0 && discountRate <= 10) || discountRate < 0) && isPeriodEffective(record.discount_periods)
+        const now = dayjs()
+        const effectivePromos = promotionList.filter(p => {
+          const periods = Array.isArray(p.periods) ? p.periods : []
+          if (!periods.length) return true
+          return periods.some(r => now.isAfter(dayjs(r.start)) && now.isBefore(dayjs(r.end)))
+        })
+        let discounted = basePrice
+        effectivePromos.forEach(p => {
+          const val = Number(p.value) || 0
+          if (val > 0 && val <= 10) {
+            discounted = discounted * (val / 10)
+          } else if (val < 0) {
+            discounted = Math.max(0, discounted + val)
+          }
+        })
+        if (discountEffective) {
+          if (discountRate > 0 && discountRate <= 10) {
+            discounted = discounted * (discountRate / 10)
+          } else if (discountRate < 0) {
+            discounted = Math.max(0, discounted + discountRate)
+          }
+        }
+        discounted = Math.round(discounted * 100) / 100
+        return (
+          <div>
+            <div style={{ color: '#999' }}>基础价 ¥{basePrice}</div>
+            <div style={{ color: '#f5222d', fontWeight: 600 }}>当前售价 ¥{discounted}</div>
+          </div>
+        )
+      }
     },
-    { title: '库存', dataIndex: 'stock', key: 'stock', render: (v) => v || 0 }
+    {
+      title: '优惠',
+      key: 'discount',
+      render: (_, record) => {
+        const tags = []
+        const discountRate = Number(record.discount_rate) || 0
+        const discountQuota = Number(record.discount_quota) || 0
+        if (discountQuota > 0 && ((discountRate > 0 && discountRate <= 10) || discountRate < 0)) {
+          tags.push(
+            <Tag color="purple" key={`batch-${record.id || record.name}`}>
+              {discountRate > 0 ? `批量折扣 ${discountRate}折 余${discountQuota} 有效期 ${formatPeriodLabel(record.discount_periods)}` : `立减 ${Math.abs(discountRate)}元 余${discountQuota} 有效期 ${formatPeriodLabel(record.discount_periods)}`}
+            </Tag>
+          )
+        }
+        const now = dayjs()
+        const effectivePromos = promotionList.filter(p => {
+          const periods = Array.isArray(p.periods) ? p.periods : []
+          if (!periods.length) return true
+          return periods.some(r => now.isAfter(dayjs(r.start)) && now.isBefore(dayjs(r.end)))
+        })
+        effectivePromos.forEach((promo, index) => {
+          tags.push(
+            <Tag color="orange" key={`promo-${index}`}>
+              {promo.title || promo.type || '优惠'}
+            </Tag>
+          )
+        })
+        return <Space wrap>{tags}</Space>
+      }
+    },
+    { title: '库存', dataIndex: 'stock', key: 'stock', render: (v) => v || 0 },
+    { title: 'WiFi', dataIndex: 'wifi', key: 'wifi', width: 70, render: (v) => v === true ? '有' : v === false ? '无' : '-' },
+    { title: '含早', dataIndex: 'breakfast_included', key: 'breakfast_included', width: 70, render: (v) => v === true ? '是' : v === false ? '否' : '-' }
   ]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {/* 顶部操作栏 */}
-      <Card>
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+          <Spin size="large" />
+        </div>
+      ) : !hotel ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 100 }}>
+          <Empty description="酒店不存在" />
+          <GlassButton style={{ marginTop: 16 }} onClick={() => navigate('/audit')}>返回列表</GlassButton>
+        </div>
+      ) : (
+        <>
+          <Card>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Space>
             <GlassButton icon={<ArrowLeftOutlined />} onClick={() => navigate('/audit')}>返回列表</GlassButton>
@@ -277,27 +361,33 @@ export default function AuditDetail() {
             )}
           </Card>
 
-          {/* 优惠活动 */}
           <Card title={<><GiftOutlined /> 优惠活动</>}>
-            {hotel.promotions && hotel.promotions.filter(p => p && p.title).length > 0 ? (
+            {promotionList.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {hotel.promotions.filter(p => p && p.title).map((promo, idx) => (
-                  <div key={idx} style={{ 
-                    padding: '12px 16px', 
-                    background: '#fff7e6', 
-                    borderRadius: 8,
-                    border: '1px solid #ffe58f',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <span>
-                      {promo.type && <Tag color="orange">{promo.type}</Tag>}
-                      {promo.title}
-                    </span>
-                    {promo.value && <span style={{ color: '#f5222d', fontWeight: 600 }}>{promo.value}折</span>}
-                  </div>
-                ))}
+                {promotionList.map((promo, idx) => {
+                  const effective = isPeriodEffective(promo.periods)
+                  const valText = getValueLabel(promo.value)
+                  const periodText = formatPeriodLabel(promo.periods)
+                  return (
+                    <div key={idx} style={{ 
+                      padding: '12px 16px', 
+                      background: effective ? '#fff7e6' : '#fafafa', 
+                      borderRadius: 8,
+                      border: effective ? '1px solid #ffe58f' : '1px solid #f0f0f0',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <span>
+                        {promo.type && <Tag color="orange">{promo.type}</Tag>}
+                        {promo.title}
+                        {valText && <span style={{ color: '#f5222d', marginLeft: 8, fontWeight: 600 }}>{valText}</span>}
+                        {periodText && <span style={{ marginLeft: 8, color: '#999' }}>{periodText}</span>}
+                      </span>
+                      <Tag color={effective ? 'green' : 'default'}>{effective ? '当前生效' : '未生效'}</Tag>
+                    </div>
+                  )
+                })}
               </div>
             ) : (
               <Empty description="暂无优惠活动" image={Empty.PRESENTED_IMAGE_SIMPLE} />
@@ -367,6 +457,8 @@ export default function AuditDetail() {
           </Card>
         </Col>
       </Row>
+        </>
+      )}
 
       {/* 驳回弹窗 */}
       <Modal
@@ -377,7 +469,7 @@ export default function AuditDetail() {
         okText="确认驳回"
         okButtonProps={{ danger: true, loading: actionLoading }}
       >
-        <p>确定要驳回酒店「{hotel.name}」吗？驳回后将通知商户。</p>
+        <p>确定要驳回酒店「{hotel?.name || ''}」吗？驳回后将通知商户。</p>
         <Form form={rejectForm} layout="vertical">
           <Form.Item
             name="reason"
@@ -398,7 +490,7 @@ export default function AuditDetail() {
         okText="确认下线"
         okButtonProps={{ danger: true, loading: actionLoading }}
       >
-        <p>确定要下线酒店「{hotel.name}」吗？下线后将通知商户。</p>
+        <p>确定要下线酒店「{hotel?.name || ''}」吗？下线后将通知商户。</p>
         <Form form={offlineForm} layout="vertical">
           <Form.Item
             name="reason"

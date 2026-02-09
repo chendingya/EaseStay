@@ -1,9 +1,9 @@
 import { Card, Table, Space, Typography, Tag, Select } from 'antd'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { EyeOutlined, StarFilled } from '@ant-design/icons'
 import { GlassButton } from '../components'
-import { api } from '../services/request'
+import { api } from '../services'
 
 const statusMap = {
   pending: { color: 'orange', label: '待审核' },
@@ -18,10 +18,10 @@ export default function Audit() {
   const [hotels, setHotels] = useState([])
   const [statusFilter, setStatusFilter] = useState('pending')
 
-  const fetchHotels = async (statusValue) => {
+  const fetchHotels = useCallback(async () => {
     setLoading(true)
     try {
-      const query = statusValue && statusValue !== 'all' ? `?status=${statusValue}` : ''
+      const query = statusFilter && statusFilter !== 'all' ? `?status=${statusFilter}` : ''
       const data = await api.get(`/api/admin/hotels${query}`)
       setHotels(data)
     } catch (error) {
@@ -29,11 +29,11 @@ export default function Audit() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [statusFilter])
 
   useEffect(() => {
-    fetchHotels(statusFilter)
-  }, [statusFilter])
+    fetchHotels()
+  }, [fetchHotels])
 
   const columns = [
     { title: '酒店名称', dataIndex: 'name', render: (text, record) => (

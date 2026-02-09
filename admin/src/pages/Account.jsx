@@ -1,8 +1,8 @@
 import { Card, Form, Input, Space, Typography, Descriptions, Divider, Modal } from 'antd'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { UserOutlined, LockOutlined, CalendarOutlined } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
-import { api } from '../services/request'
+import { api } from '../services'
 
 export default function Account() {
   const [loading, setLoading] = useState(false)
@@ -11,7 +11,7 @@ export default function Account() {
   const [form] = Form.useForm()
   const [saving, setSaving] = useState(false)
 
-  const fetchUser = async () => {
+  const fetchUser = useCallback(async () => {
     setLoading(true)
     try {
       const data = await api.get('/api/user/me')
@@ -22,11 +22,11 @@ export default function Account() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     fetchUser()
-  }, [])
+  }, [fetchUser])
 
   const handleChangePassword = async () => {
     try {

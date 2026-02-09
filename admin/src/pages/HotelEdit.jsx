@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Form, Input, InputNumber, Select, Space, Typography, Divider, DatePicker,
-  Row, Col, Spin, Image, Tag, Table, Descriptions, Tabs, Upload, Modal, Badge, Card
+  Row, Col, Spin, Image, Tag, Table, Descriptions, Tabs, Upload, Modal, Badge, Card, Checkbox
 } from 'antd'
 import {
   EyeOutlined, EditOutlined, StarFilled, EnvironmentOutlined, CalendarOutlined,
   PlusOutlined, DeleteOutlined, SearchOutlined
 } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
-import { api } from '../services/request'
+import { api } from '../services'
 import dayjs from 'dayjs'
 
 // ========== 地图选择组件 ==========
@@ -261,18 +261,32 @@ function FacilitySelector({ value = [], onChange, pendingRequests = [], approved
 // ========== 房型管理组件 ==========
 function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedRequests = [], onRequestNew, onReuseApproved, presetRoomTypes = [] }) {
   const [showPresets, setShowPresets] = useState(false)
-  const [customRoom, setCustomRoom] = useState({ name: '', price: 0, stock: 10 })
+  const [customRoom, setCustomRoom] = useState({ name: '', price: 0, stock: 10, capacity: 2, bed_width: 180, area: 20, ceiling_height: 2.8, wifi: true, breakfast_included: false })
   const [showCustomInput, setShowCustomInput] = useState(false)
+  const safeValue = Array.isArray(value) ? value : []
 
   const handleAddPreset = (preset) => {
-    onChange?.([...value, { name: preset.name, price: preset.default_price || preset.defaultPrice, stock: 10 }])
+    const nextRoom = {
+      name: preset.name,
+      price: preset.default_price || preset.defaultPrice,
+      stock: 10,
+      capacity: preset.capacity ?? 2,
+      bed_width: preset.bed_width ?? 180,
+      area: preset.area ?? 20,
+      ceiling_height: preset.ceiling_height ?? 2.8,
+      wifi: preset.wifi ?? true,
+      breakfast_included: preset.breakfast_included ?? false
+    }
+    const nextValue = [...safeValue, nextRoom]
+    console.log('[RoomType][PresetAdd]', { preset, nextRoom, nextValue })
+    onChange?.(nextValue)
     message.success(`已添加${preset.name}`)
   }
 
-  const handleRemove = (index) => onChange?.(value.filter((_, idx) => idx !== index))
+  const handleRemove = (index) => onChange?.(safeValue.filter((_, idx) => idx !== index))
 
   const handleChange = (index, field, val) => {
-    const newValue = [...value]
+    const newValue = [...safeValue]
     const currentRoom = newValue[index]
     newValue[index] = { ...currentRoom, [field]: val }
     onChange?.(newValue)
@@ -280,36 +294,120 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
 
   const handleRequestNew = () => {
     if (!customRoom.name.trim()) { message.error('请输入房型名称'); return }
-    onRequestNew?.(customRoom)
-    setCustomRoom({ name: '', price: 0, stock: 10 })
+    const nextRoom = {
+      name: customRoom.name.trim(),
+      price: Number(customRoom.price) || 0,
+      stock: Number(customRoom.stock) || 0,
+      capacity: Number(customRoom.capacity) || 0,
+      bed_width: Number(customRoom.bed_width) || 0,
+      area: Number(customRoom.area) || 0,
+      ceiling_height: Number(customRoom.ceiling_height) || 0,
+      wifi: !!customRoom.wifi,
+      breakfast_included: !!customRoom.breakfast_included
+    }
+    const existingIndex = safeValue.findIndex((room) => room && room.name === nextRoom.name)
+    if (existingIndex >= 0) {
+      const updatedValue = [...safeValue]
+      updatedValue[existingIndex] = { ...updatedValue[existingIndex], ...nextRoom }
+      onChange?.(updatedValue)
+    } else {
+      onChange?.([...safeValue, nextRoom])
+    }
+    onRequestNew?.(nextRoom)
+    setCustomRoom({ name: '', price: 0, stock: 10, capacity: 2, bed_width: 180, area: 20, ceiling_height: 2.8, wifi: true, breakfast_included: false })
     setShowCustomInput(false)
     message.success('已提交申请，等待管理员审核')
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 12 }}>
-      {value.map((room, index) => (
-        <Row gutter={16} key={index} align="middle">
-          <Col span={7}><Input value={room.name} onChange={(e) => handleChange(index, 'name', e.target.value)} placeholder="房型名称" /></Col>
-          <Col span={5}><InputNumber value={room.price} onChange={(val) => handleChange(index, 'price', val)} min={0} style={{ width: '100%' }} prefix="¥" /></Col>
-          <Col span={4}><InputNumber value={room.stock} onChange={(val) => handleChange(index, 'stock', val)} min={0} style={{ width: '100%' }} /></Col>
-          <Col span={4}><GlassButton type="link" danger icon={<DeleteOutlined />} onClick={() => handleRemove(index)}>删除</GlassButton></Col>
-        </Row>
-      ))}
+      {safeValue.map((room, index) => {
+        const summaryParts = [
+          (room.capacity ?? 2) ? `${room.capacity ?? 2}人` : null,
+          (room.bed_width ?? 180) ? `${room.bed_width ?? 180}cm` : null,
+          (room.area ?? 20) ? `${room.area ?? 20}㎡` : null,
+          (room.ceiling_height ?? 2.8) ? `${room.ceiling_height ?? 2.8}m` : null,
+          (room.wifi ?? true) ? 'WiFi' : '无WiFi',
+          (room.breakfast_included ?? false) ? '含早' : '无早'
+        ].filter(Boolean)
+        return (
+          <Card key={index} size="small" styles={{ body: { padding: 12 } }} style={{ borderRadius: 12, border: '1px solid #f0f0f0', background: '#fafafa' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Tag color="purple" style={{ margin: 0 }}>房型 {index + 1}</Tag>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>{summaryParts.join(' · ')}</Typography.Text>
+              </div>
+              <GlassButton type="link" danger icon={<DeleteOutlined />} onClick={() => handleRemove(index)}>删除</GlassButton>
+            </div>
+            <Row gutter={[12, 12]}>
+              <Col flex="220px">
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>房型名称</Typography.Text>
+                <Input value={room.name} onChange={(e) => handleChange(index, 'name', e.target.value)} placeholder="如：标准大床房" style={{ marginTop: 6 }} />
+              </Col>
+              <Col flex="180px">
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>价格</Typography.Text>
+                <InputNumber value={room.price} onChange={(val) => handleChange(index, 'price', val)} min={0} style={{ width: '100%', marginTop: 6 }} prefix="¥" placeholder="每晚价格" />
+              </Col>
+              <Col flex="140px">
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>库存</Typography.Text>
+                <InputNumber value={room.stock} onChange={(val) => handleChange(index, 'stock', val)} min={0} style={{ width: '100%', marginTop: 6 }} placeholder="可售数量" />
+              </Col>
+              <Col flex="140px">
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>可住人数</Typography.Text>
+                <InputNumber value={room.capacity ?? 2} onChange={(val) => handleChange(index, 'capacity', val)} min={0} style={{ width: '100%', marginTop: 6 }} placeholder="如：2" />
+              </Col>
+              <Col flex="140px">
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>床宽(cm)</Typography.Text>
+                <InputNumber value={room.bed_width ?? 180} onChange={(val) => handleChange(index, 'bed_width', val)} min={0} style={{ width: '100%', marginTop: 6 }} placeholder="如：180" />
+              </Col>
+              <Col flex="140px">
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>面积(㎡)</Typography.Text>
+                <InputNumber value={room.area ?? 20} onChange={(val) => handleChange(index, 'area', val)} min={0} style={{ width: '100%', marginTop: 6 }} placeholder="如：20" />
+              </Col>
+              <Col flex="140px">
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>层高(m)</Typography.Text>
+                <InputNumber value={room.ceiling_height ?? 2.8} onChange={(val) => handleChange(index, 'ceiling_height', val)} min={0} style={{ width: '100%', marginTop: 6 }} placeholder="如：2.8" />
+              </Col>
+              <Col flex="140px">
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>WiFi</Typography.Text>
+                <div style={{ marginTop: 6 }}><Checkbox checked={(room.wifi ?? true) === true} onChange={(e) => handleChange(index, 'wifi', e.target.checked)}>提供WiFi</Checkbox></div>
+              </Col>
+              <Col flex="140px">
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>早餐</Typography.Text>
+                <div style={{ marginTop: 6 }}><Checkbox checked={(room.breakfast_included ?? false) === true} onChange={(e) => handleChange(index, 'breakfast_included', e.target.checked)}>含早餐</Checkbox></div>
+              </Col>
+            </Row>
+          </Card>
+        )
+      })}
 
       {approvedRequests.length > 0 && (
         <div style={{ padding: '8px 12px', background: '#f6ffed', borderRadius: 8, border: '1px solid #b7eb8f' }}>
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>已通过申请（点击添加/撤销）：</Typography.Text>
           <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
             {approvedRequests.map((req, idx) => {
-              const exists = value.some((room) => room && room.name === req.name)
+              const exists = safeValue.some((room) => room && room.name === req.name)
               const price = req.data?.price ?? 0
               const stock = req.data?.stock ?? 0
+              const capacity = req.data?.capacity
+              const bedWidth = req.data?.bed_width
+              const area = req.data?.area
+              const ceiling = req.data?.ceiling_height
+              const wifi = req.data?.wifi
+              const breakfast = req.data?.breakfast_included
+              const detailParts = [
+                capacity ? `${capacity}人` : null,
+                bedWidth ? `${bedWidth}cm` : null,
+                area ? `${area}㎡` : null,
+                ceiling ? `${ceiling}m` : null,
+                wifi === true ? 'WiFi' : wifi === false ? '无WiFi' : null,
+                breakfast === true ? '含早' : breakfast === false ? '无早' : null
+              ].filter(Boolean)
               return (
                 <div key={`${req.id || req.name}-${idx}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                   <div style={{ fontSize: 13 }}>
                     <Tag color={exists ? 'default' : 'green'} style={{ marginRight: 8 }}>{req.name}</Tag>
-                    <span style={{ color: '#999' }}>¥{price} / 库存 {stock}</span>
+                    <span style={{ color: '#999' }}>¥{price} / 库存 {stock}{detailParts.length ? ` / ${detailParts.join(' · ')}` : ''}</span>
                   </div>
                   <GlassButton size="small" onClick={() => onReuseApproved?.(req, exists ? 'remove' : 'add')}>
                     {exists ? '撤销' : '添加'}
@@ -342,13 +440,54 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
       )}
 
       {showCustomInput && (
-        <Card size="small" style={{ background: '#f6ffed' }}>
-          <Typography.Text style={{ fontSize: 12 }}>申请新房型（需管理员审核）：</Typography.Text>
-          <Row gutter={8} style={{ marginTop: 8 }}>
-            <Col span={8}><Input placeholder="房型名称" value={customRoom.name} onChange={(e) => setCustomRoom({ ...customRoom, name: e.target.value })} /></Col>
-            <Col span={6}><InputNumber placeholder="价格" value={customRoom.price} onChange={(val) => setCustomRoom({ ...customRoom, price: val })} min={0} style={{ width: '100%' }} prefix="¥" /></Col>
-            <Col span={4}><InputNumber placeholder="库存" value={customRoom.stock} onChange={(val) => setCustomRoom({ ...customRoom, stock: val })} min={0} style={{ width: '100%' }} /></Col>
-            <Col span={6}><Space><GlassButton type="primary" onClick={handleRequestNew}>提交</GlassButton><GlassButton onClick={() => setShowCustomInput(false)}>取消</GlassButton></Space></Col>
+        <Card size="small" style={{ borderRadius: 12, border: '1px solid #b7eb8f', background: '#f6ffed' }} styles={{ body: { padding: 12 } }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>申请新房型（需管理员审核）</Typography.Text>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>填写完整信息更易通过</Typography.Text>
+          </div>
+          <Row gutter={[12, 12]}>
+            <Col flex="220px">
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>房型名称</Typography.Text>
+              <Input placeholder="如：标准大床房" value={customRoom.name} onChange={(e) => setCustomRoom({ ...customRoom, name: e.target.value })} style={{ marginTop: 6 }} />
+            </Col>
+            <Col flex="160px">
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>价格</Typography.Text>
+              <InputNumber placeholder="每晚价格" value={customRoom.price} onChange={(val) => setCustomRoom({ ...customRoom, price: val })} min={0} style={{ width: '100%', marginTop: 6 }} prefix="¥" />
+            </Col>
+            <Col flex="140px">
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>库存</Typography.Text>
+              <InputNumber placeholder="可售数量" value={customRoom.stock} onChange={(val) => setCustomRoom({ ...customRoom, stock: val })} min={0} style={{ width: '100%', marginTop: 6 }} />
+            </Col>
+            <Col flex="140px">
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>可住人数</Typography.Text>
+              <InputNumber placeholder="如：2" value={customRoom.capacity} onChange={(val) => setCustomRoom({ ...customRoom, capacity: val })} min={0} style={{ width: '100%', marginTop: 6 }} />
+            </Col>
+            <Col flex="140px">
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>床宽(cm)</Typography.Text>
+              <InputNumber placeholder="如：180" value={customRoom.bed_width} onChange={(val) => setCustomRoom({ ...customRoom, bed_width: val })} min={0} style={{ width: '100%', marginTop: 6 }} />
+            </Col>
+            <Col flex="140px">
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>面积(㎡)</Typography.Text>
+              <InputNumber placeholder="如：20" value={customRoom.area} onChange={(val) => setCustomRoom({ ...customRoom, area: val })} min={0} style={{ width: '100%', marginTop: 6 }} />
+            </Col>
+            <Col flex="140px">
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>层高(m)</Typography.Text>
+              <InputNumber placeholder="如：2.8" value={customRoom.ceiling_height} onChange={(val) => setCustomRoom({ ...customRoom, ceiling_height: val })} min={0} style={{ width: '100%', marginTop: 6 }} />
+            </Col>
+            <Col flex="140px">
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>WiFi</Typography.Text>
+              <div style={{ marginTop: 6 }}><Checkbox checked={!!customRoom.wifi} onChange={(e) => setCustomRoom({ ...customRoom, wifi: e.target.checked })}>提供WiFi</Checkbox></div>
+            </Col>
+            <Col flex="140px">
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>早餐</Typography.Text>
+              <div style={{ marginTop: 6 }}><Checkbox checked={!!customRoom.breakfast_included} onChange={(e) => setCustomRoom({ ...customRoom, breakfast_included: e.target.checked })}>含早餐</Checkbox></div>
+            </Col>
+            <Col flex="220px" style={{ display: 'flex', alignItems: 'flex-end' }}>
+              <Space>
+                <GlassButton type="primary" onClick={handleRequestNew}>提交</GlassButton>
+                <GlassButton onClick={() => setShowCustomInput(false)}>取消</GlassButton>
+              </Space>
+            </Col>
           </Row>
         </Card>
       )}
@@ -366,6 +505,21 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
   const [showPresets, setShowPresets] = useState(false)
   const [customPromo, setCustomPromo] = useState({ type: '', title: '', value: 0 })
   const [showCustomInput, setShowCustomInput] = useState(false)
+
+  const getUnitLabel = (promoValue) => {
+    const val = Number(promoValue) || 0
+    if (val < 0) return '元'
+    if (val > 10) return '元'
+    return '折'
+  }
+
+  const getValueLabel = (promoValue) => {
+    const val = Number(promoValue) || 0
+    if (val < 0) return `减免 ${Math.abs(val)} 元`
+    if (val > 10) return `减免 ${val} 元`
+    if (val > 0) return `${val} 折`
+    return '未设置'
+  }
 
   const handleAddPreset = (preset) => {
     onChange?.([...value, { type: preset.type, title: preset.label, value: 9 }])
@@ -389,28 +543,73 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 14 }}>
       {value.map((promo, index) => (
-        <Row gutter={16} key={index} align="middle">
-          <Col span={6}><Input value={promo.type} onChange={(e) => handleChange(index, 'type', e.target.value)} placeholder="类型" /></Col>
-          <Col span={10}><Input value={promo.title} onChange={(e) => handleChange(index, 'title', e.target.value)} placeholder="优惠标题" /></Col>
-          <Col span={4}>
-            <InputNumber 
-              value={promo.value} 
-              onChange={(val) => handleChange(index, 'value', val)} 
-              style={{ width: '100%' }} 
-              placeholder="数值"
-              addonAfter={promo.value < 0 ? '元' : (promo.value > 10 ? '元' : '折')}
-            />
-          </Col>
-          <Col span={4}><GlassButton type="link" danger icon={<DeleteOutlined />} onClick={() => handleRemove(index)}>删除</GlassButton></Col>
-        </Row>
+        <Card
+          key={index}
+          size="small"
+          style={{ borderRadius: 12, border: '1px solid #f0f0f0', background: '#fafafa' }}
+          styles={{ body: { padding: 12 } }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Tag color="geekblue" style={{ margin: 0 }}>优惠 {index + 1}</Tag>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>{getValueLabel(promo.value)}</Typography.Text>
+            </div>
+            <GlassButton type="link" danger icon={<DeleteOutlined />} onClick={() => handleRemove(index)}>删除</GlassButton>
+          </div>
+          <Row gutter={[12, 12]}>
+            <Col flex="140px">
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>类型</Typography.Text>
+              <Input value={promo.type} onChange={(e) => handleChange(index, 'type', e.target.value)} placeholder="如：连住优惠" style={{ marginTop: 6 }} />
+            </Col>
+            <Col flex="300px">
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>优惠标题</Typography.Text>
+              <Input value={promo.title} onChange={(e) => handleChange(index, 'title', e.target.value)} placeholder="如：连住2晚立减" style={{ marginTop: 6 }} />
+            </Col>
+            <Col flex="160px">
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>数值</Typography.Text>
+              <Space.Compact style={{ width: '100%', marginTop: 6 }}>
+                <InputNumber
+                  value={promo.value}
+                  onChange={(val) => handleChange(index, 'value', val)}
+                  style={{ width: '100%' }}
+                  placeholder="折扣或减免"
+                />
+                <div style={{ padding: '0 10px', background: '#fafafa', border: '1px solid #d9d9d9', borderLeft: 0, borderRadius: '0 6px 6px 0', display: 'flex', alignItems: 'center', color: '#999' }}>
+                  {getUnitLabel(promo.value)}
+                </div>
+              </Space.Compact>
+            </Col>
+            <Col flex="340px">
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>有效期</Typography.Text>
+              <DatePicker.RangePicker
+                showTime
+                style={{ width: '100%', marginTop: 6 }}
+                value={
+                  Array.isArray(promo.periods) && promo.periods[0]
+                    ? [dayjs(promo.periods[0].start), dayjs(promo.periods[0].end)]
+                    : null
+                }
+                onChange={(dates) => {
+                  const periods = dates && dates.length === 2
+                    ? [{ start: dates[0].toISOString(), end: dates[1].toISOString() }]
+                    : []
+                  handleChange(index, 'periods', periods)
+                }}
+              />
+            </Col>
+          </Row>
+        </Card>
       ))}
 
       {approvedRequests.length > 0 && (
-        <div style={{ padding: '8px 12px', background: '#f6ffed', borderRadius: 8, border: '1px solid #b7eb8f' }}>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>已通过申请（点击添加/撤销）：</Typography.Text>
-          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <Card size="small" style={{ borderRadius: 12, border: '1px solid #b7eb8f', background: '#f6ffed' }} styles={{ body: { padding: 12 } }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>已通过申请</Typography.Text>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>点击添加或撤销</Typography.Text>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {approvedRequests.map((req, idx) => {
               const exists = value.some((promo) => promo && promo.title === req.name && promo.type === (req.data?.type || ''))
               const type = req.data?.type || ''
@@ -431,50 +630,63 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
               )
             })}
           </div>
-        </div>
+        </Card>
       )}
 
       {pendingRequests.length > 0 && (
-        <div style={{ padding: '8px 12px', background: '#fffbe6', borderRadius: 8 }}>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>待审核优惠：</Typography.Text>
-          {pendingRequests.map((req, idx) => (<Tag key={idx} color="orange" style={{ marginLeft: 8 }}>{req.title} - 审核中</Tag>))}
-        </div>
+        <Card size="small" style={{ borderRadius: 12, border: '1px solid #ffe58f', background: '#fffbe6' }} styles={{ body: { padding: 12 } }}>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>待审核优惠</Typography.Text>
+          <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {pendingRequests.map((req, idx) => (
+              <Tag key={idx} color="orange" style={{ margin: 0 }}>{req.title} - 审核中</Tag>
+            ))}
+          </div>
+        </Card>
       )}
 
       {showPresets && (
-        <Card size="small" style={{ background: '#fafafa' }}>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>点击添加预设优惠：</Typography.Text>
-          <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <Card size="small" style={{ borderRadius: 12, border: '1px solid #f0f0f0', background: '#fff' }} styles={{ body: { padding: 12 } }}>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>点击添加预设优惠</Typography.Text>
+          <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {presetPromotionTypes.map(preset => (
-              <Tag key={preset.type} style={{ cursor: 'pointer', padding: '4px 12px' }} onClick={() => handleAddPreset(preset)}>{preset.label}</Tag>
+              <Tag key={preset.type} color="blue" style={{ cursor: 'pointer', padding: '4px 12px', margin: 0 }} onClick={() => handleAddPreset(preset)}>{preset.label}</Tag>
             ))}
           </div>
         </Card>
       )}
 
       {showCustomInput && (
-        <Card size="small" style={{ background: '#f6ffed' }}>
-          <Typography.Text style={{ fontSize: 12 }}>申请新优惠（需管理员审核）：</Typography.Text>
-          <Row gutter={8} style={{ marginTop: 8 }}>
-            <Col span={6}><Input placeholder="类型" value={customPromo.type} onChange={(e) => setCustomPromo({ ...customPromo, type: e.target.value })} /></Col>
-            <Col span={10}><Input placeholder="优惠标题" value={customPromo.title} onChange={(e) => setCustomPromo({ ...customPromo, title: e.target.value })} /></Col>
-            <Col span={4}>
-              <InputNumber 
-                placeholder="数值" 
-                value={customPromo.value} 
-                onChange={(val) => setCustomPromo({ ...customPromo, value: val })} 
-                style={{ width: '100%' }} 
+        <Card size="small" style={{ borderRadius: 12, border: '1px solid #b7eb8f', background: '#f6ffed' }} styles={{ body: { padding: 12 } }}>
+          <Typography.Text style={{ fontSize: 12 }}>申请新优惠（需管理员审核）</Typography.Text>
+          <Row gutter={[12, 12]} style={{ marginTop: 10 }}>
+            <Col flex="140px">
+              <Input placeholder="类型" value={customPromo.type} onChange={(e) => setCustomPromo({ ...customPromo, type: e.target.value })} />
+            </Col>
+            <Col flex="auto">
+              <Input placeholder="优惠标题" value={customPromo.title} onChange={(e) => setCustomPromo({ ...customPromo, title: e.target.value })} />
+            </Col>
+            <Col flex="160px">
+              <InputNumber
+                placeholder="数值"
+                value={customPromo.value}
+                onChange={(val) => setCustomPromo({ ...customPromo, value: val })}
+                style={{ width: '100%' }}
               />
             </Col>
-            <Col span={4}><Space><GlassButton type="primary" onClick={handleRequestNew}>提交</GlassButton><GlassButton onClick={() => setShowCustomInput(false)}>取消</GlassButton></Space></Col>
+            <Col flex="200px">
+              <Space>
+                <GlassButton type="primary" onClick={handleRequestNew}>提交</GlassButton>
+                <GlassButton onClick={() => setShowCustomInput(false)}>取消</GlassButton>
+              </Space>
+            </Col>
           </Row>
         </Card>
       )}
 
-      <Row gutter={8}>
-        <Col><GlassButton type="dashed" icon={<PlusOutlined />} onClick={() => setShowPresets(!showPresets)}>{showPresets ? '收起预设' : '选择预设优惠'}</GlassButton></Col>
-        <Col><GlassButton type="dashed" icon={<PlusOutlined />} onClick={() => setShowCustomInput(!showCustomInput)}>申请自定义优惠</GlassButton></Col>
-      </Row>
+      <Space wrap>
+        <GlassButton type="dashed" icon={<PlusOutlined />} onClick={() => setShowPresets(!showPresets)}>{showPresets ? '收起预设' : '选择预设优惠'}</GlassButton>
+        <GlassButton type="dashed" icon={<PlusOutlined />} onClick={() => setShowCustomInput(!showCustomInput)}>申请自定义优惠</GlassButton>
+      </Space>
     </div>
   )
 }
@@ -627,12 +839,30 @@ function HotelPreview({ data }) {
         const discount = Number(record.discount_rate) || 0
         let finalPrice = price
         let discountText = ''
-
+        const now = dayjs()
+        const promos = (data.promotions || []).filter(p => p && p.title)
+        const effectivePromos = promos.filter(p => {
+          const periods = Array.isArray(p.periods) ? p.periods : []
+          if (!periods.length) return true
+          return periods.some(r => {
+            const s = dayjs(r.start)
+            const e = dayjs(r.end)
+            return now.isAfter(s) && now.isBefore(e)
+          })
+        })
+        effectivePromos.forEach(p => {
+          const val = Number(p.value) || 0
+          if (val > 0 && val <= 10) {
+            finalPrice = finalPrice * (val / 10)
+          } else if (val < 0) {
+            finalPrice = Math.max(0, finalPrice + val)
+          }
+        })
         if (discount > 0 && discount <= 10) {
-          finalPrice = price * (discount / 10)
+          finalPrice = finalPrice * (discount / 10)
           discountText = `${discount}折`
         } else if (discount < 0) {
-          finalPrice = Math.max(0, price + discount)
+          finalPrice = Math.max(0, finalPrice + discount)
           discountText = `减¥${Math.abs(discount)}`
         }
         
@@ -701,6 +931,11 @@ function HotelPreview({ data }) {
                 {promo.type && <Tag color="orange" style={{ marginRight: 8 }}>{promo.type}</Tag>}
                 <span>{promo.title}</span>
                 {promo.value && <span style={{ color: '#f5222d', marginLeft: 8 }}>{promo.value}折</span>}
+                {Array.isArray(promo.periods) && promo.periods[0] && (
+                  <span style={{ marginLeft: 8, color: '#999' }}>
+                    {dayjs(promo.periods[0].start).format('YYYY-MM-DD HH:mm')} ~ {dayjs(promo.periods[0].end).format('YYYY-MM-DD HH:mm')}
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -733,6 +968,8 @@ export default function HotelEdit() {
     promotionTypes: [],
     cities: []
   })
+
+  const watchedValues = Form.useWatch([], form)
 
   const isEditing = !!id
 
@@ -780,10 +1017,19 @@ export default function HotelEdit() {
         setLoading(true)
         try {
           const data = await api.get(`/api/merchant/hotels/${id}`)
+          console.log('[HotelEdit][FetchHotel]', { id, roomTypes: data?.roomTypes, promotions: data?.promotions })
           form.setFieldsValue({
             ...data,
             opening_time: data.opening_time ? dayjs(data.opening_time) : null,
-            roomTypes: data.roomTypes || [],
+            roomTypes: (data.roomTypes || []).map((rt) => ({
+              ...rt,
+              capacity: rt.capacity ?? 2,
+              bed_width: rt.bed_width ?? 180,
+              area: rt.area ?? 20,
+              ceiling_height: rt.ceiling_height ?? 2.8,
+              wifi: rt.wifi ?? true,
+              breakfast_included: rt.breakfast_included ?? false
+            })),
             facilities: data.facilities || [],
             images: data.images || [],
             nearby_attractions: data.nearby_attractions || [],
@@ -802,6 +1048,10 @@ export default function HotelEdit() {
       fetchHotel()
     }
   }, [id, navigate, form])
+
+  useEffect(() => {
+    if (watchedValues) setPreviewData(watchedValues)
+  }, [watchedValues])
 
   const handleFormChange = () => setPreviewData(form.getFieldsValue())
   
@@ -829,7 +1079,16 @@ export default function HotelEdit() {
         hotelId: id ? parseInt(id) : null,
         type: 'room_type',
         name: room.name,
-        data: { price: room.price, stock: room.stock }
+        data: {
+          price: room.price,
+          stock: room.stock,
+          capacity: room.capacity,
+          bed_width: room.bed_width,
+          area: room.area,
+          ceiling_height: room.ceiling_height,
+          wifi: room.wifi,
+          breakfast_included: room.breakfast_included
+        }
       })
       setPendingRoomTypes([...pendingRoomTypes, { ...room, status: 'pending' }])
       message.success('房型申请已提交，等待管理员审核')
@@ -885,7 +1144,17 @@ export default function HotelEdit() {
     }
     if (!exists) {
       form.setFieldsValue({
-        roomTypes: [...current, { name: req.name, price: req.data?.price || 0, stock: req.data?.stock || 0 }]
+        roomTypes: [...current, {
+          name: req.name,
+          price: req.data?.price || 0,
+          stock: req.data?.stock || 0,
+          capacity: req.data?.capacity,
+          bed_width: req.data?.bed_width,
+          area: req.data?.area,
+          ceiling_height: req.data?.ceiling_height,
+          wifi: req.data?.wifi,
+          breakfast_included: req.data?.breakfast_included
+        }]
       })
       handleFormChange()
     }
@@ -918,6 +1187,9 @@ export default function HotelEdit() {
       const nearbyAttractions = form.getFieldValue('nearby_attractions') || []
       const nearbyTransport = form.getFieldValue('nearby_transport') || []
       const nearbyMalls = form.getFieldValue('nearby_malls') || []
+      const roomTypesValue = form.getFieldValue('roomTypes')
+      const promotionsValue = form.getFieldValue('promotions')
+      console.log('[HotelEdit][BeforeSubmit]', { values, roomTypesValue, promotionsValue })
       const payload = {
         ...values,
         star_rating: Number(values.star_rating || 0),
@@ -925,9 +1197,10 @@ export default function HotelEdit() {
         nearby_attractions: Array.isArray(nearbyAttractions) ? nearbyAttractions : [],
         nearby_transport: Array.isArray(nearbyTransport) ? nearbyTransport : [],
         nearby_malls: Array.isArray(nearbyMalls) ? nearbyMalls : [],
-        roomTypes: (values.roomTypes || []).filter((room) => room && room.name),
-        promotions: (values.promotions || []).filter((promo) => promo && promo.title)
+        roomTypes: (roomTypesValue || values.roomTypes || []).filter((room) => room && room.name),
+        promotions: (promotionsValue || values.promotions || []).filter((promo) => promo && promo.title)
       }
+      console.log('[HotelEdit][SubmitPayload]', payload)
       setSaving(true)
       if (isEditing) {
         await api.put(`/api/merchant/hotels/${id}`, payload)
@@ -942,14 +1215,13 @@ export default function HotelEdit() {
     } finally { setSaving(false) }
   }
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 100 }}><Spin size="large" /></div>
-
   const tabItems = [
     {
       key: 'edit',
       label: <span><EditOutlined /> 编辑信息</span>,
       children: (
-        <Form layout="vertical" form={form} initialValues={{ star_rating: 0 }} onValuesChange={handleFormChange}>
+        <Spin spinning={loading}>
+          <Form layout="vertical" form={form} initialValues={{ star_rating: 0 }} onValuesChange={handleFormChange}>
           <Typography.Title level={5}>地址信息</Typography.Title>
           <MapPicker onAddressChange={({ city, address }) => { form.setFieldsValue({ city, address }); handleFormChange() }} hotCities={presets.cities} />
           <Row gutter={16}>
@@ -1011,7 +1283,11 @@ export default function HotelEdit() {
 
           <Divider />
           <Typography.Title level={5}>房型信息</Typography.Title>
-          <Form.Item name="roomTypes">
+          <Form.Item
+            name="roomTypes"
+            valuePropName="value"
+            getValueFromEvent={(v) => v}
+          >
             <RoomTypeManager
               pendingRequests={pendingRoomTypes}
               approvedRequests={approvedRoomTypes}
@@ -1023,7 +1299,11 @@ export default function HotelEdit() {
 
           <Divider />
           <Typography.Title level={5}>优惠活动</Typography.Title>
-          <Form.Item name="promotions">
+          <Form.Item
+            name="promotions"
+            valuePropName="value"
+            getValueFromEvent={(v) => v}
+          >
             <PromotionManager
               pendingRequests={pendingPromotions}
               approvedRequests={approvedPromotions}
@@ -1033,9 +1313,10 @@ export default function HotelEdit() {
             />
           </Form.Item>
         </Form>
+        </Spin>
       )
     },
-    { key: 'preview', label: <span><EyeOutlined /> 预览效果</span>, children: <HotelPreview data={previewData} /> }
+    { key: 'preview', label: <span><EyeOutlined /> 预览效果</span>, children: <Spin spinning={loading}><HotelPreview data={previewData} /></Spin> }
   ]
 
   return (
@@ -1047,7 +1328,7 @@ export default function HotelEdit() {
           <GlassButton type="primary" loading={saving} onClick={handleSubmit}>{isEditing ? '保存修改' : '提交审核'}</GlassButton>
         </Space>
       </div>
-      <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
+      <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} destroyOnHidden={false} />
     </>
   )
 }

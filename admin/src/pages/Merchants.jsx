@@ -1,9 +1,9 @@
 import { Card, Table, Space, Typography, Tag, Modal, Form, Input } from 'antd'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { UserOutlined, ShopOutlined, EyeOutlined, KeyOutlined } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
-import { api } from '../services/request'
+import { api } from '../services'
 
 export default function Merchants() {
   const navigate = useNavigate()
@@ -13,7 +13,7 @@ export default function Merchants() {
   const [form] = Form.useForm()
   const [resetting, setResetting] = useState(false)
 
-  const fetchMerchants = async () => {
+  const fetchMerchants = useCallback(async () => {
     setLoading(true)
     try {
       const data = await api.get('/api/user/merchants')
@@ -24,7 +24,7 @@ export default function Merchants() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   const handleResetPassword = async () => {
     try {
@@ -50,7 +50,7 @@ export default function Merchants() {
 
   useEffect(() => {
     fetchMerchants()
-  }, [])
+  }, [fetchMerchants])
 
   const columns = [
     {

@@ -104,11 +104,18 @@ async function addFacility(req, res) {
  */
 async function addRoomType(req, res) {
   try {
-    const { name, defaultPrice, description } = req.body
+    const { name, defaultPrice, description, capacity, bedWidth, area, ceilingHeight, wifi, breakfastIncluded } = req.body
     if (!name || !defaultPrice) {
       return res.status(400).json({ success: false, error: '房型名称和价格不能为空' })
     }
-    const data = await presetService.addPresetRoomType(name, defaultPrice, description)
+    const data = await presetService.addPresetRoomType(name, defaultPrice, description, {
+      capacity,
+      bed_width: bedWidth,
+      area,
+      ceiling_height: ceilingHeight,
+      wifi,
+      breakfast_included: breakfastIncluded
+    })
     res.json({ success: true, data })
   } catch (error) {
     console.error('添加房型失败:', error)
