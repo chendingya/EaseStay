@@ -15,7 +15,7 @@
 | id | Number | 主键 |
 | username | String | 用户名 |
 | password_hash | String | 密码哈希 |
-| role | Enum('merchant','admin') | 角色 |
+| role | Enum('merchant','admin','user') | 角色 |
 | created_at | Date | 创建时间 |
 
 ### 2.2 Hotel
@@ -94,6 +94,7 @@
 | id | Number | 主键 |
 | hotel_id | Number | 酒店ID |
 | merchant_id | Number | 商户用户ID |
+| user_id | Number | 下单用户ID（可空） |
 | room_type_id | Number | 房型ID |
 | room_type_name | String | 房型名称 |
 | quantity | Number | 预订数量 |

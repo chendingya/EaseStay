@@ -1176,7 +1176,7 @@ const getPublicHotel = async ({ hotelId }) => {
   return { ok: true, status: 200, data: { ...hotel, roomTypes: roomTypes || [] } }
 }
 
-const createPublicOrder = async ({ hotelId, payload }) => {
+const createPublicOrder = async ({ hotelId, userId, payload }) => {
   const {
     roomTypeId,
     roomTypeName,
@@ -1288,6 +1288,7 @@ const createPublicOrder = async ({ hotelId, payload }) => {
     .insert({
       hotel_id: hotelId,
       merchant_id: hotel.merchant_id,
+      user_id: userId,
       room_type_id: room.id,
       room_type_name: room.name,
       quantity: normalizedQuantity,

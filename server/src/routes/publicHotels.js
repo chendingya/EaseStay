@@ -1,5 +1,6 @@
 const express = require('express')
 const { list, detail, createOrder } = require('../controllers/publicHotelsController')
+const { authOptional } = require('../middleware/auth')
 
 const router = express.Router()
 
@@ -95,6 +96,6 @@ router.get('/:id', detail)
  *       201:
  *         description: ok
  */
-router.post('/:id/orders', createOrder)
+router.post('/:id/orders', authOptional, createOrder)
 
 module.exports = router
