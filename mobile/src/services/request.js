@@ -26,13 +26,19 @@ const request = async (options) => {
     }
 
     const msg = data?.message || '请求失败'
-    Taro.showToast({ title: msg, icon: 'none' })
-    toastShown = true
+    // 只有当不是 200-299 状态码时，才抛出错误并显示 Toast
+    if (!toastShown) {
+        Taro.showToast({ title: msg, icon: 'none' })
+        toastShown = true
+    }
     throw new Error(msg)
   } catch (error) {
     if (!toastShown) {
       const msg = error?.data?.message || error?.errMsg || error?.message || '请求失败'
-      Taro.showToast({ title: msg, icon: 'none' })
+      // 避免重复显示 Toast
+      if (!msg.includes('验证码已发送')) {
+         Taro.showToast({ title: msg, icon: 'none' })
+      }
     }
     throw error instanceof Error ? error : new Error('请求失败')
   }
