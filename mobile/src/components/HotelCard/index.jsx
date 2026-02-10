@@ -27,9 +27,15 @@ export default function HotelCard({ hotel, onClick }) {
               </Text>
             </View>
             <View className="hotel-price">
-               <Text className="price-symbol">¥</Text>
-               <Text className="price-value">{hotel.lowestPrice}</Text>
-               <Text className="price-suffix"> 起</Text>
+               {hotel.lowestPrice ? (
+                 <>
+                   <Text className="price-symbol">¥</Text>
+                   <Text className="price-value">{hotel.lowestPrice}</Text>
+                   <Text className="price-suffix"> 起</Text>
+                 </>
+               ) : (
+                  <Text className="price-none">暂无房型</Text>
+                )}
             </View>
          </View>
       </View>

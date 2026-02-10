@@ -1080,11 +1080,35 @@ const listPublicHotels = async ({ query }) => {
   }
 
   if (city) {
-    dbQuery = dbQuery.ilike('city', `%${city}%`)
+    // 宽松匹配：如果用户传 "扬州市"，我们也尝试匹配 "扬州"
+    // 反之，如果用户传 "扬州"，也能匹配 "扬州市"
+    // ilike %city% 已经能处理 "扬州" -> "扬州市" 的情况
+    // 但 "扬州市" -> "扬州" (如数据库存的是简称) 则需要处理
+    const cleanCity = city.replace(/市$/, '')
+    dbQuery = dbQuery.ilike('city', `%${cleanCity}%`)
   }
 
   if (keyword) {
-    dbQuery = dbQuery.or(`name.ilike.%${keyword}%,name_en.ilike.%${keyword}%,address.ilike.%${keyword}%`)
+    let orString = `name.ilike.%${keyword}%,name_en.ilike.%${keyword}%,address.ilike.%${keyword}%,facilities.cs.["${keyword}"]`
+    
+    // 增强搜索：针对设施的 JSONB 数组进行大小写模糊匹配尝试
+    if (/[a-zA-Z]/.test(keyword)) {
+       const lower = keyword.toLowerCase()
+       const upper = keyword.toUpperCase()
+       
+       if (lower !== keyword) orString += `,facilities.cs.["${lower}"]`
+       if (upper !== keyword && upper !== lower) orString += `,facilities.cs.["${upper}"]`
+       
+       // 特殊处理 "WiFi" (常见写法)
+       if (lower.includes('wifi')) {
+          const wifiVariant = keyword.replace(/wifi/ig, 'WiFi')
+          if (wifiVariant !== keyword && wifiVariant !== lower && wifiVariant !== upper) {
+             orString += `,facilities.cs.["${wifiVariant}"]`
+          }
+       }
+    }
+    
+    dbQuery = dbQuery.or(orString)
   }
 
   if (stars) {

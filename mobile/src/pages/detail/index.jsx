@@ -5,13 +5,6 @@ import { useState, useEffect } from 'react'
 import { api } from '../../services/request'
 import './index.css'
 
-// 默认房型（后端暂未提供时使用）
-const defaultRoomTypes = [
-  { id: 1, name: '标准双床房', price: 299, breakfast: false, cancelable: true },
-  { id: 2, name: '豪华大床房', price: 399, breakfast: true, cancelable: true },
-  { id: 3, name: '行政套房', price: 599, breakfast: true, cancelable: false }
-]
-
 // 默认设施
 const defaultFacilities = ['免费WiFi', '停车场', '健身房', '餐厅', '会议室', '洗衣服务']
 
@@ -148,10 +141,30 @@ export default function Detail() {
     ? hotel.roomTypes
     : hotel.room_types?.length > 0
       ? hotel.room_types
-      : defaultRoomTypes
+      : [] // 移除默认假数据，没有就是没有
 
-  const roomTypes = [...rawRoomTypes].sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0))
-  const minRoomPrice = roomTypes.length ? roomTypes[0].price : 299
+
+  const calculateFinalPrice = (room) => {
+    const price = Number(room.price) || 0
+    const discount = Number(room.discount_rate) || 0
+    const quota = Number(room.discount_quota) || 0
+    let finalPrice = price
+    
+    if (quota > 0) {
+      if (discount > 0 && discount <= 10) {
+        finalPrice = price * (discount / 10)
+      } else if (discount < 0) {
+        finalPrice = Math.max(0, price + discount)
+      }
+    }
+    return Math.round(finalPrice * 100) / 100
+  }
+
+  const roomTypes = [...rawRoomTypes].sort((a, b) => {
+    return calculateFinalPrice(a) - calculateFinalPrice(b)
+  })
+  
+  const minRoomPrice = roomTypes.length ? calculateFinalPrice(roomTypes[0]) : null
 
   const nights = () => {
     if (!checkIn || !checkOut) return 1
@@ -285,7 +298,12 @@ export default function Detail() {
         {/* 房型列表 */}
         <View className="room-section">
           <Text className="section-title">房型选择</Text>
-          {roomTypes.map((room) => (
+          {roomTypes.length === 0 ? (
+            <View className="empty-rooms glass-card" style={{ padding: '30px', textAlign: 'center' }}>
+              <Text style={{ color: '#999' }}>该酒店暂无上架房型</Text>
+            </View>
+          ) : (
+            roomTypes.map((room) => (
             <View key={room.id} className="room-card glass-card">
               <View className="room-img-wrap">
                 <View className="room-img-placeholder"></View>
@@ -304,21 +322,7 @@ export default function Detail() {
                 <View className="room-price">
                   <Text className="price-symbol">¥</Text>
                   <Text className="price-num">
-                    {(() => {
-                      const price = Number(room.price) || 0
-                      const discount = Number(room.discount_rate) || 0
-                      const quota = Number(room.discount_quota) || 0
-                      let finalPrice = applyPromotions(price, hotel.promotions)
-                      const hasDiscount = quota > 0 && ((discount > 0 && discount <= 10) || discount < 0) && isEffectiveNow(room.discount_periods)
-                      if (hasDiscount) {
-                        if (discount > 0 && discount <= 10) {
-                          finalPrice = finalPrice * (discount / 10)
-                        } else if (discount < 0) {
-                          finalPrice = Math.max(0, finalPrice + discount)
-                        }
-                      }
-                      return Math.round(finalPrice * 100) / 100
-                    })()}
+                    {calculateFinalPrice(room)}
                   </Text>
                   {(() => {
                     const discount = Number(room.discount_rate) || 0
@@ -339,19 +343,22 @@ export default function Detail() {
                   if (discount !== 0 && quota > 0) {
                     const text = discount < 0 ? `减¥${Math.abs(discount)}` : `${discount}折`
                     return (
-                      <View className="discount-tag" style={{ alignSelf: 'flex-end', marginTop: '2px' }}>
-                        <Text style={{ color: '#f5222d', fontSize: '10px', border: '1px solid #f5222d', padding: '0 4px', borderRadius: '2px' }}>{text}</Text>
+                      <View className="discount-tag-wrap" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' }}>
+                         <Text className="discount-tag" style={{ background: '#ff4d4f', color: '#fff', fontSize: '10px', padding: '0 4px', borderRadius: '4px' }}>{text}</Text>
                       </View>
                     )
                   }
                   return null
                 })()}
-                <View className="book-btn" onClick={() => handleBook(room)}>
-                  <Text className="book-text">预订</Text>
+                <View 
+                  className={`book-btn ${bookingRoomId === room.id ? 'loading' : ''}`}
+                  onClick={() => handleBook(room)}
+                >
+                  {bookingRoomId === room.id ? '...' : '预订'}
                 </View>
               </View>
             </View>
-          ))}
+          )))}
         </View>
 
         {/* 设施服务 */}
@@ -437,14 +444,22 @@ export default function Detail() {
           </View>
         </View>
         <View className="bottom-right">
-          <View className="price-info">
-            <Text className="price-from">¥</Text>
-            <Text className="price-value">{hotel.price || minRoomPrice}</Text>
-            <Text className="price-suffix">起</Text>
-          </View>
-          <View className="main-book-btn" onClick={() => handleBook(roomTypes[0])}>
-            <Text className="main-book-text">立即预订</Text>
-          </View>
+          {minRoomPrice ? (
+            <>
+              <View className="price-info">
+                <Text className="price-from">¥</Text>
+                <Text className="price-value">{minRoomPrice}</Text>
+                <Text className="price-suffix">起</Text>
+              </View>
+              <View className="main-book-btn" onClick={() => handleBook(roomTypes[0])}>
+                <Text className="main-book-text">立即预订</Text>
+              </View>
+            </>
+          ) : (
+            <View className="price-info" style={{ width: '100%', justifyContent: 'flex-end' }}>
+              <Text className="price-suffix">暂无房型可订</Text>
+            </View>
+          )}
         </View>
       </View>
     </View>
