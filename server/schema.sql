@@ -3,7 +3,7 @@ CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   username VARCHAR(100) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
-  role VARCHAR(20) NOT NULL CHECK (role IN ('merchant', 'admin')),
+  role VARCHAR(20) NOT NULL CHECK (role IN ('merchant', 'admin', 'user')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -51,6 +51,7 @@ CREATE TABLE orders (
   id SERIAL PRIMARY KEY,
   hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
   merchant_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id INT REFERENCES users(id) ON DELETE SET NULL,
   room_type_id INT REFERENCES room_types(id) ON DELETE SET NULL,
   room_type_name VARCHAR(200) NOT NULL,
   quantity INT DEFAULT 1,
@@ -339,3 +340,7 @@ ALTER TABLE preset_room_types ADD COLUMN IF NOT EXISTS area DECIMAL(10, 2) DEFAU
 ALTER TABLE preset_room_types ADD COLUMN IF NOT EXISTS ceiling_height DECIMAL(10, 2) DEFAULT 2.8;
 ALTER TABLE preset_room_types ADD COLUMN IF NOT EXISTS wifi BOOLEAN DEFAULT TRUE;
 ALTER TABLE preset_room_types ADD COLUMN IF NOT EXISTS breakfast_included BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE users DROP CONSTRAINT users_role_check;
+ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('merchant', 'admin', 'user'));
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS user_id INT REFERENCES users(id) ON DELETE SET NULL;

@@ -49,6 +49,22 @@ const requireRole = (role) => (req, res, next) => {
   next()
 }
 
+/**
+ * 认证可选中间件 - 如果请求中包含 Token 则验证，否则跳过
+ */
+const authOptional = (req, res, next) => {
+  const header = req.headers.authorization || ''
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null
+  if (token) {
+    try {
+      req.user = verifyToken(token)
+    } catch (error) {
+      // Token 无效时不报错，视为未登录
+    }
+  }
+  next()
+}
+
 module.exports = {
   // 密码工具
   hashPassword,
@@ -58,5 +74,6 @@ module.exports = {
   verifyToken,
   // Express 中间件
   authRequired,
+  authOptional,
   requireRole
 }

@@ -17,6 +17,7 @@ const detail = async (req, res) => {
 const createOrder = async (req, res) => {
   const result = await createPublicOrder({
     hotelId: Number(req.params.id),
+    userId: req.user ? req.user.id : null,
     payload: req.body
   })
   if (!result.ok) {

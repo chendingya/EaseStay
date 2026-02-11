@@ -6,8 +6,8 @@ const register = async ({ username, password, role, code }) => {
   if (!username || !password || !role || !code) {
     return { ok: false, status: 400, message: 'username、password、role、code 为必填项' }
   }
-  if (!['merchant', 'admin'].includes(role)) {
-    return { ok: false, status: 400, message: 'role 必须是 merchant 或 admin' }
+  if (!['merchant', 'admin', 'user'].includes(role)) {
+    return { ok: false, status: 400, message: 'role 必须是 merchant, admin 或 user' }
   }
 
   // 验证验证码
