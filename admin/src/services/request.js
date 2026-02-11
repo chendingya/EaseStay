@@ -8,6 +8,9 @@ const request = axios.create({
   timeout: 15000
 })
 
+const debounceDelay = 300
+const debounceMap = new Map()
+
 request.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
   if (import.meta.env.DEV) {
@@ -50,12 +53,68 @@ request.interceptors.response.use(
   }
 )
 
+const safeStringify = (value) => {
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return ''
+  }
+}
+
+const buildDebounceKey = (method, url, data, config) => {
+  const params = config?.params
+  return [method, url, safeStringify(data), safeStringify(params)].join('|')
+}
+
+const debounceRequest = (key, executor) => {
+  const existing = debounceMap.get(key)
+  if (existing) {
+    clearTimeout(existing.timer)
+    existing.timer = setTimeout(() => {
+      executor()
+        .then(existing.resolve)
+        .catch(existing.reject)
+        .finally(() => debounceMap.delete(key))
+    }, debounceDelay)
+    return existing.promise
+  }
+  let resolve
+  let reject
+  const promise = new Promise((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  const timer = setTimeout(() => {
+    executor()
+      .then(resolve)
+      .catch(reject)
+      .finally(() => debounceMap.delete(key))
+  }, debounceDelay)
+  debounceMap.set(key, { timer, promise, resolve, reject })
+  return promise
+}
+
 export const api = {
-  get: (url, config) => request.get(url, config).then((res) => res.data),
-  post: (url, data, config) => request.post(url, data, config).then((res) => res.data),
-  put: (url, data, config) => request.put(url, data, config).then((res) => res.data),
-  patch: (url, data, config) => request.patch(url, data, config).then((res) => res.data),
-  delete: (url, config) => request.delete(url, config).then((res) => res.data)
+  get: (url, config) => {
+    const key = buildDebounceKey('GET', url, null, config)
+    return debounceRequest(key, () => request.get(url, config).then((res) => res.data))
+  },
+  post: (url, data, config) => {
+    const key = buildDebounceKey('POST', url, data, config)
+    return debounceRequest(key, () => request.post(url, data, config).then((res) => res.data))
+  },
+  put: (url, data, config) => {
+    const key = buildDebounceKey('PUT', url, data, config)
+    return debounceRequest(key, () => request.put(url, data, config).then((res) => res.data))
+  },
+  patch: (url, data, config) => {
+    const key = buildDebounceKey('PATCH', url, data, config)
+    return debounceRequest(key, () => request.patch(url, data, config).then((res) => res.data))
+  },
+  delete: (url, config) => {
+    const key = buildDebounceKey('DELETE', url, null, config)
+    return debounceRequest(key, () => request.delete(url, config).then((res) => res.data))
+  }
 }
 
 export default request
