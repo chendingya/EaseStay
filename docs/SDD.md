@@ -8,6 +8,28 @@
 - 文档：Swagger（/api-docs）
 - 安全：JWT 认证、角色鉴权、密码加密存储
 
+## 1.1 测试策略与 Mock 说明
+### 1.1.1 测试目录约定
+- admin：统一放在 admin/tests 下，按层级划分 components、pages、services
+- server：统一放在 server/__tests__ 下，按控制器、中间件、路由拆分
+
+### 1.1.2 当前 Mock 的做法
+- admin：通过 vitest 的 vi.mock 替换 services 与组件依赖，避免真实网络与 UI 副作用
+- server：通过 jest.mock 替换 service 层、supabase 依赖，路由测试用 supertest 发起请求
+- 环境变量：测试内注入 SUPABASE_URL 与 SUPABASE_ANON_KEY，避免未配置时报错
+
+### 1.1.3 Mock 的价值与边界
+- 价值：隔离外部依赖，聚焦业务逻辑、参数校验与状态流转，执行更快、更稳定
+- 边界：不验证真实数据库/外部服务连通性，需要额外集成测试或端到端测试补齐
+
+### 1.1.4 当前覆盖的测试范围
+- admin：基础组件渲染、登录页面、申请审核页面、通知服务未读更新
+- server：认证接口、预设数据接口、申请接口、地图接口、状态页、控制器与鉴权中间件
+
+### 1.1.5 运行方式
+- admin：在 admin 目录执行 npm run test
+- server：在 server 目录执行 npm run test
+
 ## 2. 数据模型设计
 ### 2.1 User
 | 字段 | 类型 | 说明 |
