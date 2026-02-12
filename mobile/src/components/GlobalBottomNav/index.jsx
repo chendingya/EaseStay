@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import {
@@ -15,23 +16,131 @@ const navItems = [
   { key: '/pages/account/index', label: '我的', icon: UserOutline }
 ]
 
-const getCurrentPath = () => {
-  const pages = Taro.getCurrentPages ? Taro.getCurrentPages() : []
-  if (pages && pages.length > 0) {
-    return `/${pages[pages.length - 1].route}`
+const INVALID_ROUTES = new Set(['/undefined', '/null', '/nan'])
+
+const normalizePath = (rawPath) => {
+  let path = String(rawPath || '')
+  if (!path) return '/pages/index/index'
+
+  if (path.startsWith('#/')) {
+    path = path.slice(1)
+  } else if (path.startsWith('/#/')) {
+    path = path.slice(2)
   }
+
+  path = path.split('?')[0].split('#')[0].replace(/\.html$/i, '')
+  if (!path.startsWith('/')) {
+    path = `/${path}`
+  }
+  path = path.replace(/\/+$/, '')
+
+  // H5 常见别名路径兼容，统一映射到页面路由
+  if (!path || path === '/' || path === '/index' || path === '/home') {
+    return '/pages/index/index'
+  }
+  if (path.includes('/orders')) {
+    return '/pages/orders/index'
+  }
+  if (path.includes('/favorites') || path.includes('/favorite')) {
+    return '/pages/favorites/index'
+  }
+  if (path.includes('/account') || path.includes('/my') || path.includes('/mine')) {
+    return '/pages/account/index'
+  }
+  if (path.includes('/list')) {
+    return '/pages/list/index'
+  }
+  if (path.includes('/detail')) {
+    return '/pages/detail/index'
+  }
+
+  if (INVALID_ROUTES.has(path.toLowerCase())) {
+    return '/pages/index/index'
+  }
+
+  return path || '/pages/index/index'
+}
+
+const getRouteFromCurrentPages = () => {
+  if (!Taro.getCurrentPages) return ''
+  const pages = Taro.getCurrentPages() || []
+  if (!pages.length) return ''
+
+  const current = pages[pages.length - 1] || {}
+  const candidates = [
+    current.route,
+    current.path,
+    current.$taroPath,
+    current?.$component?.$router?.path
+  ]
+
+  const route = candidates.find((item) => typeof item === 'string' && item.trim())
+  if (!route) return ''
+  return route.startsWith('/') ? route : `/${route}`
+}
+
+const readCurrentPath = () => {
   if (typeof window !== 'undefined') {
-    const path = window.location.pathname || ''
-    return path.replace(/\/+$/, '') || '/pages/index/index'
+    if (window.location.hash && window.location.hash.startsWith('#/')) {
+      return normalizePath(window.location.hash)
+    }
+
+    const fromPathname = normalizePath(window.location.pathname)
+    if (fromPathname) return fromPathname
   }
+
+  const routeFromPages = getRouteFromCurrentPages()
+  if (routeFromPages) {
+    return normalizePath(routeFromPages)
+  }
+
   return '/pages/index/index'
 }
 
+const isNavActive = (currentPath, key) => {
+  const normalizedCurrent = normalizePath(currentPath)
+  const normalizedKey = normalizePath(key)
+  const isHomeKey = normalizedKey === '/pages/index/index'
+
+  if (isHomeKey) {
+    // 首页只在首页/搜索列表场景高亮
+    return normalizedCurrent === '/pages/index/index' || normalizedCurrent === '/pages/list/index'
+  }
+
+  // 其余导航仅匹配自身，避免多项同时高亮
+  return normalizedCurrent === normalizedKey
+}
+
 export default function GlobalBottomNav() {
-  const currentPath = getCurrentPath()
+  const [currentPath, setCurrentPath] = useState(() => readCurrentPath())
+
+  useEffect(() => {
+    const syncPath = () => {
+      const next = readCurrentPath()
+      setCurrentPath((prev) => (prev === next ? prev : next))
+    }
+
+    syncPath()
+    let timer = null
+    if (typeof window !== 'undefined') {
+      window.addEventListener('popstate', syncPath)
+      window.addEventListener('hashchange', syncPath)
+      timer = window.setInterval(syncPath, 300)
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('popstate', syncPath)
+        window.removeEventListener('hashchange', syncPath)
+        if (timer) {
+          window.clearInterval(timer)
+        }
+      }
+    }
+  }, [])
 
   const handleNav = (target) => {
-    if (target === currentPath) return
+    if (isNavActive(currentPath, target)) return
     Taro.reLaunch({ url: target })
   }
 
@@ -39,7 +148,7 @@ export default function GlobalBottomNav() {
     <View className='global-bottom-nav'>
       {navItems.map((item) => {
         const Icon = item.icon
-        const active = currentPath === item.key
+        const active = isNavActive(currentPath, item.key)
         return (
           <View
             key={item.key}
