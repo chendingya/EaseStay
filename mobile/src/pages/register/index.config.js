@@ -1,3 +1,3 @@
 export default {
-  navigationBarTitleText: '手机号注册'
+  navigationStyle: 'custom'
 }

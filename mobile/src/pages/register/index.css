@@ -1,27 +1,18 @@
 .register-page {
-  padding: 20px;
-  min-height: 100vh;
+  min-height: calc(100vh - 58px);
   background: linear-gradient(180deg, #e6f4ff 0%, #ffffff 24%);
-}
-
-.page-top-nav {
-  height: 24px;
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.page-top-back {
-  font-size: 14px;
-  color: #1677ff;
 }
 
 .title {
   font-size: 24px;
   font-weight: bold;
-  margin-bottom: 30px;
+  margin: 22px 20px 26px;
   text-align: center;
   color: #1f1f1f;
+}
+
+.register-page .adm-form {
+  margin: 0 20px;
 }
 
 .footer-actions {

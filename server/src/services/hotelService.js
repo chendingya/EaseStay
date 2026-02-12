@@ -3,6 +3,7 @@ const { sendNotification, NotificationTemplates } = require('./notificationServi
 
 const normalizeArray = (value) => (Array.isArray(value) ? value : [])
 const normalizeNumber = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0)
+const generateOrderNo = () => `YS${Date.now()}${Math.floor(Math.random() * 900000 + 100000)}`
 
 const isEffectiveNow = (periods) => {
   const ranges = normalizeArray(periods)
@@ -1199,8 +1200,14 @@ const createPublicOrder = async ({ hotelId, userId, payload }) => {
   if (!hotelId) {
     return { ok: false, status: 400, message: 'hotelId 不能为空' }
   }
+  if (!userId) {
+    return { ok: false, status: 401, message: '请先登录后下单' }
+  }
   if (!roomTypeId && !roomTypeName) {
     return { ok: false, status: 400, message: 'roomTypeId 或 roomTypeName 不能为空' }
+  }
+  if (!checkIn || !checkOut) {
+    return { ok: false, status: 400, message: '入住和离店日期为必填项' }
   }
 
   const { data: hotel, error: hotelError } = await supabase
@@ -1245,10 +1252,10 @@ const createPublicOrder = async ({ hotelId, userId, payload }) => {
   let checkInValue = null
   let checkOutValue = null
 
-  if (checkIn || checkOut) {
-    const checkInDate = checkIn ? new Date(checkIn) : null
-    const checkOutDate = checkOut ? new Date(checkOut) : null
-    if (!checkInDate || Number.isNaN(checkInDate.getTime()) || !checkOutDate || Number.isNaN(checkOutDate.getTime())) {
+  {
+    const checkInDate = new Date(checkIn)
+    const checkOutDate = new Date(checkOut)
+    if (Number.isNaN(checkInDate.getTime()) || Number.isNaN(checkOutDate.getTime())) {
       return { ok: false, status: 400, message: '入住或离店日期不合法' }
     }
     const diff = (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)
@@ -1294,22 +1301,25 @@ const createPublicOrder = async ({ hotelId, userId, payload }) => {
   
   totalPrice = Math.round(totalPrice * 100) / 100
 
+  const insertPayload = {
+    hotel_id: hotelId,
+    merchant_id: hotel.merchant_id,
+    user_id: userId,
+    room_type_id: room.id,
+    room_type_name: room.name,
+    quantity: normalizedQuantity,
+    price_per_night: pricePerNight,
+    nights,
+    total_price: totalPrice,
+    status: 'pending_payment',
+    check_in: checkInValue,
+    check_out: checkOutValue,
+    order_no: generateOrderNo()
+  }
+
   const { data: order, error: orderError } = await supabase
     .from('orders')
-    .insert({
-      hotel_id: hotelId,
-      merchant_id: hotel.merchant_id,
-      user_id: userId,
-      room_type_id: room.id,
-      room_type_name: room.name,
-      quantity: normalizedQuantity,
-      price_per_night: pricePerNight,
-      nights,
-      total_price: totalPrice,
-      status: 'confirmed',
-      check_in: checkInValue,
-      check_out: checkOutValue
-    })
+    .insert(insertPayload)
     .select()
     .single()
 

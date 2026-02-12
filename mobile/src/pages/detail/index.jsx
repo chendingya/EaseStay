@@ -77,15 +77,29 @@ export default function Detail() {
 
   const handleBook = async (room) => {
     if (!room || bookingRoomId) return
+    const token = Taro.getStorageSync('token')
+    if (!token) {
+      Taro.showToast({ title: '请先登录后下单', icon: 'none' })
+      Taro.navigateTo({ url: '/pages/login/index' })
+      return
+    }
+    if (!checkIn || !checkOut) {
+      Taro.showToast({ title: '请先选择入住和离店日期', icon: 'none' })
+      return
+    }
     setBookingRoomId(room.id)
     try {
-      await api.post(`/api/hotels/${id}/orders`, {
+      const order = await api.post(`/api/hotels/${id}/orders`, {
         roomTypeId: room.id,
         quantity: 1,
         checkIn,
         checkOut
       })
-      Taro.showToast({ title: '预订成功', icon: 'success' })
+      if (order?.id) {
+        Taro.navigateTo({ url: `/pages/order-pay/index?id=${order.id}` })
+      } else {
+        Taro.showToast({ title: '下单成功，请前往订单页支付', icon: 'none' })
+      }
     } catch (err) {
     } finally {
       setBookingRoomId(null)

@@ -31,3 +31,13 @@ export const getMyOrders = (params = {}) => {
   const suffix = query.toString() ? `?${query.toString()}` : ''
   return api.get(`/api/user/orders${suffix}`)
 }
+
+// 获取订单详情
+export const getOrderDetail = (orderId) => {
+  return api.get(`/api/user/orders/${orderId}`)
+}
+
+// 订单支付（模拟）
+export const payOrder = (orderId, data = {}) => {
+  return api.post(`/api/user/orders/${orderId}/pay`, data)
+}

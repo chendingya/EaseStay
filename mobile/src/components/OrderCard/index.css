@@ -1,0 +1,166 @@
+.hotel-order-card {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #ecf0f4;
+  box-shadow: 0 4px 14px rgba(30, 55, 90, 0.05);
+  padding: 12px;
+}
+
+.hotel-order-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.hotel-order-name-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.hotel-order-name {
+  display: block;
+  color: #1f2a38;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hotel-order-name-en {
+  display: block;
+  margin-top: 2px;
+  color: #8a96a6;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hotel-order-status {
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 600;
+  padding: 5px 8px;
+  border-radius: 999px;
+}
+
+.hotel-order-status-pending-payment {
+  color: #d06a00;
+  background: rgba(208, 106, 0, 0.12);
+}
+
+.hotel-order-status-pending-use {
+  color: #145ee2;
+  background: rgba(20, 94, 226, 0.12);
+}
+
+.hotel-order-status-completed {
+  color: #2c8b14;
+  background: rgba(44, 139, 20, 0.13);
+}
+
+.hotel-order-status-cancelled {
+  color: #c12c44;
+  background: rgba(193, 44, 68, 0.11);
+}
+
+.hotel-order-status-default {
+  color: #6a778a;
+  background: #eef2f7;
+}
+
+.hotel-order-meta {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.hotel-order-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.hotel-order-label {
+  color: #8b95a3;
+  font-size: 12px;
+}
+
+.hotel-order-value {
+  color: #283345;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hotel-order-divider {
+  height: 1px;
+  margin: 10px 0;
+  background: #eef2f6;
+}
+
+.hotel-order-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.hotel-order-bottom-left {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.hotel-order-no {
+  color: #556275;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hotel-order-created {
+  margin-top: 2px;
+  color: #99a3b1;
+  font-size: 11px;
+}
+
+.hotel-order-price {
+  color: #e63d3d;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.hotel-order-bottom-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.hotel-order-pay-btn {
+  height: 24px;
+  border-radius: 12px;
+  padding: 0 10px;
+  background: #1677ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hotel-order-pay-text {
+  font-size: 11px;
+  color: #fff;
+  font-weight: 600;
+  line-height: 1;
+}

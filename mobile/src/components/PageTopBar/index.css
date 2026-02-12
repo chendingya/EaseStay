@@ -1,0 +1,76 @@
+.page-top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid #e9eff7;
+  transition: box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.page-top-bar.elevated {
+  box-shadow: 0 8px 24px rgba(23, 42, 68, 0.1);
+}
+
+.page-top-bar-navbar {
+  --height: 46px;
+  --border-bottom: none;
+  padding: 8px 8px 4px;
+}
+
+.page-top-bar-left {
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  border: 1px solid #e2eaf5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f7faff;
+  color: #28415f;
+}
+
+.page-top-bar-back-icon {
+  font-size: 18px;
+}
+
+.page-top-bar-title {
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 800;
+  color: #12263f;
+  letter-spacing: 0.3px;
+}
+
+.page-top-bar-right {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.page-top-bar-action {
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  border: 1px solid #e2eaf5;
+  color: #4b617d;
+  background: #f7faff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s ease;
+}
+
+.page-top-bar-action.active {
+  color: #1a6dff;
+  border-color: #c3dafd;
+  background: #eaf2ff;
+  box-shadow: 0 4px 12px rgba(26, 109, 255, 0.2);
+}
+
+.page-top-bar-extra {
+  padding: 2px 12px 10px;
+}

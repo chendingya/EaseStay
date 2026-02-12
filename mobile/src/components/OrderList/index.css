@@ -1,0 +1,155 @@
+.hotel-order-list {
+  height: 100%;
+}
+
+.hotel-order-scroll {
+  height: 100%;
+}
+
+.hotel-order-pull {
+  height: 28px;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.hotel-order-pull.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hotel-order-pull-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #1677ff;
+  margin-right: 6px;
+}
+
+.hotel-order-pull.loading .hotel-order-pull-dot {
+  animation: order-pull-dot 0.9s linear infinite;
+}
+
+.hotel-order-pull-text {
+  font-size: 11px;
+  color: #64758a;
+}
+
+.hotel-order-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hotel-order-empty {
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px 0;
+  border: 1px solid #e9eef4;
+}
+
+.hotel-order-bottom-skeleton {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hotel-order-skeleton-card {
+  background: #fff;
+  border: 1px solid #e9eef4;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.hotel-order-skeleton-line {
+  height: 10px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #edf1f6 10%, #f8fbff 50%, #edf1f6 90%);
+  background-size: 200% 100%;
+  animation: order-skeleton 1.2s ease-in-out infinite;
+  margin-top: 8px;
+}
+
+.hotel-order-skeleton-line:first-child {
+  margin-top: 0;
+}
+
+.hotel-order-skeleton-line.title {
+  width: 68%;
+  height: 12px;
+}
+
+.hotel-order-skeleton-line.short {
+  width: 44%;
+}
+
+.hotel-order-skeleton-line.tiny {
+  width: 110px;
+}
+
+.hotel-order-skeleton-line.price {
+  width: 56px;
+  height: 14px;
+}
+
+.hotel-order-skeleton-footer {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hotel-order-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0 8px;
+}
+
+.hotel-order-total-pill {
+  background: #edf4ff;
+  border: 1px solid #dce9fd;
+  border-radius: 999px;
+  padding: 5px 12px;
+}
+
+.hotel-order-total-pill-text {
+  color: #2f5cbb;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.hotel-order-load-tip {
+  font-size: 11px;
+  color: #8f9aad;
+}
+
+@keyframes order-skeleton {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+@keyframes order-pull-dot {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 0.45;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

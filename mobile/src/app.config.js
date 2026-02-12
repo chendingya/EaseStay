@@ -7,6 +7,7 @@ export default {
     'pages/register/index',
     'pages/account/index',
     'pages/orders/index',
+    'pages/order-pay/index',
     'pages/favorites/index'
   ],
   window: {

@@ -1,0 +1,86 @@
+.order-pay-page {
+  min-height: calc(100vh - 58px);
+  background: #f5f7fb;
+}
+
+.order-pay-content {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.order-pay-card {
+  background: #fff;
+  border: 1px solid #e6edf5;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.order-pay-title {
+  display: block;
+  color: #1f2f42;
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.order-pay-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  gap: 8px;
+}
+
+.order-pay-label {
+  color: #7d8ba0;
+  font-size: 12px;
+}
+
+.order-pay-value {
+  color: #273447;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: right;
+}
+
+.order-pay-divider {
+  margin-top: 10px;
+  height: 1px;
+  background: #eef3f8;
+}
+
+.order-pay-amount {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.order-pay-amount-label {
+  color: #667892;
+  font-size: 12px;
+}
+
+.order-pay-amount-value {
+  color: #e53935;
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.order-pay-actions {
+  margin-top: 6px;
+}
+
+.order-pay-loading {
+  margin: 12px;
+  background: #fff;
+  border: 1px solid #e6edf5;
+  border-radius: 14px;
+  padding: 20px;
+  text-align: center;
+  color: #7d8ba0;
+  font-size: 12px;
+}

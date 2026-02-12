@@ -5,6 +5,32 @@
 const supabase = require('../config/supabase')
 const { hashPassword, verifyPassword } = require('../middleware/auth')
 
+const buildHotelMapByOrders = async (orders = []) => {
+  const hotelIds = [...new Set((orders || [])
+    .map((item) => item?.hotel_id)
+    .filter((item) => item !== undefined && item !== null && String(item).trim() !== ''))]
+
+  if (hotelIds.length === 0) return {}
+
+  const { data: hotels } = await supabase
+    .from('hotels')
+    .select('id, name, name_en, city, address, cover_image, images')
+    .in('id', hotelIds)
+
+  return (hotels || []).reduce((acc, item) => {
+    acc[String(item.id)] = item
+    return acc
+  }, {})
+}
+
+const enrichOrder = (order, hotelMap = {}) => {
+  const hotel = hotelMap[String(order.hotel_id)] || null
+  return {
+    ...order,
+    hotel
+  }
+}
+
 /**
  * 获取当前用户信息
  */
@@ -103,24 +129,8 @@ async function getMyOrders(req, res) {
       return res.status(500).json({ message: '获取订单失败：' + error.message })
     }
 
-    const hotelIds = [...new Set((orders || []).map((item) => item.hotel_id).filter(Boolean))]
-    let hotelMap = {}
-    if (hotelIds.length > 0) {
-      const { data: hotels } = await supabase
-        .from('hotels')
-        .select('id, name, name_en, city, address, cover_image, images')
-        .in('id', hotelIds)
-
-      hotelMap = (hotels || []).reduce((acc, item) => {
-        acc[item.id] = item
-        return acc
-      }, {})
-    }
-
-    const list = (orders || []).map((order) => ({
-      ...order,
-      hotel: hotelMap[order.hotel_id] || null
-    }))
+    const hotelMap = await buildHotelMapByOrders(orders || [])
+    const list = (orders || []).map((order) => enrichOrder(order, hotelMap))
 
     res.json({
       page,
@@ -130,6 +140,83 @@ async function getMyOrders(req, res) {
     })
   } catch (err) {
     console.error('获取用户订单失败:', err)
+    res.status(500).json({ message: '服务器错误' })
+  }
+}
+
+/**
+ * 获取单个订单详情（移动端）
+ */
+async function getMyOrderDetail(req, res) {
+  const id = Number(req.params.id)
+  if (!Number.isFinite(id)) {
+    return res.status(400).json({ message: '订单ID不合法' })
+  }
+
+  try {
+    const { data: order, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .single()
+
+    if (error || !order) {
+      return res.status(404).json({ message: '订单不存在' })
+    }
+
+    const hotelMap = await buildHotelMapByOrders([order])
+    res.json(enrichOrder(order, hotelMap))
+  } catch (err) {
+    console.error('获取订单详情失败:', err)
+    res.status(500).json({ message: '服务器错误' })
+  }
+}
+
+/**
+ * 支付订单（模拟）
+ */
+async function payOrder(req, res) {
+  const id = Number(req.params.id)
+  if (!Number.isFinite(id)) {
+    return res.status(400).json({ message: '订单ID不合法' })
+  }
+
+  try {
+    const { data: order, error: findError } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .single()
+
+    if (findError || !order) {
+      return res.status(404).json({ message: '订单不存在' })
+    }
+
+    if (order.status !== 'pending_payment') {
+      return res.status(400).json({ message: '当前订单无需支付' })
+    }
+
+    const { data: updated, error: updateError } = await supabase
+      .from('orders')
+      .update({
+        status: 'confirmed',
+        paid_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .select('*')
+      .single()
+
+    if (updateError || !updated) {
+      return res.status(500).json({ message: '支付失败：' + (updateError?.message || '更新失败') })
+    }
+
+    const hotelMap = await buildHotelMapByOrders([updated])
+    res.json(enrichOrder(updated, hotelMap))
+  } catch (err) {
+    console.error('支付订单失败:', err)
     res.status(500).json({ message: '服务器错误' })
   }
 }
@@ -259,6 +346,8 @@ module.exports = {
   getCurrentUser,
   changePassword,
   getMyOrders,
+  getMyOrderDetail,
+  payOrder,
   getMerchants,
   getMerchantDetail,
   resetMerchantPassword

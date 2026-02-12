@@ -114,19 +114,22 @@
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | id | Number | 主键 |
+| order_no | String | 订单号（唯一） |
 | hotel_id | Number | 酒店ID |
 | merchant_id | Number | 商户用户ID |
-| user_id | Number | 下单用户ID（可空） |
-| room_type_id | Number | 房型ID |
+| user_id | Number | 下单用户ID（必填） |
+| room_type_id | Number | 房型ID（必填） |
 | room_type_name | String | 房型名称 |
 | quantity | Number | 预订数量 |
 | price_per_night | Number | 每晚单价 |
 | nights | Number | 入住间夜 |
 | total_price | Number | 订单总价 |
-| status | String | 订单状态 |
+| status | Enum('pending_payment','confirmed','finished','cancelled') | 订单状态 |
 | check_in | Date | 入住日期 |
 | check_out | Date | 离店日期 |
+| paid_at | Date | 支付时间（可空） |
 | created_at | Date | 创建时间 |
+| updated_at | Date | 更新时间 |
 
 ## 3. 状态流转
 - pending：商户新建或更新后进入待审核
@@ -400,6 +403,8 @@ city, keyword, sort, page, pageSize
 ```
 
 #### POST /api/hotels/:id/orders
+认证：`Bearer Token`（必填）
+
 请求：
 ```json
 {
@@ -409,7 +414,26 @@ city, keyword, sort, page, pageSize
   "checkOut": "2026-02-08"
 }
 ```
-响应：订单信息
+响应：
+```json
+{
+  "id": 101,
+  "order_no": "YS1739356800123456",
+  "hotel_id": 1,
+  "merchant_id": 2,
+  "user_id": 8,
+  "room_type_id": 1,
+  "room_type_name": "标准双床房",
+  "quantity": 1,
+  "price_per_night": 269.1,
+  "nights": 2,
+  "total_price": 538.2,
+  "status": "pending_payment",
+  "check_in": "2026-02-20",
+  "check_out": "2026-02-22",
+  "created_at": "2026-02-12T10:00:00.000Z"
+}
+```
 
 ### 4.6 预设数据（设施/房型/优惠/城市）
 #### GET /api/presets
@@ -488,6 +512,46 @@ Query：location
 请求：旧密码与新密码
 响应：修改结果
 
+#### GET /api/user/orders
+Query：page、pageSize、status（可选）
+
+响应：
+```json
+{
+  "page": 1,
+  "pageSize": 10,
+  "total": 3,
+  "list": [
+    {
+      "id": 101,
+      "order_no": "YS1739356800123456",
+      "hotel_id": 1,
+      "status": "pending_payment",
+      "total_price": 538.2,
+      "hotel": {
+        "id": 1,
+        "name": "易宿酒店",
+        "name_en": "EaseStay Hotel",
+        "city": "上海",
+        "address": "示例路 1 号"
+      }
+    }
+  ]
+}
+```
+
+#### GET /api/user/orders/:id
+响应：订单详情（同订单列表结构，含 `hotel` 关联信息）
+
+#### POST /api/user/orders/:id/pay
+请求：
+```json
+{
+  "channel": "wechat"
+}
+```
+响应：订单状态更新为 `confirmed`，并写入 `paid_at`
+
 #### GET /api/user/merchants
 响应：商户列表（管理员）
 
@@ -502,6 +566,9 @@ Query：location
 - 商户端：酒店创建/更新后状态统一为 pending
 - 管理端：审核支持 approve/reject/offline/restore
 - 移动端：列表仅展示 approved 酒店，详情房型价格升序
+- 订单：创建订单接口要求登录，状态使用 pending_payment/confirmed/finished/cancelled
+- 支付：移动端通过 /api/user/orders/:id/pay 执行模拟支付，成功后订单转为 confirmed
+- 收藏：移动端收藏使用本地存储持久化，支持单条取消与批量清空
 - 通知中心：使用 /api/notifications 系列接口
 
 ## 6. 预设数据配置
@@ -590,3 +657,20 @@ Query：location
 
 ### 10.7 状态与健康检查
 - statusController 输出状态页与健康检查接口
+
+## 11. 移动端模块实现（mobile）
+### 11.1 公共导航与页面壳
+- `PageTopBar`：统一顶部栏（返回、居中标题、右侧图标操作），用于订单页、支付页、收藏页、登录注册页
+- `GlobalBottomNav`：全局底部导航，按当前路由高亮首页/订单/收藏/我的
+
+### 11.2 订单页与支付页
+- `pages/orders`：顶部栏 + 状态分段 + 订单列表，支持筛选弹层（关键词、金额排序、时间排序）
+- `components/OrderList`：ScrollView + 下拉刷新 + 上拉加载 + 骨架屏
+- `components/OrderCard`：展示酒店名、房型、入住离店、间夜、订单号、价格；待付款订单展示“去支付”
+- `pages/order-pay`：订单详情确认、支付渠道选择、模拟支付后回到订单页“待使用”
+
+### 11.3 收藏页
+- `pages/favorites`：顶部栏 + 收藏列表 + 空状态
+- `components/FavoriteHotelList`：收藏数量汇总与列表容器
+- `components/FavoriteHotelCard`：酒店图文卡片（中英名、地址、星级/开业、收藏时间、价格）
+- 收藏存储：`services/favorites` 基于本地存储，支持单条取消收藏与批量清空

@@ -61,7 +61,7 @@ export function GanttTimeline({
   getTitle = (item) => item?.title || item?.type || '优惠',
   getPeriods = (item) => item?.periods,
   formatAxisLabel = (value) => dayjs(value).format('YYYY-MM-DD'),
-  minBarWidth = 0.04,
+  minBarWidth = 0,
   rowHeight = 18,
   showMarkers = true,
   color = '#60a5fa',
@@ -100,7 +100,10 @@ export function GanttTimeline({
       const rawLeft = safeStart.diff(start) / totalMs
       const rawWidth = safeEnd.diff(safeStart) / totalMs
       const left = Math.min(Math.max(0, rawLeft), 1)
-      let width = Math.max(rawWidth, minBarWidth)
+      let width = Math.max(rawWidth, 0)
+      if (width === 0 && minBarWidth > 0) {
+        width = minBarWidth
+      }
       if (left + width > 1) {
         width = Math.max(0, 1 - left)
       }

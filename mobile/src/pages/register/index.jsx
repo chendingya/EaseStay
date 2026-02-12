@@ -3,6 +3,7 @@ import Taro from '@tarojs/taro'
 import { View } from '@tarojs/components'
 import { Form, Input, Button, Toast, Modal } from 'antd-mobile'
 import { register, sendCode } from '../../services/auth'
+import PageTopBar from '../../components/PageTopBar'
 import './index.css'
 
 const PHONE_REGEX = /^1\d{10}$/
@@ -80,9 +81,7 @@ export default function Register() {
 
   return (
     <View className='register-page'>
-      <View className='page-top-nav' onClick={handleBack}>
-        <View className='page-top-back'>‹ 返回</View>
-      </View>
+      <PageTopBar title='手机号注册' onBack={handleBack} />
       <View className='title'>手机号注册</View>
       <Form
         form={form}

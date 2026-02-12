@@ -1,25 +1,48 @@
 .favorites-page {
-  min-height: 100vh;
-  background: #f5f6f8;
-  padding: 12px;
-}
-
-.favorites-list {
+  height: calc(100vh - 58px);
+  background: linear-gradient(180deg, #f7faff 0%, #f2f6fc 120px, #f4f6fb 100%);
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
 
-.favorite-card {
+.favorites-clear-icon {
+  font-size: 16px;
+  color: currentColor;
+}
+
+.favorites-content {
+  flex: 1;
+  min-height: 0;
+  padding: 10px 12px 12px;
+}
+
+.favorites-list-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.favorites-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4px 0 6px;
+}
+
+.favorites-footer-text {
+  color: #8a98ac;
+  font-size: 11px;
+}
+
+.favorites-empty-card {
   background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
+  border: 1px solid #e9eef7;
+  border-radius: 16px;
+  padding: 28px 12px 22px;
 }
 
-.favorite-remove {
-  padding: 10px 12px;
-  text-align: right;
-  border-top: 1px solid #f4f4f4;
-  color: #ff4d4f;
-  font-size: 12px;
+.favorites-empty-action {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
 }

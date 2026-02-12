@@ -49,19 +49,23 @@ CREATE TABLE IF NOT EXISTS room_types (
 -- 订单表
 CREATE TABLE orders (
   id SERIAL PRIMARY KEY,
+  order_no VARCHAR(40) NOT NULL UNIQUE,
   hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
   merchant_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  user_id INT REFERENCES users(id) ON DELETE SET NULL,
-  room_type_id INT REFERENCES room_types(id) ON DELETE SET NULL,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  room_type_id INT NOT NULL REFERENCES room_types(id) ON DELETE RESTRICT,
   room_type_name VARCHAR(200) NOT NULL,
-  quantity INT DEFAULT 1,
+  quantity INT NOT NULL DEFAULT 1 CHECK (quantity > 0),
   price_per_night DECIMAL(10, 2) NOT NULL,
-  nights INT DEFAULT 1,
-  total_price DECIMAL(10, 2) NOT NULL,
-  status VARCHAR(20) DEFAULT 'confirmed' CHECK (status IN ('confirmed', 'finished', 'cancelled')),
-  check_in DATE,
-  check_out DATE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  nights INT NOT NULL DEFAULT 1 CHECK (nights > 0),
+  total_price DECIMAL(10, 2) NOT NULL CHECK (total_price >= 0),
+  status VARCHAR(20) DEFAULT 'pending_payment' CHECK (status IN ('pending_payment', 'confirmed', 'finished', 'cancelled')),
+  check_in DATE NOT NULL,
+  check_out DATE NOT NULL,
+  paid_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CHECK (check_out > check_in)
 );
 
 -- 短信验证码表（临时存储）
@@ -225,6 +229,8 @@ CREATE INDEX idx_hotels_merchant_id ON hotels(merchant_id);
 CREATE INDEX idx_hotels_status ON hotels(status);
 CREATE INDEX idx_hotels_city ON hotels(city);
 CREATE INDEX idx_room_types_hotel_id ON room_types(hotel_id);
+CREATE INDEX idx_orders_user_id ON orders(user_id);
+CREATE INDEX idx_orders_user_status_created_at ON orders(user_id, status, created_at DESC);
 CREATE INDEX idx_sms_codes_username ON sms_codes(username);
 CREATE INDEX idx_requests_merchant_id ON requests(merchant_id);
 CREATE INDEX idx_requests_status ON requests(status);
@@ -343,4 +349,27 @@ ALTER TABLE preset_room_types ADD COLUMN IF NOT EXISTS breakfast_included BOOLEA
 
 ALTER TABLE users DROP CONSTRAINT users_role_check;
 ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('merchant', 'admin', 'user'));
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS user_id INT REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS user_id INT REFERENCES users(id) ON DELETE CASCADE;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_no VARCHAR(40);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+ALTER TABLE orders ALTER COLUMN user_id SET NOT NULL;
+ALTER TABLE orders ALTER COLUMN room_type_id SET NOT NULL;
+ALTER TABLE orders ALTER COLUMN check_in SET NOT NULL;
+ALTER TABLE orders ALTER COLUMN check_out SET NOT NULL;
+ALTER TABLE orders ALTER COLUMN order_no SET NOT NULL;
+ALTER TABLE orders DROP COLUMN IF EXISTS hotel_name;
+ALTER TABLE orders DROP COLUMN IF EXISTS hotel_name_en;
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_status_check;
+ALTER TABLE orders ADD CONSTRAINT orders_status_check CHECK (status IN ('pending_payment', 'confirmed', 'finished', 'cancelled'));
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_check_out_check;
+ALTER TABLE orders ADD CONSTRAINT orders_check_out_check CHECK (check_out > check_in);
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_quantity_check;
+ALTER TABLE orders ADD CONSTRAINT orders_quantity_check CHECK (quantity > 0);
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_nights_check;
+ALTER TABLE orders ADD CONSTRAINT orders_nights_check CHECK (nights > 0);
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_total_price_check;
+ALTER TABLE orders ADD CONSTRAINT orders_total_price_check CHECK (total_price >= 0);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_order_no_unique ON orders(order_no);
+CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_orders_user_status_created_at ON orders(user_id, status, created_at DESC);

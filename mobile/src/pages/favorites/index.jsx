@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { View, Text } from '@tarojs/components'
-import { Empty, Dialog } from 'antd-mobile'
-import HotelCard from '../../components/HotelCard'
+import { Empty, Dialog, Button } from 'antd-mobile'
+import { DeleteOutline } from 'antd-mobile-icons'
+import PageTopBar from '../../components/PageTopBar'
+import FavoriteHotelList from '../../components/FavoriteHotelList'
 import { getFavoriteHotels, saveFavoriteHotels } from '../../services/favorites'
 import './index.css'
 
@@ -17,7 +19,14 @@ export default function Favorites() {
   const [list, setList] = useState([])
 
   const refresh = () => {
-    setList(getFavoriteHotels())
+    const next = getFavoriteHotels()
+      .slice()
+      .sort((a, b) => {
+        const ta = new Date(a?.savedAt || 0).getTime()
+        const tb = new Date(b?.savedAt || 0).getTime()
+        return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0)
+      })
+    setList(next)
   }
 
   useDidShow(() => {
@@ -44,22 +53,56 @@ export default function Favorites() {
     setList(next)
   }
 
+  const clearFavorites = async () => {
+    const result = await Dialog.confirm({
+      content: '确认清空全部收藏酒店吗？'
+    }).catch(() => false)
+    if (!result) return
+    saveFavoriteHotels([])
+    setList([])
+  }
+
+  const goExplore = () => {
+    Taro.reLaunch({ url: '/pages/index/index' })
+  }
+
   return (
     <View className='favorites-page'>
-      {list.length === 0 ? (
-        <Empty description='暂无收藏酒店' />
-      ) : (
-        <View className='favorites-list'>
-          {list.map((hotel) => (
-            <View className='favorite-card' key={hotel.id}>
-              <HotelCard hotel={hotel} onClick={() => openHotel(hotel.id)} />
-              <View className='favorite-remove' onClick={() => removeFavorite(hotel.id)}>
-                <Text>取消收藏</Text>
-              </View>
+      <PageTopBar
+        title='收藏'
+        showBack={false}
+        rightActions={list.length > 0
+          ? [{
+              key: 'clear',
+              icon: <DeleteOutline className='favorites-clear-icon' />,
+              onClick: clearFavorites
+            }]
+          : []}
+      />
+
+      <View className='favorites-content'>
+        {list.length === 0 ? (
+          <View className='favorites-empty-card'>
+            <Empty description='暂无收藏酒店' />
+            <View className='favorites-empty-action'>
+              <Button color='primary' size='small' onClick={goExplore}>
+                去逛逛酒店
+              </Button>
             </View>
-          ))}
-        </View>
-      )}
+          </View>
+        ) : (
+          <View className='favorites-list-wrap'>
+            <FavoriteHotelList
+              list={list}
+              onOpen={openHotel}
+              onRemove={removeFavorite}
+            />
+            <View className='favorites-footer'>
+              <Text className='favorites-footer-text'>已展示全部收藏酒店</Text>
+            </View>
+          </View>
+        )}
+      </View>
     </View>
   )
 }
