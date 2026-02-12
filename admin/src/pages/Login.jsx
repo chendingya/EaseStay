@@ -9,6 +9,7 @@ export default function Login({ onLoggedIn }) {
   const { token } = theme.useToken()
   const [activeTab, setActiveTab] = useState('login')
   const [sending, setSending] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [seconds, setSeconds] = useState(0)
   const [form] = Form.useForm()
 
@@ -98,13 +99,19 @@ export default function Login({ onLoggedIn }) {
           </div>
 
           <Form
-              form={form}
-              layout="vertical"
-              onFinish={async (values) => {
-                if (activeTab === 'register') return handleRegister(values)
-                return handleLogin(values)
-              }}
-            >
+            form={form}
+            layout="vertical"
+            onFinish={async (values) => {
+              if (submitting) return false
+              setSubmitting(true)
+              try {
+                if (activeTab === 'register') return await handleRegister(values)
+                return await handleLogin(values)
+              } finally {
+                setSubmitting(false)
+              }
+            }}
+          >
             <Tabs
               activeKey={activeTab}
               onChange={setActiveTab}
@@ -193,7 +200,7 @@ export default function Login({ onLoggedIn }) {
               </>
             )}
 
-            <GlassButton type="primary" htmlType="submit" size="large" block>
+            <GlassButton type="primary" htmlType="submit" size="large" block loading={submitting} disabled={submitting}>
               {activeTab === 'register' ? '注册并登录' : '登录'}
             </GlassButton>
             </Form>

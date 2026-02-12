@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Card, Descriptions, Tag, Image, Space, Typography, Table, Spin, Row, Col, Tabs, Progress, Statistic, Modal, Form, InputNumber, Radio, DatePicker } from 'antd'
 import { StarFilled, EnvironmentOutlined, CalendarOutlined } from '@ant-design/icons'
-import { GlassButton, glassMessage as message } from '../components'
+import { GlassButton, GanttTimeline, glassMessage as message } from '../components'
 import dayjs from 'dayjs'
 import { api } from '../services'
 
@@ -98,6 +98,13 @@ export default function HotelDetail() {
     if (!list.length) return true
     const now = dayjs()
     return list.some((p) => now.isAfter(dayjs(p.start)) && now.isBefore(dayjs(p.end)))
+  }
+  const getPromotionValueText = (value) => {
+    const val = Number(value) || 0
+    if (val < 0) return `立减 ${Math.abs(val)} 元`
+    if (val > 10) return `立减 ${val} 元`
+    if (val > 0) return `${val} 折`
+    return ''
   }
 
   const openDiscountModal = (room) => {
@@ -218,7 +225,7 @@ export default function HotelDetail() {
         if (discountQuota > 0 && ((discountRate > 0 && discountRate <= 10) || discountRate < 0)) {
           tags.push(
             <Tag color="purple" key={`batch-${record.id || record.name}`}>
-              {discountRate > 0 ? `批量折扣 ${discountRate}折 余${discountQuota} 有效期 ${formatPeriodLabel(record.discount_periods)}` : `立减 ${Math.abs(discountRate)}元 余${discountQuota} 有效期 ${formatPeriodLabel(record.discount_periods)}`}
+              {discountRate > 0 ? `批量折扣 ${discountRate}折 余${discountQuota}` : `立减 ${Math.abs(discountRate)}元 余${discountQuota}`}
             </Tag>
           )
         }
@@ -514,24 +521,38 @@ export default function HotelDetail() {
           )}
 
           {/* 优惠信息 */}
-          {hotel.promotions && hotel.promotions.length > 0 && (
-            <Card title="优惠活动" size="small" style={{ marginBottom: 16 }}>
-              <Space style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                {hotel.promotions.map((promo, index) => (
-                  <div key={index} style={{ padding: '8px 12px', background: '#fff7e6', borderRadius: 4 }}>
-                    <Tag color="orange">{promo.type}</Tag>
-                    <span>{promo.title}</span>
-                    {promo.value && <span style={{ color: '#f5222d', marginLeft: 8 }}>{promo.value}折</span>}
-                    {Array.isArray(promo.periods) && promo.periods[0] && (
-                      <span style={{ marginLeft: 8, color: '#999' }}>
-                        {dayjs(promo.periods[0].start).format('YYYY-MM-DD HH:mm')} ~ {dayjs(promo.periods[0].end).format('YYYY-MM-DD HH:mm')}
-                      </span>
-                    )}
+          {hotel.promotions && hotel.promotions.length > 0 && (() => {
+            const promotionList = hotel.promotions.filter((promo) => promo && (promo.title || promo.type))
+            return (
+              <Card title="优惠活动" size="small" style={{ marginBottom: 16 }}>
+                <Space style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                  {promotionList.map((promo, index) => {
+                    const valueText = getPromotionValueText(promo.value)
+                    return (
+                      <div key={index} style={{ padding: '8px 12px', background: '#fff7e6', borderRadius: 4 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          {promo.type && <Tag color="orange">{promo.type}</Tag>}
+                          <span>{promo.title || '优惠活动'}</span>
+                          {valueText && <span style={{ color: '#f5222d' }}>{valueText}</span>}
+                          <span style={{ color: '#999' }}>有效期 {formatPeriodLabel(promo.periods)}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </Space>
+                {promotionList.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <GanttTimeline
+                      items={promotionList}
+                      getTitle={(promo) => promo.title || promo.type || '优惠'}
+                      getPeriods={(promo) => promo.periods}
+                      formatAxisLabel={(value) => dayjs(value).format('YYYY-MM-DD')}
+                    />
                   </div>
-                ))}
-              </Space>
-            </Card>
-          )}
+                )}
+              </Card>
+            )
+          })()}
 
           {/* 周边信息 */}
           <Card title="周边信息" size="small">
