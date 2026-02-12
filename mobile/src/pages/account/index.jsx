@@ -53,6 +53,18 @@ export default function Account() {
     Taro.navigateTo({ url: '/pages/login/index' })
   }
 
+  const handleOpenOrders = () => {
+    if (!isLogin) {
+      handleLogin()
+      return
+    }
+    Taro.navigateTo({ url: '/pages/orders/index' })
+  }
+
+  const handleOpenFavorites = () => {
+    Taro.navigateTo({ url: '/pages/favorites/index' })
+  }
+
   return (
     <View className='account-page'>
       <View className='header'>
@@ -71,10 +83,12 @@ export default function Account() {
       </View>
 
       <List header='我的服务'>
-        <List.Item onClick={() => {}} disabled description='暂未开放'>
+        <List.Item onClick={handleOpenOrders} description={isLogin ? '' : '登录后可查看'}>
           我的订单
         </List.Item>
-        {/* 这里可以加更多菜单 */}
+        <List.Item onClick={handleOpenFavorites}>
+          我的收藏
+        </List.Item>
       </List>
 
       {isLogin && (

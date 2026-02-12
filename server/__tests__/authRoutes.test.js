@@ -5,14 +5,16 @@ process.env.SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'test-anon-key'
 
 jest.mock('../src/services/authService', () => ({
   register: jest.fn(),
-  login: jest.fn()
+  login: jest.fn(),
+  registerByPhone: jest.fn(),
+  loginByPhone: jest.fn()
 }))
 
 jest.mock('../src/services/smsService', () => ({
   sendCode: jest.fn()
 }))
 
-const { register, login } = require('../src/services/authService')
+const { register, login, registerByPhone, loginByPhone } = require('../src/services/authService')
 const { sendCode } = require('../src/services/smsService')
 const app = require('../src/app')
 
@@ -47,5 +49,19 @@ describe('auth routes', () => {
     const res = await request(app).post('/api/auth/login').send({ username: 'u1', password: 'p' })
     expect(res.status).toBe(200)
     expect(res.body.userRole).toBe('admin')
+  })
+
+  it('POST /api/auth/phone/register returns 201', async () => {
+    registerByPhone.mockResolvedValue({ ok: true, status: 201, data: { token: 't', userRole: 'user' } })
+    const res = await request(app).post('/api/auth/phone/register').send({ phone: '13800000000', code: '123456' })
+    expect(res.status).toBe(201)
+    expect(res.body.userRole).toBe('user')
+  })
+
+  it('POST /api/auth/phone/login returns 200', async () => {
+    loginByPhone.mockResolvedValue({ ok: true, status: 200, data: { token: 't', userRole: 'user' } })
+    const res = await request(app).post('/api/auth/phone/login').send({ phone: '13800000000', code: '123456' })
+    expect(res.status).toBe(200)
+    expect(res.body.userRole).toBe('user')
   })
 })

@@ -1,7 +1,19 @@
 .register-page {
   padding: 20px;
   min-height: 100vh;
-  background-color: #fff;
+  background: linear-gradient(180deg, #e6f4ff 0%, #ffffff 24%);
+}
+
+.page-top-nav {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.page-top-back {
+  font-size: 14px;
+  color: #1677ff;
 }
 
 .title {
@@ -9,7 +21,7 @@
   font-weight: bold;
   margin-bottom: 30px;
   text-align: center;
-  color: #333;
+  color: #1f1f1f;
 }
 
 .footer-actions {

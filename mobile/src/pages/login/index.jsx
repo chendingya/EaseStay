@@ -1,12 +1,49 @@
 import React, { useState } from 'react'
 import Taro from '@tarojs/taro'
 import { View } from '@tarojs/components'
-import { Form, Input, Button, Toast } from 'antd-mobile'
-import { login } from '../../services/auth'
+import { Form, Input, Button, Toast, Modal } from 'antd-mobile'
+import { login, sendCode } from '../../services/auth'
 import './index.css'
+
+const PHONE_REGEX = /^1\d{10}$/
 
 export default function Login() {
   const [loading, setLoading] = useState(false)
+  const [countdown, setCountdown] = useState(0)
+  const [form] = Form.useForm()
+
+  React.useEffect(() => {
+    if (countdown <= 0) return undefined
+    const timer = setInterval(() => {
+      setCountdown((prev) => prev - 1)
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [countdown])
+
+  const onGetCode = async () => {
+    const phone = form.getFieldValue('phone')
+    if (!PHONE_REGEX.test(phone || '')) {
+      Toast.show({
+        icon: 'fail',
+        content: '请输入正确的手机号'
+      })
+      return
+    }
+    try {
+      const res = await sendCode(phone)
+      setCountdown(60)
+      Toast.show({
+        icon: 'success',
+        content: '验证码已发送',
+      })
+      if (res?.code) {
+        Modal.alert({
+          content: `模拟验证码：${res.code}`,
+        })
+        form.setFieldsValue({ code: res.code })
+      }
+    } catch (error) {}
+  }
 
   const onFinish = async (values) => {
     setLoading(true)
@@ -24,7 +61,7 @@ export default function Login() {
         Taro.setStorageSync('userRole', res.userRole)
         
         // 跳转回个人中心或上一页
-        Taro.navigateBack({ fail: () => Taro.switchTab({ url: '/pages/account/index' }) })
+        Taro.navigateBack({ fail: () => Taro.reLaunch({ url: '/pages/account/index' }) })
       }
     } catch (error) {
       Toast.show({
@@ -36,10 +73,23 @@ export default function Login() {
     }
   }
 
+  const handleBack = () => {
+    const pages = Taro.getCurrentPages ? Taro.getCurrentPages() : []
+    if (pages.length > 1) {
+      Taro.navigateBack()
+      return
+    }
+    Taro.reLaunch({ url: '/pages/account/index' })
+  }
+
   return (
     <View className='login-page'>
-      <View className='title'>账号登录</View>
+      <View className='page-top-nav' onClick={handleBack}>
+        <View className='page-top-back'>‹ 返回</View>
+      </View>
+      <View className='title'>手机号登录</View>
       <Form
+        form={form}
         layout='horizontal'
         onFinish={onFinish}
         footer={
@@ -49,18 +99,32 @@ export default function Login() {
         }
       >
         <Form.Item
-          name='username'
-          label='用户名'
-          rules={[{ required: true, message: '请输入用户名' }]}
+          name='phone'
+          label='手机号'
+          rules={[
+            { required: true, message: '请输入手机号' },
+            { pattern: PHONE_REGEX, message: '手机号格式不正确' }
+          ]}
         >
-          <Input placeholder='请输入用户名' />
+          <Input placeholder='请输入手机号' maxLength={11} />
         </Form.Item>
         <Form.Item
-          name='password'
-          label='密码'
-          rules={[{ required: true, message: '请输入密码' }]}
+          name='code'
+          label='验证码'
+          rules={[{ required: true, message: '请输入验证码' }]}
+          extra={(
+            <Button
+              size='small'
+              color='primary'
+              fill='outline'
+              disabled={countdown > 0}
+              onClick={onGetCode}
+            >
+              {countdown > 0 ? `${countdown}s` : '获取验证码'}
+            </Button>
+          )}
         >
-          <Input placeholder='请输入密码' type='password' />
+          <Input placeholder='请输入验证码' maxLength={6} />
         </Form.Item>
       </Form>
       <View className='footer-actions'>

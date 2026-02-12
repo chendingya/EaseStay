@@ -1,5 +1,11 @@
 const express = require('express')
-const { sendSmsCode, registerAccount, loginAccount } = require('../controllers/authController')
+const {
+  sendSmsCode,
+  registerAccount,
+  loginAccount,
+  registerPhoneAccount,
+  loginPhoneAccount
+} = require('../controllers/authController')
 
 const router = express.Router()
 
@@ -59,5 +65,31 @@ router.post('/register', registerAccount)
  *         description: ok
  */
 router.post('/login', loginAccount)
+
+/**
+ * @openapi
+ * /api/auth/phone/register:
+ *   post:
+ *     tags:
+ *       - Auth
+ *     summary: 手机号验证码注册（模拟）
+ *     responses:
+ *       201:
+ *         description: created
+ */
+router.post('/phone/register', registerPhoneAccount)
+
+/**
+ * @openapi
+ * /api/auth/phone/login:
+ *   post:
+ *     tags:
+ *       - Auth
+ *     summary: 手机号验证码登录（模拟）
+ *     responses:
+ *       200:
+ *         description: ok
+ */
+router.post('/phone/login', loginPhoneAccount)
 
 module.exports = router

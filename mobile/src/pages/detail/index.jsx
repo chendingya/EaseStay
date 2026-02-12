@@ -3,6 +3,7 @@ import { useRouter } from '@tarojs/taro'
 import Taro from '@tarojs/taro'
 import { useState, useEffect } from 'react'
 import { api } from '../../services/request'
+import { isFavoriteHotel, toggleFavoriteHotel } from '../../services/favorites'
 import './index.css'
 
 // 默认设施
@@ -33,21 +34,6 @@ const isEffectiveNow = (periods) => {
   })
 }
 
-const applyPromotions = (price, promotions) => {
-  let final = Number(price) || 0
-  const list = Array.isArray(promotions) ? promotions : []
-  const effective = list.filter((p) => p && p.title && isEffectiveNow(p.periods))
-  effective.forEach((p) => {
-    const val = Number(p.value) || 0
-    if (val > 0 && val <= 10) {
-      final = final * (val / 10)
-    } else if (val < 0) {
-      final = Math.max(0, final + val)
-    }
-  })
-  return Math.round(final * 100) / 100
-}
-
 export default function Detail() {
   const router = useRouter()
   const { id, checkIn, checkOut } = router.params
@@ -56,9 +42,14 @@ export default function Detail() {
   const [loading, setLoading] = useState(true)
   const [navOpacity, setNavOpacity] = useState(0)
   const [bookingRoomId, setBookingRoomId] = useState(null)
+  const [collected, setCollected] = useState(false)
 
   useEffect(() => {
     fetchHotelDetail()
+  }, [id])
+
+  useEffect(() => {
+    setCollected(isFavoriteHotel(id))
   }, [id])
 
   const fetchHotelDetail = async () => {
@@ -102,11 +93,23 @@ export default function Detail() {
   }
 
   const handleShare = () => {
-    Taro.showToast({ title: '分享功能开发中', icon: 'none' })
+    const sharePath = `/pages/detail/index?id=${id}&checkIn=${checkIn || ''}&checkOut=${checkOut || ''}`
+    const shareText = `${hotel?.name || '易宿酒店'} ${sharePath}`
+    Taro.setClipboardData({
+      data: shareText,
+      success: () => Taro.showToast({ title: '分享链接已复制', icon: 'success' }),
+      fail: () => Taro.showToast({ title: '复制失败，请稍后重试', icon: 'none' })
+    })
   }
 
   const handleCollect = () => {
-    Taro.showToast({ title: '收藏成功', icon: 'success' })
+    const { collected: nextCollected } = toggleFavoriteHotel({
+      ...hotel,
+      id,
+      lowestPrice: minRoomPrice
+    })
+    setCollected(nextCollected)
+    Taro.showToast({ title: nextCollected ? '收藏成功' : '已取消收藏', icon: 'success' })
   }
 
   if (loading) {
@@ -173,6 +176,26 @@ export default function Detail() {
   }
 
   const openingYear = hotel.opening_time ? hotel.opening_time.split('-')[0] : ''
+  const checkinPolicy = hotel.check_in_time || '14:00后'
+  const checkoutPolicy = hotel.check_out_time || '12:00前'
+  const childPolicy = hotel.child_policy || '欢迎儿童入住'
+
+  const getRoomMeta = (room) => {
+    const meta = []
+    if (Number(room.area) > 0) {
+      meta.push(`${room.area}㎡`)
+    }
+    if (Number(room.bed_width) > 0) {
+      meta.push(`床宽${room.bed_width}m`)
+    }
+    if (Number(room.capacity) > 0) {
+      meta.push(`可住${room.capacity}人`)
+    }
+    if (Number(room.ceiling_height) > 0) {
+      meta.push(`层高${room.ceiling_height}m`)
+    }
+    return meta.length > 0 ? meta.join(' · ') : '以酒店实际安排为准'
+  }
 
   return (
     <View className="detail-page">
@@ -187,7 +210,7 @@ export default function Detail() {
             <Text className="nav-icon">↗</Text>
           </View>
           <View className="nav-btn" onClick={handleCollect}>
-            <Text className="nav-icon">♡</Text>
+            <Text className="nav-icon">{collected ? '♥' : '♡'}</Text>
           </View>
         </View>
       </View>
@@ -306,16 +329,21 @@ export default function Detail() {
             roomTypes.map((room) => (
             <View key={room.id} className="room-card glass-card">
               <View className="room-img-wrap">
-                <View className="room-img-placeholder"></View>
+                {((Array.isArray(room.images) && room.images[0]) || room.image) ? (
+                  <Image className="room-img" src={(Array.isArray(room.images) && room.images[0]) || room.image} mode="aspectFill" />
+                ) : (
+                  <View className="room-img-placeholder"></View>
+                )}
               </View>
               <View className="room-info">
                 <Text className="room-name">{room.name}</Text>
                 <View className="room-tags">
-                  {room.breakfast && <Text className="room-tag green">含早</Text>}
+                  {(room.breakfast || room.breakfast_included) && <Text className="room-tag green">含早</Text>}
                   {room.cancelable && <Text className="room-tag blue">免费取消</Text>}
+                  {room.wifi && <Text className="room-tag blue">免费WiFi</Text>}
                 </View>
                 <View className="room-detail">
-                  <Text className="room-size">25㎡ · 大床1.8m</Text>
+                  <Text className="room-size">{getRoomMeta(room)}</Text>
                 </View>
               </View>
               <View className="room-right">
@@ -415,15 +443,15 @@ export default function Detail() {
           <Text className="section-title">酒店政策</Text>
           <View className="policy-item">
             <Text className="policy-label">入住时间</Text>
-            <Text className="policy-value">14:00后</Text>
+            <Text className="policy-value">{checkinPolicy}</Text>
           </View>
           <View className="policy-item">
             <Text className="policy-label">离店时间</Text>
-            <Text className="policy-value">12:00前</Text>
+            <Text className="policy-value">{checkoutPolicy}</Text>
           </View>
           <View className="policy-item">
             <Text className="policy-label">儿童政策</Text>
-            <Text className="policy-value">欢迎儿童入住</Text>
+            <Text className="policy-value">{childPolicy}</Text>
           </View>
         </View>
 
@@ -435,10 +463,10 @@ export default function Detail() {
       <View className="bottom-bar glass-card">
         <View className="bottom-left">
           <View className="bottom-action" onClick={handleCollect}>
-            <Text className="action-icon">♡</Text>
-            <Text className="action-text">收藏</Text>
+            <Text className="action-icon">{collected ? '♥' : '♡'}</Text>
+            <Text className="action-text">{collected ? '已收藏' : '收藏'}</Text>
           </View>
-          <View className="bottom-action">
+          <View className="bottom-action" onClick={() => Taro.showToast({ title: '客服咨询开发中', icon: 'none' })}>
             <Text className="action-icon">💬</Text>
             <Text className="action-text">咨询</Text>
           </View>

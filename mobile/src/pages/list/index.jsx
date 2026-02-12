@@ -1,7 +1,7 @@
 import { View, Text } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useEffect, useState, useRef } from 'react'
-import { NavBar, Dropdown, InfiniteScroll, Radio, Checkbox, Button, Empty, SearchBar, Space } from 'antd-mobile'
+import { NavBar, Dropdown, InfiniteScroll, Radio, Checkbox, Button, Empty, Space } from 'antd-mobile'
 import { SearchOutline } from 'antd-mobile-icons'
 import { api } from '../../services/request'
 import HotelCard from '../../components/HotelCard'
@@ -37,17 +37,34 @@ export default function List() {
   // Filter State
   const [sort, setSort] = useState('recommend') // recommend, price_asc, price_desc, star
   const [selectedStars, setSelectedStars] = useState(() => paramsRef.current.stars ? paramsRef.current.stars.split(',') : [])
+  const [selectedTags, setSelectedTags] = useState(() => {
+    if (!paramsRef.current.tags) return []
+    return safeDecode(paramsRef.current.tags).split(',').filter(Boolean)
+  })
+  const [tagOptions, setTagOptions] = useState([])
   
   const dropdownRef = useRef(null)
   const isFirstLoad = useRef(true)
 
   // Use refs for current search params to avoid stale closures in loadMore if called async
-  const searchParamsRef = useRef({ city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars })
+  const searchParamsRef = useRef({ city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags })
 
   // Sync refs with state
   useEffect(() => {
-    searchParamsRef.current = { city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars }
-  }, [city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars])
+    searchParamsRef.current = { city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags }
+  }, [city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags])
+
+  useEffect(() => {
+    const fetchTagOptions = async () => {
+      try {
+        const res = await api.get('/api/presets/facilities')
+        if (res && Array.isArray(res.data)) {
+          setTagOptions(res.data.slice(0, 12).map((item) => item.name).filter(Boolean))
+        }
+      } catch (error) {}
+    }
+    fetchTagOptions()
+  }, [])
 
   // Fetch Data
   async function loadMore() {
@@ -65,6 +82,7 @@ export default function List() {
       if (currentParams.maxPrice) queryParams.append('maxPrice', currentParams.maxPrice)
       if (currentParams.sort) queryParams.append('sort', currentParams.sort)
       if (currentParams.selectedStars.length > 0) queryParams.append('stars', currentParams.selectedStars.join(','))
+      if (currentParams.selectedTags.length > 0) queryParams.append('tags', currentParams.selectedTags.join(','))
       
       queryParams.append('page', nextPage)
       queryParams.append('pageSize', 10)
@@ -99,12 +117,19 @@ export default function List() {
     setPage(1)
     setList([])
     setHasMore(true) // This should trigger InfiniteScroll to call loadMore
-  }, [sort, selectedStars, city, keyword, minPrice, maxPrice]) // checkIn/checkOut usually don't change in list page interaction unless we add date picker
+  }, [sort, selectedStars, selectedTags, city, keyword, minPrice, maxPrice]) // checkIn/checkOut usually don't change in list page interaction unless we add date picker
 
   // Handle Search Bar Click -> Go back to search or expand
   const handleSearchClick = () => {
     Taro.navigateBack()
   }
+
+  const nights = (() => {
+    if (!checkIn || !checkOut) return 1
+    const diff = (new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24)
+    if (!Number.isFinite(diff) || diff <= 0) return 1
+    return Math.round(diff)
+  })()
 
   return (
     <View className="list-page">
@@ -121,7 +146,7 @@ export default function List() {
               {city} · {keyword || '搜索酒店'}
             </Text>
             <Text className="search-date">
-              {checkIn && checkOut ? `${checkIn.slice(5).replace('-','/')} - ${checkOut.slice(5).replace('-','/')}` : ''}
+              {checkIn && checkOut ? `${checkIn.slice(5).replace('-','/')} - ${checkOut.slice(5).replace('-','/')} · ${nights}晚` : ''}
             </Text>
           </View>
         </NavBar>
@@ -184,6 +209,27 @@ export default function List() {
                   <Radio value='1000+'>¥1000以上</Radio>
                 </Space>
               </Radio.Group>
+            </View>
+          </Dropdown.Item>
+
+          <Dropdown.Item key="tags" title={selectedTags.length ? `标签(${selectedTags.length})` : '标签筛选'}>
+            <View className="dropdown-content">
+              <View className="filter-section-title">常用标签</View>
+              <Checkbox.Group value={selectedTags} onChange={(val) => setSelectedTags(val)}>
+                <Space direction='vertical' block>
+                  {tagOptions.map((tag) => (
+                    <Checkbox key={tag} value={tag}>{tag}</Checkbox>
+                  ))}
+                </Space>
+              </Checkbox.Group>
+              <Button
+                block
+                color='primary'
+                style={{ marginTop: 16 }}
+                onClick={() => dropdownRef.current?.close()}
+              >
+                确定
+              </Button>
             </View>
           </Dropdown.Item>
           

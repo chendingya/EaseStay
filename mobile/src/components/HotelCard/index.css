@@ -1,5 +1,5 @@
 .hotel-card {
-  padding: 12px !important; /* 给卡片加内边距 */
+  padding: 12px !important;
   border-radius: 12px !important;
   overflow: hidden;
   background: #fff;
@@ -7,54 +7,85 @@
 
 .hotel-card-content {
   display: flex;
+  align-items: stretch;
 }
 
 .hotel-image {
   width: 100px;
-  height: 100px;
-  border-radius: 8px; /* 统一四周圆角 */
-  object-fit: cover; /* 确保图片不变形 */
-  flex-shrink: 0; /* 防止图片被压缩 */
+  height: 116px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 .hotel-image-placeholder {
   width: 100px;
-  height: 100px;
+  height: 116px;
   background: #f5f5f5;
-  border-radius: 8px; /* 占位图也统一圆角 */
+  border-radius: 8px;
   flex-shrink: 0;
 }
 
 .hotel-info {
-  padding: 0 0 0 12px; /* 移除顶部内边距，只保留左侧间距 */
+  padding: 0 0 0 12px;
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-width: 0; /* 修复 flex 子项文本截断失效的问题 */
+  min-width: 0;
 }
 
 .hotel-name {
-  font-size: 16px;
-  font-weight: bold;
+  font-size: 15px;
+  font-weight: 700;
   color: #333;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.hotel-name-en {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #999;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.hotel-address {
+  margin-top: 4px;
+  color: #666;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   overflow: hidden;
 }
 
 .hotel-meta {
   color: #666;
-  font-size: 12px;
+  font-size: 11px;
   display: flex;
   align-items: center;
+  gap: 8px;
 }
 
-.hotel-score {
-  color: #0086F6;
-  font-weight: 500;
-  margin-left: 8px;
+.hotel-open-year {
+  color: #999;
+}
+
+.hotel-tags {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.hotel-tag {
+  font-size: 10px;
+  color: #1677ff;
+  background: rgba(22, 119, 255, 0.1);
+  padding: 1px 6px;
+  border-radius: 10px;
 }
 
 .hotel-price {
@@ -69,7 +100,7 @@
 }
 
 .price-value {
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1;
   margin: 0 2px;
 }

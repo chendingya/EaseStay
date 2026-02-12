@@ -1,0 +1,95 @@
+.orders-page {
+  min-height: 100vh;
+  background: #f5f6f8;
+  padding: 12px;
+}
+
+.orders-filter {
+  margin-bottom: 12px;
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.order-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.order-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.order-hotel-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #222;
+}
+
+.order-status {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.order-status-confirmed {
+  color: #1677ff;
+  background: rgba(22, 119, 255, 0.1);
+}
+
+.order-status-completed {
+  color: #389e0d;
+  background: rgba(56, 158, 13, 0.12);
+}
+
+.order-status-cancelled {
+  color: #cf1322;
+  background: rgba(207, 19, 34, 0.1);
+}
+
+.order-status-default {
+  color: #666;
+  background: #f1f1f1;
+}
+
+.order-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.order-label {
+  color: #8c8c8c;
+  font-size: 12px;
+}
+
+.order-value {
+  color: #333;
+  font-size: 13px;
+}
+
+.order-total {
+  color: #f5222d;
+  font-weight: 700;
+}
+
+.orders-login-tip {
+  padding: 48px 20px;
+  text-align: center;
+  color: #999;
+}
+
+.orders-login-btn {
+  margin-top: 12px;
+}

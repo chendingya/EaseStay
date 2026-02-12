@@ -78,6 +78,63 @@ async function changePassword(req, res) {
 }
 
 /**
+ * 获取当前用户订单（移动端）
+ */
+async function getMyOrders(req, res) {
+  const page = Math.max(Number(req.query.page) || 1, 1)
+  const pageSize = Math.max(Number(req.query.pageSize) || 10, 1)
+  const status = String(req.query.status || '').trim()
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  try {
+    let query = supabase
+      .from('orders')
+      .select('*', { count: 'exact' })
+      .eq('user_id', req.user.id)
+      .order('created_at', { ascending: false })
+
+    if (status) {
+      query = query.eq('status', status)
+    }
+
+    const { data: orders, error, count } = await query.range(from, to)
+    if (error) {
+      return res.status(500).json({ message: '获取订单失败：' + error.message })
+    }
+
+    const hotelIds = [...new Set((orders || []).map((item) => item.hotel_id).filter(Boolean))]
+    let hotelMap = {}
+    if (hotelIds.length > 0) {
+      const { data: hotels } = await supabase
+        .from('hotels')
+        .select('id, name, name_en, city, address, cover_image, images')
+        .in('id', hotelIds)
+
+      hotelMap = (hotels || []).reduce((acc, item) => {
+        acc[item.id] = item
+        return acc
+      }, {})
+    }
+
+    const list = (orders || []).map((order) => ({
+      ...order,
+      hotel: hotelMap[order.hotel_id] || null
+    }))
+
+    res.json({
+      page,
+      pageSize,
+      total: count || 0,
+      list
+    })
+  } catch (err) {
+    console.error('获取用户订单失败:', err)
+    res.status(500).json({ message: '服务器错误' })
+  }
+}
+
+/**
  * 获取所有商户列表（仅管理员）
  */
 async function getMerchants(req, res) {
@@ -201,6 +258,7 @@ async function resetMerchantPassword(req, res) {
 module.exports = {
   getCurrentUser,
   changePassword,
+  getMyOrders,
   getMerchants,
   getMerchantDetail,
   resetMerchantPassword

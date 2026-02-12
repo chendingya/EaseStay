@@ -304,6 +304,12 @@
   flex-shrink: 0;
 }
 
+.room-img {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+}
+
 .room-img-placeholder {
   width: 80px;
   height: 80px;
@@ -470,13 +476,13 @@
 
 /* 底部占位 */
 .bottom-placeholder {
-  height: 80px;
+  height: 140px;
 }
 
 /* 底部预订栏 */
 .bottom-bar {
   position: fixed;
-  bottom: 0;
+  bottom: 58px;
   left: 0;
   right: 0;
   height: 64px;

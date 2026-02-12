@@ -27,6 +27,11 @@ const router = express.Router()
  *         required: false
  *         schema:
  *           type: string
+ *       - name: tags
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: string
  *       - name: page
  *         in: query
  *         required: false

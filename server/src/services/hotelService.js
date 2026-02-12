@@ -1026,6 +1026,7 @@ const listPublicHotels = async ({ query }) => {
     checkIn,
     checkOut,
     stars, // comma separated strings '3,4,5'
+    tags, // comma separated strings '免费WiFi,停车场'
     minPrice,
     maxPrice,
     page = 1,
@@ -1115,6 +1116,16 @@ const listPublicHotels = async ({ query }) => {
     const starList = stars.split(',').map(Number).filter(n => !isNaN(n))
     if (starList.length > 0) {
       dbQuery = dbQuery.in('star_rating', starList)
+    }
+  }
+
+  if (tags) {
+    const tagList = String(tags)
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+    if (tagList.length > 0) {
+      dbQuery = dbQuery.contains('facilities', tagList)
     }
   }
 

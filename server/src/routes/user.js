@@ -10,6 +10,9 @@ const userController = require('../controllers/userController')
 // 获取当前用户信息
 router.get('/me', authRequired, userController.getCurrentUser)
 
+// 获取当前用户订单（移动端）
+router.get('/orders', authRequired, userController.getMyOrders)
+
 // 修改密码
 router.post('/change-password', authRequired, userController.changePassword)
 

@@ -1,0 +1,25 @@
+.favorites-page {
+  min-height: 100vh;
+  background: #f5f6f8;
+  padding: 12px;
+}
+
+.favorites-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.favorite-card {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.favorite-remove {
+  padding: 10px 12px;
+  text-align: right;
+  border-top: 1px solid #f4f4f4;
+  color: #ff4d4f;
+  font-size: 12px;
+}
