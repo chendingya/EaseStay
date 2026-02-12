@@ -103,6 +103,20 @@ export default function Index() {
     if (mapVisible && process.env.TARO_ENV === 'h5') {
       // H5 Amap Loader
       if (!window.AMap) {
+        // 检查是否已经存在 script 标签，避免重复加载
+        if (document.querySelector('script[src*="webapi.amap.com/maps"]')) {
+           // 如果 script 存在但 AMap 未就绪，等待一下（简单轮询）
+           const checkAMap = setInterval(() => {
+             if (window.AMap) {
+               clearInterval(checkAMap)
+               initAmap()
+             }
+           }, 100)
+           // 5秒超时
+           setTimeout(() => clearInterval(checkAMap), 5000)
+           return
+        }
+
         const script = document.createElement('script')
         script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}`
         script.onload = () => {
