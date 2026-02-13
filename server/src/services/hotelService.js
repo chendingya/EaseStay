@@ -1406,7 +1406,7 @@ const createPublicOrder = async ({ hotelId, userId, payload }) => {
 
   const { data: hotel, error: hotelError } = await supabase
     .from('hotels')
-    .select('id, merchant_id, status')
+    .select('id, merchant_id, status, name, name_en')
     .eq('id', hotelId)
     .eq('status', 'approved')
     .single()
@@ -1538,7 +1538,18 @@ const createPublicOrder = async ({ hotelId, userId, payload }) => {
       .eq('id', room.id)
   }
 
-  return { ok: true, status: 201, data: order }
+  const hotelName = String(hotel?.name || '').trim()
+  const hotelNameEn = String(hotel?.name_en || '').trim()
+  return {
+    ok: true,
+    status: 201,
+    data: {
+      ...order,
+      hotel: hotelName || hotelNameEn ? { id: hotel.id, name: hotelName, name_en: hotelNameEn } : null,
+      hotel_name: hotelName,
+      hotel_name_en: hotelNameEn
+    }
+  }
 }
 
 // 管理员获取酒店详情（可查看任意状态）

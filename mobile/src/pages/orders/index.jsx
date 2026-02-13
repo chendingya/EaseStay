@@ -72,6 +72,7 @@ export default function Orders() {
   const pageRef = useRef(1)
   const hasMoreRef = useRef(true)
   const activeTabRef = useRef('all')
+  const listRef = useRef([])
 
   const statusLabelMap = useMemo(() => {
     return statusTabs.reduce((acc, item) => {
@@ -117,6 +118,7 @@ export default function Orders() {
   const resetPagination = () => {
     pageRef.current = 1
     setList([])
+    listRef.current = []
     setTotal(0)
     setHasMoreSafe(true)
   }
@@ -151,13 +153,17 @@ export default function Orders() {
       const nextItems = Array.isArray(res?.list) ? res.list : []
       const nextTotal = Number(res?.total) || 0
 
-      setList((prev) => (reset ? mergeOrders([], nextItems) : mergeOrders(prev, nextItems)))
+      const baseList = reset ? [] : listRef.current
+      const mergedList = reset ? mergeOrders([], nextItems) : mergeOrders(baseList, nextItems)
+      setList(mergedList)
+      listRef.current = mergedList
       setTotal(nextTotal)
       pageRef.current = requestPage + 1
       setHasMoreSafe(requestPage * pageSize < nextTotal)
     } catch (error) {
       if (reset) {
         setList([])
+        listRef.current = []
         setTotal(0)
       }
       setHasMoreSafe(false)
