@@ -14,7 +14,7 @@ const buildHotelMapByOrders = async (orders = []) => {
 
   const { data: hotels } = await supabase
     .from('hotels')
-    .select('id, name, name_en, city, address, cover_image, images')
+    .select('id, name, name_en, city, address, images, star_rating, opening_time')
     .in('id', hotelIds)
 
   return (hotels || []).reduce((acc, item) => {
@@ -25,9 +25,13 @@ const buildHotelMapByOrders = async (orders = []) => {
 
 const enrichOrder = (order, hotelMap = {}) => {
   const hotel = hotelMap[String(order.hotel_id)] || null
+  const hotelName = String(hotel?.name || order?.hotel_name || '').trim()
+  const hotelNameEn = String(hotel?.name_en || order?.hotel_name_en || '').trim()
   return {
     ...order,
-    hotel
+    hotel,
+    hotel_name: hotelName,
+    hotel_name_en: hotelNameEn
   }
 }
 
