@@ -1,5 +1,45 @@
 const supabase = require('../config/supabase')
 const { sendNotification, NotificationTemplates } = require('./notificationService')
+const mapService = require('./mapService')
+const { cityData } = require('../utils/cityData')
+
+// --- City Lookup Initialization ---
+const cityLookup = new Map()
+const addToLookup = (fullName) => {
+  if (!fullName) return
+  // 1. Full match
+  cityLookup.set(fullName, fullName)
+  
+  // 2. Short match (remove common suffixes)
+  // 优先匹配最长的前缀，比如 "新疆维吾尔自治区" -> "新疆"
+  const shortNames = []
+  if (fullName.endsWith('市')) shortNames.push(fullName.slice(0, -1))
+  if (fullName.endsWith('省')) shortNames.push(fullName.slice(0, -1))
+  if (fullName.endsWith('特别行政区')) shortNames.push(fullName.slice(0, -6))
+  if (fullName.endsWith('自治区')) shortNames.push(fullName.slice(0, -3))
+  if (fullName.endsWith('维吾尔自治区')) shortNames.push(fullName.slice(0, -7))
+  if (fullName.endsWith('壮族自治区')) shortNames.push(fullName.slice(0, -6))
+  if (fullName.endsWith('回族自治区')) shortNames.push(fullName.slice(0, -6))
+  
+  shortNames.forEach(short => {
+    if (short && !cityLookup.has(short)) {
+        cityLookup.set(short, fullName)
+    }
+  })
+}
+
+// Initialize lookup map
+if (Array.isArray(cityData)) {
+    cityData.forEach(prov => {
+        addToLookup(prov.label)
+        if (prov.children) {
+            prov.children.forEach(city => {
+                addToLookup(city.label)
+            })
+        }
+    })
+}
+
 const {
   formatDateOnly,
   getActiveOrderQtyMap,
@@ -1198,6 +1238,19 @@ const updateHotelStatus = async ({ hotelId, status, rejectReason }) => {
   return { ok: true, status: 200, data: updatedHotel }
 }
 
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  const d = R * c; // Distance in km
+  return d;
+}
+
 // 公开酒店列表
 const listPublicHotels = async ({ query }) => {
   const {
@@ -1210,6 +1263,8 @@ const listPublicHotels = async ({ query }) => {
     tags, // comma separated strings '免费WiFi,停车场'
     minPrice,
     maxPrice,
+    userLat,
+    userLng,
     page = 1,
     pageSize = 10
   } = query || {}
@@ -1223,8 +1278,6 @@ const listPublicHotels = async ({ query }) => {
   if (minPrice || maxPrice) {
     let priceQuery = supabase.from('room_types').select('hotel_id').eq('is_active', true)
     
-    // 简化处理：只筛选原始价格，不考虑复杂的折扣计算（性能考量）
-    // 若要严谨，需使用数据库函数或存储过程计算最终价格
     if (minPrice) {
       priceQuery = priceQuery.gte('price', Number(minPrice))
     }
@@ -1243,56 +1296,77 @@ const listPublicHotels = async ({ query }) => {
     .select('*', { count: 'exact' })
     .eq('status', 'approved')
 
-  // 如果有价格筛选结果，应用 ID 过滤
   if (priceFilteredIds !== null) {
     if (priceFilteredIds.length === 0) {
-      // 没有匹配价格的酒店，直接返回空
-      return {
-        ok: true,
-        status: 200,
-        data: {
-          page: normalizedPage,
-          pageSize: normalizedPageSize,
-          total: 0,
-          list: []
-        }
-      }
+      return { ok: true, status: 200, data: { page: normalizedPage, pageSize: normalizedPageSize, total: 0, list: [] } }
     }
     dbQuery = dbQuery.in('id', priceFilteredIds)
   }
 
-  if (city) {
-    // 宽松匹配：如果用户传 "扬州市"，我们也尝试匹配 "扬州"
-    // 反之，如果用户传 "扬州"，也能匹配 "扬州市"
-    // ilike %city% 已经能处理 "扬州" -> "扬州市" 的情况
-    // 但 "扬州市" -> "扬州" (如数据库存的是简称) 则需要处理
-    const cleanCity = city.replace(/市$/, '')
+  // --- 智能城市切换逻辑 ---
+  let filterCity = city
+  let targetLocation = null
+
+  if (keyword) {
+    // 1. 优先检查本地城市/省份列表 (Fast & Accurate)
+    const matchedCity = cityLookup.get(keyword)
+    
+    if (matchedCity) {
+        // 命中了本地城市库，直接切换城市
+        filterCity = matchedCity
+        
+        // 获取该城市的中心坐标用于后续排序
+        try {
+            const geo = await mapService.geocode(matchedCity)
+            if (geo && geo.location) {
+                const [lng, lat] = geo.location.split(',').map(Number)
+                targetLocation = { lat, lng }
+            }
+        } catch (e) { console.error('City geocode error', e) }
+    } else {
+        // 2. 尝试全局搜索 Keyword (不限制城市)
+        const geo = await mapService.geocode(keyword)
+        
+        if (geo) {
+          // 如果 Keyword 是一个明确的行政区划 (省/市/区)，优先切换城市
+          const level = geo.level
+          const isCityLevel = ['province', 'city', 'district', '省', '市', '区县', '城区', '直辖市'].includes(level)
+          
+          if (isCityLevel) {
+            // 提取城市名称: geo.city 可能是数组或空，geo.province 也是
+            // 高德 geocode 返回: city (String/Array), province (String)
+            // 通常如果是直辖市，city 可能为空或等于 province
+            const newCity = typeof geo.city === 'string' && geo.city.length > 0 ? geo.city : 
+                            (typeof geo.province === 'string' ? geo.province : '')
+            
+            if (newCity) {
+               filterCity = newCity
+            } else if (geo.formatted_address) {
+               // 兜底：如果是 "杭州市"，formatted_address 也是 "杭州市"
+               // 简单提取：移除 "省" 后面的部分？或者直接用 formatted_address
+               // 风险：formatted_address 可能是 "浙江省杭州市"
+               if (geo.formatted_address.includes('市')) {
+                 // 简单正则提取市名
+                 const match = geo.formatted_address.match(/([^省]+市)/)
+                 if (match) filterCity = match[1]
+               }
+            }
+          } 
+          // 记录目标坐标用于后续排序
+          if (geo.location) {
+            const [lng, lat] = geo.location.split(',')
+            targetLocation = { lat: Number(lat), lng: Number(lng) }
+          }
+        }
+    }
+  }
+
+  if (filterCity) {
+    const cleanCity = filterCity.replace(/市$/, '')
     dbQuery = dbQuery.ilike('city', `%${cleanCity}%`)
   }
 
-  if (keyword) {
-    let orString = `name.ilike.%${keyword}%,name_en.ilike.%${keyword}%,address.ilike.%${keyword}%,facilities.cs.["${keyword}"]`
-    
-    // 增强搜索：针对设施的 JSONB 数组进行大小写模糊匹配尝试
-    if (/[a-zA-Z]/.test(keyword)) {
-       const lower = keyword.toLowerCase()
-       const upper = keyword.toUpperCase()
-       
-       if (lower !== keyword) orString += `,facilities.cs.["${lower}"]`
-       if (upper !== keyword && upper !== lower) orString += `,facilities.cs.["${upper}"]`
-       
-       // 特殊处理 "WiFi" (常见写法)
-       if (lower.includes('wifi')) {
-          const wifiVariant = keyword.replace(/wifi/ig, 'WiFi')
-          if (wifiVariant !== keyword && wifiVariant !== lower && wifiVariant !== upper) {
-             orString += `,facilities.cs.["${wifiVariant}"]`
-          }
-       }
-    }
-    
-    dbQuery = dbQuery.or(orString)
-  }
-
+  // --- Common Filters (Apply before keyword logic) ---
   if (stars) {
     const starList = stars.split(',').map(Number).filter(n => !isNaN(n))
     if (starList.length > 0) {
@@ -1310,6 +1384,108 @@ const listPublicHotels = async ({ query }) => {
     }
   }
 
+  // --- 智能排序逻辑 ---
+  if (keyword) {
+    // 策略：获取所有候选酒店（按城市/价格过滤后），在内存中进行相关性评分
+    // 注意：这里我们放宽 DB 搜索条件，不再强制匹配 keyword，而是取回数据后算分
+    
+    // 如果没有 filterCity，我们尝试基于 keyword 模糊匹配先缩小范围
+    if (!filterCity) {
+       let orString = `name.ilike.%${keyword}%,name_en.ilike.%${keyword}%,address.ilike.%${keyword}%,facilities.cs.["${keyword}"]`
+       dbQuery = dbQuery.or(orString).limit(200)
+    } else {
+       // 如果有 filterCity，我们取回该城市下的酒店进行排序
+       dbQuery = dbQuery.limit(500)
+    }
+
+    const { data: candidates, error, count } = await dbQuery
+    
+    if (error) {
+      return { ok: false, status: 500, message: '查询失败：' + error.message }
+    }
+
+    // 修正目标坐标:
+    // 如果没有切换城市 (filterCity === city)，说明 Keyword 不是城市名。
+    // 此时之前的全局 Geocode 可能返回了外地的 POI (例如搜 "希尔顿" 返回了北京希尔顿)。
+    // 我们应该尝试在当前 filterCity 下重新 Geocode 以获取本地 POI 坐标。
+    if (filterCity === city) {
+        try {
+            const localGeo = await mapService.geocode(keyword, filterCity)
+            if (localGeo && localGeo.location) {
+                const [lng, lat] = localGeo.location.split(',').map(Number)
+                targetLocation = { lat, lng }
+            }
+        } catch (e) { console.error(e) }
+    }
+
+    // 计算评分
+    let scored = candidates.map(h => {
+      let score = 0
+      const name = h.name || ''
+      const address = h.address || ''
+      
+      // 1. 文本相关性
+      if (name === keyword) score += 100
+      else if (name.includes(keyword)) score += 60
+      else if (address.includes(keyword)) score += 40
+      
+      // 2. 位置相关性 (Priority 1: Keyword Location)
+      if (targetLocation && h.latitude && h.longitude) {
+        const dist = calculateDistance(targetLocation.lat, targetLocation.lng, Number(h.latitude), Number(h.longitude))
+        // 距离越近分越高。假设 5km 内有加分。
+        score += Math.max(0, 50 - dist * 5)
+      } 
+      // 3. 位置相关性 (Priority 2: User Location - 仅当 keyword 不是明确地名或者作为补充)
+      else if (userLat && userLng && h.latitude && h.longitude) {
+        const dist = calculateDistance(Number(userLat), Number(userLng), Number(h.latitude), Number(h.longitude))
+        score += Math.max(0, 20 - dist * 2)
+      }
+
+      return { ...h, _score: score, _dist: targetLocation ? calculateDistance(targetLocation.lat, targetLocation.lng, Number(h.latitude), Number(h.longitude)) : 0 }
+    })
+
+    // 过滤掉相关性太低的结果
+    if (filterCity) {
+        scored = scored.filter(h => {
+            // 如果 keyword 在名字/地址/设施里
+            const textMatch = h.name.includes(keyword) || h.address.includes(keyword) || 
+                              (h.name_en && h.name_en.includes(keyword)) ||
+                              (h.facilities && JSON.stringify(h.facilities).includes(keyword))
+            // 或者有位置加分
+            const locMatch = h._score > 0
+            return textMatch || locMatch
+        })
+    }
+
+    // 排序
+    scored.sort((a, b) => b._score - a._score)
+
+    // 手动分页
+    const total = scored.length
+    const pageData = scored.slice(offset, offset + normalizedPageSize)
+    
+    const hotelIds = pageData.map((h) => h.id)
+    const priceMap = await getLowestPrices(hotelIds)
+
+    const enriched = pageData.map((hotel) => ({
+      ...hotel,
+      lowestPrice: priceMap[hotel.id]
+    }))
+
+    return {
+      ok: true,
+      status: 200,
+      data: {
+        page: normalizedPage,
+        pageSize: normalizedPageSize,
+        total: total,
+        list: enriched
+      }
+    }
+  }
+
+  // --- 原有逻辑 (无 Keyword) ---
+  
   const { data: hotels, error, count } = await dbQuery.range(offset, offset + normalizedPageSize - 1)
 
   if (error) {
@@ -1345,6 +1521,7 @@ const listPublicHotels = async ({ query }) => {
     }
   }
 }
+
 
 // 公开酒店详情
 const getPublicHotel = async ({ hotelId }) => {

@@ -28,6 +28,8 @@ export default function List() {
   const [checkOut, setCheckOut] = useState(() => paramsRef.current.checkOut || '')
   const [minPrice, setMinPrice] = useState(() => paramsRef.current.minPrice || '')
   const [maxPrice, setMaxPrice] = useState(() => paramsRef.current.maxPrice || '')
+  const [userLat, setUserLat] = useState(() => paramsRef.current.userLat || '')
+  const [userLng, setUserLng] = useState(() => paramsRef.current.userLng || '')
 
   // Data State
   const [list, setList] = useState([])
@@ -47,12 +49,12 @@ export default function List() {
   const isFirstLoad = useRef(true)
 
   // Use refs for current search params to avoid stale closures in loadMore if called async
-  const searchParamsRef = useRef({ city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags })
+  const searchParamsRef = useRef({ city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags, userLat, userLng })
 
   // Sync refs with state
   useEffect(() => {
-    searchParamsRef.current = { city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags }
-  }, [city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags])
+    searchParamsRef.current = { city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags, userLat, userLng }
+  }, [city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags, userLat, userLng])
 
   useEffect(() => {
     const fetchTagOptions = async () => {
@@ -83,6 +85,8 @@ export default function List() {
       if (currentParams.sort) queryParams.append('sort', currentParams.sort)
       if (currentParams.selectedStars.length > 0) queryParams.append('stars', currentParams.selectedStars.join(','))
       if (currentParams.selectedTags.length > 0) queryParams.append('tags', currentParams.selectedTags.join(','))
+      if (currentParams.userLat) queryParams.append('userLat', currentParams.userLat)
+      if (currentParams.userLng) queryParams.append('userLng', currentParams.userLng)
       
       queryParams.append('page', nextPage)
       queryParams.append('pageSize', 10)
