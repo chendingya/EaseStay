@@ -135,14 +135,15 @@ export default function Index() {
   const initAmap = () => {
     if (window.AMap) {
         const map = new window.AMap.Map('amap-container', {
-            zoom: 14,
-            center: [longitude, latitude],
+            zoom: 4, // 调整缩放级别以显示全国
+            center: [105.0, 35.0], // 中国地理中心坐标
         })
         const marker = new window.AMap.Marker({
             position: [longitude, latitude],
             title: '当前位置'
         })
-        map.add(marker)
+        // 初始不显示 marker，只有点击或定位后才显示
+        // map.add(marker)
         setMapInstance(map)
         setMarkerInstance(marker)
 
@@ -150,6 +151,10 @@ export default function Index() {
             const lng = e.lnglat.getLng()
             const lat = e.lnglat.getLat()
             marker.setPosition([lng, lat])
+            // 确保 marker 在地图上
+            if (!marker.getMap()) {
+                map.add(marker)
+            }
             setLongitude(lng)
             setLatitude(lat)
             handleReverseGeocode(lng, lat)
@@ -299,7 +304,7 @@ export default function Index() {
   }
 
   const handleSearch = () => {
-    let url = `/pages/list/index?city=${encodeURIComponent(city)}&keyword=${encodeURIComponent(keyword)}&checkIn=${checkIn}&checkOut=${checkOut}`
+    let url = `/pages/list/index?city=${encodeURIComponent(city)}&keyword=${encodeURIComponent(keyword)}&checkIn=${checkIn}&checkOut=${checkOut}&userLat=${latitude}&userLng=${longitude}`
     if (selectedStar) {
       url += `&stars=${selectedStar}`
     }
@@ -320,7 +325,7 @@ export default function Index() {
   }
 
   const handleTagClick = (tag) => {
-    let url = `/pages/list/index?city=${encodeURIComponent(city)}&keyword=${encodeURIComponent(tag)}&checkIn=${checkIn}&checkOut=${checkOut}`
+    let url = `/pages/list/index?city=${encodeURIComponent(city)}&keyword=${encodeURIComponent(tag)}&checkIn=${checkIn}&checkOut=${checkOut}&userLat=${latitude}&userLng=${longitude}`
     if (selectedStar) {
       url += `&stars=${selectedStar}`
     }
