@@ -7,6 +7,7 @@
 - 数据库：Supabase（PostgreSQL）
 - 文档：Swagger（/api-docs）
 - 安全：JWT 认证、角色鉴权、密码加密存储
+- 动效与交互：页面转场动画、列表分步入场、下拉刷新临界反馈
 
 ## 1.1 测试策略与 Mock 说明
 ### 1.1.1 测试目录约定
@@ -143,6 +144,7 @@
 - 响应格式：JSON
 - 认证：Authorization: Bearer <token>
 - 分页字段：page、pageSize
+ - 订单列表：若缺少 hotel.name 前端将使用 hotel_id 补充展示
 
 ### 4.2 认证模块
 #### POST /api/auth/sms/send

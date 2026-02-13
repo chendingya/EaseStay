@@ -41,3 +41,11 @@ export const getOrderDetail = (orderId) => {
 export const payOrder = (orderId, data = {}) => {
   return api.post(`/api/user/orders/${orderId}/pay`, data)
 }
+
+export const cancelOrder = (orderId) => {
+  return api.post(`/api/user/orders/${orderId}/cancel`)
+}
+
+export const useOrder = (orderId) => {
+  return api.post(`/api/user/orders/${orderId}/use`)
+}

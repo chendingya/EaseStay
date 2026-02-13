@@ -7,14 +7,14 @@
 }
 
 .hotel-order-pull {
-  height: 28px;
-  margin-top: 2px;
+  margin-top: 0;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
   transform: translateY(-6px);
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  transition: opacity 0.1s ease, transform 0.1s ease, height 0.1s ease;
 }
 
 .hotel-order-pull.visible {
@@ -28,10 +28,15 @@
   border-radius: 50%;
   background: #1677ff;
   margin-right: 6px;
+  transition: transform 0.1s ease, background-color 0.1s ease;
 }
 
 .hotel-order-pull.loading .hotel-order-pull-dot {
   animation: order-pull-dot 0.9s linear infinite;
+}
+
+.hotel-order-pull.ready .hotel-order-pull-dot {
+  background: #1a6dff;
 }
 
 .hotel-order-pull-text {
@@ -53,7 +58,7 @@
 }
 
 .hotel-order-bottom-skeleton {
-  margin-top: 8px;
+  margin-top: 10px;
   display: flex;
   flex-direction: column;
   gap: 10px;

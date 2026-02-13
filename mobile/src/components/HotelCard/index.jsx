@@ -2,13 +2,18 @@ import { View, Image, Text } from '@tarojs/components'
 import { Card } from 'antd-mobile'
 import './index.css'
 
-export default function HotelCard({ hotel, onClick }) {
+export default function HotelCard({ hotel, onClick, index, animate = false }) {
   const imageSrc = (Array.isArray(hotel.images) && hotel.images[0]) || hotel.cover_image || ''
   const openingYear = hotel.opening_time ? String(hotel.opening_time).slice(0, 4) : ''
   const facilities = Array.isArray(hotel.facilities) ? hotel.facilities.slice(0, 2) : []
+  const delay = animate && Number.isFinite(index) ? `${Math.min(index, 10) * 20}ms` : '0ms'
 
   return (
-    <Card onClick={onClick} className="hotel-card">
+    <Card
+      onClick={onClick}
+      className={`hotel-card ${animate ? 'stagger-enter' : ''}`}
+      style={animate ? { animationDelay: delay } : undefined}
+    >
       <View className="hotel-card-content">
         {imageSrc ? (
           <Image src={imageSrc} mode="aspectFill" className="hotel-image" />

@@ -12,6 +12,16 @@ const payChannelOptions = [
   { label: '银行卡', value: 'bank' }
 ]
 
+const getHotelName = (order) => {
+  const name = String(order?.hotel?.name || '').trim()
+  if (name) return name
+  const nameEn = String(order?.hotel?.name_en || '').trim()
+  if (nameEn) return nameEn
+  const fallback = String(order?.hotel_name || order?.hotelName || '').trim()
+  if (fallback) return fallback
+  return `酒店 #${order?.hotel_id ?? '--'}`
+}
+
 const formatDate = (value) => {
   if (!value) return '--'
   return String(value).slice(0, 10)
@@ -77,7 +87,7 @@ export default function OrderPay() {
     )
   }
 
-  const hotelName = order?.hotel?.name || `酒店 #${order?.hotel_id ?? '--'}`
+  const hotelName = getHotelName(order)
   const totalPrice = Number(order?.total_price) || 0
   const canPay = order?.status === 'pending_payment'
 

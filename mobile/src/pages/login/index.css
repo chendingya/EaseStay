@@ -1,6 +1,6 @@
 .login-page {
   min-height: calc(100vh - 58px);
-  background: linear-gradient(180deg, #e6f4ff 0%, #ffffff 24%);
+  background: #f5f7fb;
 }
 
 .title {

@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useRef } from 'react'
 import { View, Text, ScrollView } from '@tarojs/components'
 import { Empty } from 'antd-mobile'
 import OrderCard from '../OrderCard'
@@ -34,16 +34,62 @@ function OrderList({
   loading,
   refreshing,
   pullLabel,
+  pullDistance,
+  pullThreshold = 72,
   onLoadMore,
   onRefresh,
   onPulling,
   onPullEnd,
   onScrollChange,
-  onPay
+  onPay,
+  onDetail
 }) {
+  const isH5 = typeof window !== 'undefined' && typeof document !== 'undefined'
+  const startYRef = useRef(0)
+  const pullingRef = useRef(false)
+  const lastDyRef = useRef(0)
+  const scrollTopRef = useRef(0)
   const isInitialLoading = loading && list.length === 0 && !refreshing
   const showBottomSkeleton = loading && list.length > 0 && hasMore
   const showEmpty = !loading && !refreshing && list.length === 0
+  const safePullDistance = Math.max(Number(pullDistance) || 0, 0)
+  const progress = pullThreshold > 0 ? Math.min(safePullDistance / pullThreshold, 1) : 0
+  const visible = refreshing || safePullDistance > 0
+  const pullHeight = visible ? Math.min(60, 20 + safePullDistance * 0.4) : 0
+
+  const handleTouchStart = (event) => {
+    if (!isH5 || refreshing) return
+    if (scrollTopRef.current > 0) return
+    const touch = event?.touches?.[0]
+    if (!touch) return
+    startYRef.current = touch.clientY
+    pullingRef.current = true
+    lastDyRef.current = 0
+  }
+
+  const handleTouchMove = (event) => {
+    if (!pullingRef.current || refreshing) return
+    const touch = event?.touches?.[0]
+    if (!touch) return
+    const dy = touch.clientY - startYRef.current
+    if (dy <= 0) {
+      lastDyRef.current = 0
+      return
+    }
+    lastDyRef.current = dy
+    onPulling && onPulling(dy)
+  }
+
+  const handleTouchEnd = () => {
+    if (!pullingRef.current || refreshing) return
+    pullingRef.current = false
+    const dy = lastDyRef.current
+    if (dy >= pullThreshold) {
+      onRefresh && onRefresh()
+      return
+    }
+    onPullEnd && onPullEnd()
+  }
 
   return (
     <View className='hotel-order-list'>
@@ -53,8 +99,16 @@ function OrderList({
         enhanced
         showScrollbar={false}
         lowerThreshold={120}
-        onScrollToLower={() => onLoadMore && onLoadMore()}
-        onScroll={(event) => onScrollChange && onScrollChange(Number(event?.detail?.scrollTop) || 0)}
+        onScrollToLower={() => {
+          if (hasMore && !loading && onLoadMore) {
+            onLoadMore()
+          }
+        }}
+        onScroll={(event) => {
+          const nextTop = Number(event?.detail?.scrollTop) || 0
+          scrollTopRef.current = nextTop
+          onScrollChange && onScrollChange(nextTop)
+        }}
         refresherEnabled
         refresherThreshold={72}
         refresherTriggered={refreshing}
@@ -62,24 +116,41 @@ function OrderList({
         onRefresherPulling={onPulling}
         onRefresherRestore={onPullEnd}
         onRefresherAbort={onPullEnd}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
-        <View className={`hotel-order-pull ${pullLabel ? 'visible' : ''} ${refreshing ? 'loading' : ''}`}>
-          <View className='hotel-order-pull-dot' />
+        <View
+          className={`hotel-order-pull ${visible ? 'visible' : ''} ${refreshing ? 'loading' : ''} ${progress >= 1 ? 'ready' : ''}`}
+          style={{ height: `${pullHeight}px`, opacity: visible ? 1 : 0 }}
+        >
+          <View className='hotel-order-pull-dot' style={{ transform: `scale(${0.6 + progress * 0.6})` }} />
           <Text className='hotel-order-pull-text'>{pullLabel || ' '}</Text>
         </View>
 
-        {isInitialLoading ? renderSkeletonCards(4, 'initial') : null}
+        {isInitialLoading ? (
+          <View className='hotel-order-cards'>
+            {renderSkeletonCards(4, 'initial')}
+          </View>
+        ) : null}
 
         {list.length > 0 ? (
           <View className='hotel-order-cards'>
             {list.map((item, index) => (
-              <OrderCard key={getOrderKey(item, index)} order={item} onPay={onPay} />
+              <OrderCard
+                key={getOrderKey(item, index)}
+                order={item}
+                onPay={onPay}
+                onDetail={onDetail}
+                index={index}
+                animate
+              />
             ))}
           </View>
         ) : null}
 
         {showBottomSkeleton ? (
-          <View className='hotel-order-bottom-skeleton'>
+          <View className='hotel-order-cards hotel-order-bottom-skeleton'>
             {renderSkeletonCards(2, 'more')}
           </View>
         ) : null}

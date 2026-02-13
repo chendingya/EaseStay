@@ -15,16 +15,20 @@ const formatPrice = (value) => {
   return Number.isFinite(num) && num > 0 ? Math.round(num * 100) / 100 : null
 }
 
-export default function FavoriteHotelCard({ hotel, onOpen, onRemove }) {
+export default function FavoriteHotelCard({ hotel, onOpen, onRemove, index, animate = false }) {
   const imageSrc = (Array.isArray(hotel?.images) && hotel.images[0]) || hotel?.cover_image || ''
   const openingYear = hotel?.opening_time ? String(hotel.opening_time).slice(0, 4) : ''
   const price = formatPrice(hotel?.lowestPrice)
   const savedAt = formatSavedAt(hotel?.savedAt)
   const hotelName = hotel?.name || `酒店 #${hotel?.id ?? '--'}`
   const address = `${hotel?.city || ''} ${hotel?.address || ''}`.trim() || '地址信息待完善'
+  const delay = animate && Number.isFinite(index) ? `${Math.min(index, 10) * 20}ms` : '0ms'
 
   return (
-    <View className='favorite-hotel-card'>
+    <View
+      className={`favorite-hotel-card ${animate ? 'stagger-enter' : ''}`}
+      style={animate ? { animationDelay: delay } : undefined}
+    >
       <View className='favorite-hotel-main' onClick={() => onOpen && onOpen(hotel?.id)}>
         {imageSrc ? (
           <Image className='favorite-hotel-image' src={imageSrc} mode='aspectFill' />

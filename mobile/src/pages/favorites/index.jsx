@@ -70,7 +70,7 @@ export default function Favorites() {
     <View className='favorites-page'>
       <PageTopBar
         title='收藏'
-        showBack={false}
+        showBack
         rightActions={list.length > 0
           ? [{
               key: 'clear',

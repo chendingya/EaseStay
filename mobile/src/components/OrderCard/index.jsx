@@ -26,11 +26,28 @@ const formatDateTime = (value) => {
   return String(value).replace('T', ' ').slice(0, 16)
 }
 
-function OrderCard({ order, onPay }) {
+const getHotelName = (order) => {
+  const name = String(order?.hotel?.name || '').trim()
+  if (name) return name
+  const nameEn = String(order?.hotel?.name_en || '').trim()
+  if (nameEn) return nameEn
+  const fallback = String(order?.hotel_name || order?.hotelName || '').trim()
+  if (fallback) return fallback
+  return `酒店 #${order?.hotel_id ?? '--'}`
+}
+
+const getHotelNameEn = (order) => {
+  const nameEn = String(order?.hotel?.name_en || '').trim()
+  if (nameEn) return nameEn
+  const fallback = String(order?.hotel_name_en || order?.hotelNameEn || '').trim()
+  return fallback
+}
+
+function OrderCard({ order, onPay, onDetail, index, animate = false }) {
   const statusText = statusTextMap[order?.status] || order?.status || '未知'
   const statusClass = statusClassMap[order?.status] || 'hotel-order-status-default'
-  const hotelName = order?.hotel?.name || `酒店 #${order?.hotel_id ?? '--'}`
-  const hotelNameEn = order?.hotel?.name_en || ''
+  const hotelName = getHotelName(order)
+  const hotelNameEn = getHotelNameEn(order)
   const stayNights = Math.max(Number(order?.nights) || 1, 1)
   const rooms = Math.max(Number(order?.quantity) || 1, 1)
   const nights = stayNights * rooms
@@ -40,8 +57,14 @@ function OrderCard({ order, onPay }) {
   const createdAt = formatDateTime(order?.created_at)
   const canPay = order?.status === 'pending_payment'
 
+  const delay = animate && Number.isFinite(index) ? `${Math.min(index, 10) * 20}ms` : '0ms'
+
   return (
-    <View className='hotel-order-card'>
+    <View
+      className={`hotel-order-card ${animate ? 'stagger-enter' : ''}`}
+      style={animate ? { animationDelay: delay } : undefined}
+      onClick={() => onDetail && onDetail(order)}
+    >
       <View className='hotel-order-top'>
         <View className='hotel-order-name-wrap'>
           <Text className='hotel-order-name'>{hotelName}</Text>
@@ -77,7 +100,13 @@ function OrderCard({ order, onPay }) {
         <View className='hotel-order-bottom-right'>
           <Text className='hotel-order-price'>¥{totalPrice}</Text>
           {canPay ? (
-            <View className='hotel-order-pay-btn' onClick={() => onPay && onPay(order)}>
+            <View
+              className='hotel-order-pay-btn'
+              onClick={(event) => {
+                event?.stopPropagation?.()
+                onPay && onPay(order)
+              }}
+            >
               <Text className='hotel-order-pay-text'>去支付</Text>
             </View>
           ) : null}

@@ -16,6 +16,8 @@ export default function FavoriteHotelList({ list = [], onOpen, onRemove }) {
             hotel={hotel}
             onOpen={onOpen}
             onRemove={onRemove}
+            index={index}
+            animate
           />
         ))}
       </View>

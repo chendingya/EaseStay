@@ -43,7 +43,14 @@ const getOrderTime = (order) => {
 
 const getOrderPrice = (order) => Number(order?.total_price) || 0
 
-const getOrderHotelName = (order) => String(order?.hotel?.name || '').trim()
+const getOrderHotelName = (order) => {
+  const name = String(order?.hotel?.name || '').trim()
+  if (name) return name
+  const nameEn = String(order?.hotel?.name_en || '').trim()
+  if (nameEn) return nameEn
+  const fallback = String(order?.hotel_name || order?.hotelName || '').trim()
+  return fallback
+}
 
 export default function Orders() {
   const router = useRouter()
@@ -185,7 +192,12 @@ export default function Orders() {
 
   useDidShow(() => {
     const token = Taro.getStorageSync('token')
-    setIsLogin(!!token)
+    const nextLogin = !!token
+    setIsLogin(nextLogin)
+    if (nextLogin) {
+      resetPagination()
+      loadOrders({ reset: true })
+    }
   })
 
   useEffect(() => {
@@ -204,8 +216,8 @@ export default function Orders() {
     setPullDistance(0)
   }
 
-  const handlePulling = (event) => {
-    const dy = Number(event?.detail?.dy) || 0
+  const handlePulling = (eventOrDy) => {
+    const dy = typeof eventOrDy === 'number' ? eventOrDy : (Number(eventOrDy?.detail?.dy) || 0)
     setPullDistance(dy > 0 ? dy : 0)
   }
 
@@ -246,6 +258,11 @@ export default function Orders() {
   const handlePayOrder = (order) => {
     if (!order?.id) return
     Taro.navigateTo({ url: `/pages/order-pay/index?id=${order.id}` })
+  }
+
+  const handleOpenDetail = (order) => {
+    if (!order?.id) return
+    Taro.navigateTo({ url: `/pages/order-detail/index?id=${order.id}` })
   }
 
   const pullLabel = refreshing
@@ -298,12 +315,15 @@ export default function Orders() {
             loading={loading}
             refreshing={refreshing}
             pullLabel={pullLabel}
+            pullDistance={pullDistance}
+            pullThreshold={pullThreshold}
             onLoadMore={loadOrders}
             onRefresh={handleRefresh}
             onPulling={handlePulling}
             onPullEnd={handlePullEnd}
             onScrollChange={handleScrollChange}
             onPay={handlePayOrder}
+            onDetail={handleOpenDetail}
           />
         </View>
       )}
