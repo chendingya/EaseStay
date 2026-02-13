@@ -96,7 +96,7 @@ export default function Account() {
 
       {isLogin && (
         <View className='logout-container'>
-          <GlassButton block tone='danger' size='large' onClick={handleLogout}>
+          <GlassButton block tone='danger' fill='outline' size='large' onClick={handleLogout}>
             退出登录
           </GlassButton>
         </View>

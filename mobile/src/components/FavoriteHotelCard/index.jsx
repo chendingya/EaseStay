@@ -87,7 +87,7 @@ export default function FavoriteHotelCard({ hotel, onOpen, onRemove, index, anim
       </View>
 
       <View className='favorite-hotel-actions'>
-        <GlassButton tone='danger' size='small' onClick={() => onRemove && onRemove(hotel?.id)}>
+        <GlassButton tone='danger' fill='outline' size='small' onClick={() => onRemove && onRemove(hotel?.id)}>
           取消收藏
         </GlassButton>
       </View>

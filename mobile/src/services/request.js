@@ -1,6 +1,6 @@
 import Taro from '@tarojs/taro'
 
-const apiBase = (typeof process !== 'undefined' && process.env && process.env.TARO_APP_API_BASE) || 'http://192.168.50.202:4100'
+const apiBase = (typeof process !== 'undefined' && process.env && process.env.TARO_APP_API_BASE) || 'http://127.0.0.1:4100'
 
 const request = async (options) => {
   const token = Taro.getStorageSync('token')

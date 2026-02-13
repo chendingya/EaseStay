@@ -504,6 +504,7 @@ export default function Detail() {
               </View>
               <GlassButton
                 tone='primary'
+                fill='solid'
                 size='large'
                 loading={isBooking}
                 className='main-book-btn'
