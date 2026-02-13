@@ -176,6 +176,7 @@ export default function AdminHotelDetail() {
   // Columns definitions
   const roomColumns = [
     { title: '房型名称', dataIndex: 'name', key: 'name' },
+    { title: '状态', dataIndex: 'is_active', key: 'is_active', width: 80, render: (active) => active === false ? <Tag color="default">已下架</Tag> : <Tag color="green">已上架</Tag> },
     { title: '可住', dataIndex: 'capacity', key: 'capacity', width: 80, render: (v) => v ? `${v}人` : '-' },
     { title: '床宽', dataIndex: 'bed_width', key: 'bed_width', width: 80, render: (v) => v ? `${v}cm` : '-' },
     { title: '面积', dataIndex: 'area', key: 'area', width: 80, render: (v) => v ? `${v}㎡` : '-' },

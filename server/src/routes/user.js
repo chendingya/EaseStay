@@ -14,6 +14,8 @@ router.get('/me', authRequired, userController.getCurrentUser)
 router.get('/orders', authRequired, userController.getMyOrders)
 router.get('/orders/:id', authRequired, userController.getMyOrderDetail)
 router.post('/orders/:id/pay', authRequired, userController.payOrder)
+router.post('/orders/:id/cancel', authRequired, userController.cancelOrder)
+router.post('/orders/:id/use', authRequired, userController.useOrder)
 
 // 修改密码
 router.post('/change-password', authRequired, userController.changePassword)

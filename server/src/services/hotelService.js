@@ -717,6 +717,7 @@ const createHotel = async ({ merchantId, payload }) => {
         ceiling_height: room.ceiling_height !== undefined ? Number(room.ceiling_height) || 0 : undefined,
         wifi: room.wifi !== undefined ? !!room.wifi : undefined,
         breakfast_included: room.breakfast_included !== undefined ? !!room.breakfast_included : undefined,
+        images: normalizeArray(room.images),
         is_active: true
       }))
 
@@ -849,6 +850,7 @@ const updateHotel = async ({ merchantId, hotelId, payload }) => {
         ceiling_height: room.ceiling_height !== undefined ? Number(room.ceiling_height) || 0 : undefined,
         wifi: room.wifi !== undefined ? !!room.wifi : undefined,
         breakfast_included: room.breakfast_included !== undefined ? !!room.breakfast_included : undefined,
+        images: normalizeArray(room.images),
         is_active: room.is_active !== undefined ? !!room.is_active : undefined
       }))
 

@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS room_types (
   discount_rate DECIMAL,
   discount_quota INT DEFAULT 0,
   discount_periods JSONB DEFAULT '[]',
+  images JSONB DEFAULT '[]',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -336,6 +337,7 @@ ALTER TABLE requests ADD CONSTRAINT requests_type_check
 
 ALTER TABLE room_types ADD COLUMN IF NOT EXISTS discount_periods JSONB DEFAULT '[]';
 ALTER TABLE room_types ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
+ALTER TABLE room_types ADD COLUMN IF NOT EXISTS images JSONB DEFAULT '[]';
 ALTER TABLE room_types ADD COLUMN IF NOT EXISTS capacity INT DEFAULT 2;
 ALTER TABLE room_types ADD COLUMN IF NOT EXISTS bed_width INT DEFAULT 180;
 ALTER TABLE room_types ADD COLUMN IF NOT EXISTS area DECIMAL(10, 2) DEFAULT 20;

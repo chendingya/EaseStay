@@ -221,6 +221,96 @@ async function payOrder(req, res) {
   }
 }
 
+async function cancelOrder(req, res) {
+  const id = Number(req.params.id)
+  if (!Number.isFinite(id)) {
+    return res.status(400).json({ message: '订单ID不合法' })
+  }
+
+  try {
+    const { data: order, error: findError } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .single()
+
+    if (findError || !order) {
+      return res.status(404).json({ message: '订单不存在' })
+    }
+
+    if (order.status !== 'confirmed') {
+      return res.status(400).json({ message: '当前订单不可取消' })
+    }
+
+    const { data: updated, error: updateError } = await supabase
+      .from('orders')
+      .update({
+        status: 'cancelled',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .select('*')
+      .single()
+
+    if (updateError || !updated) {
+      return res.status(500).json({ message: '取消失败：' + (updateError?.message || '更新失败') })
+    }
+
+    const hotelMap = await buildHotelMapByOrders([updated])
+    res.json(enrichOrder(updated, hotelMap))
+  } catch (err) {
+    console.error('取消订单失败:', err)
+    res.status(500).json({ message: '服务器错误' })
+  }
+}
+
+async function useOrder(req, res) {
+  const id = Number(req.params.id)
+  if (!Number.isFinite(id)) {
+    return res.status(400).json({ message: '订单ID不合法' })
+  }
+
+  try {
+    const { data: order, error: findError } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .single()
+
+    if (findError || !order) {
+      return res.status(404).json({ message: '订单不存在' })
+    }
+
+    if (order.status !== 'confirmed') {
+      return res.status(400).json({ message: '当前订单不可使用' })
+    }
+
+    const { data: updated, error: updateError } = await supabase
+      .from('orders')
+      .update({
+        status: 'finished',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .select('*')
+      .single()
+
+    if (updateError || !updated) {
+      return res.status(500).json({ message: '使用失败：' + (updateError?.message || '更新失败') })
+    }
+
+    const hotelMap = await buildHotelMapByOrders([updated])
+    res.json(enrichOrder(updated, hotelMap))
+  } catch (err) {
+    console.error('使用订单失败:', err)
+    res.status(500).json({ message: '服务器错误' })
+  }
+}
+
 /**
  * 获取所有商户列表（仅管理员）
  */
@@ -348,6 +438,8 @@ module.exports = {
   getMyOrders,
   getMyOrderDetail,
   payOrder,
+  cancelOrder,
+  useOrder,
   getMerchants,
   getMerchantDetail,
   resetMerchantPassword

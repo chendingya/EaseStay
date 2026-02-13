@@ -4,6 +4,8 @@ const { applyPromotionsToRooms } = require('./hotelService')
 
 const allowedRequestTypes = ['facility', 'room_type', 'promotion', 'hotel_delete']
 
+const normalizeArray = (val) => Array.isArray(val) ? val.filter((item) => item !== undefined && item !== null) : []
+
 const createRequest = async ({ merchantId, hotelId, type, name, data }) => {
   if (!type) {
     return { ok: false, status: 400, message: 'type 为必填项' }
@@ -279,7 +281,8 @@ const reviewRequest = async ({ requestId, action, rejectReason }) => {
             area: request.data?.area,
             ceiling_height: request.data?.ceiling_height,
             wifi: request.data?.wifi,
-            breakfast_included: request.data?.breakfast_included
+            breakfast_included: request.data?.breakfast_included,
+            images: normalizeArray(request.data?.images)
           })
       } else if (request.type === 'promotion') {
         const promotions = hotel.promotions || []

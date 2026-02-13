@@ -552,6 +552,12 @@ Query：page、pageSize、status（可选）
 ```
 响应：订单状态更新为 `confirmed`，并写入 `paid_at`
 
+#### POST /api/user/orders/:id/cancel
+响应：订单状态更新为 `cancelled`
+
+#### POST /api/user/orders/:id/use
+响应：订单状态更新为 `finished`
+
 #### GET /api/user/merchants
 响应：商户列表（管理员）
 
@@ -667,6 +673,7 @@ Query：page、pageSize、status（可选）
 - `pages/orders`：顶部栏 + 状态分段 + 订单列表，支持筛选弹层（关键词、金额排序、时间排序）
 - `components/OrderList`：ScrollView + 下拉刷新 + 上拉加载 + 骨架屏
 - `components/OrderCard`：展示酒店名、房型、入住离店、间夜、订单号、价格；待付款订单展示“去支付”
+- `pages/order-detail`：订单详情页，待使用订单可取消/确认使用，完成后状态刷新
 - `pages/order-pay`：订单详情确认、支付渠道选择、模拟支付后回到订单页“待使用”
 
 ### 11.3 收藏页

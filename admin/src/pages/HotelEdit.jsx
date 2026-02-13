@@ -261,7 +261,7 @@ function FacilitySelector({ value = [], onChange, pendingRequests = [], approved
 // ========== 房型管理组件 ==========
 function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedRequests = [], onRequestNew, onReuseApproved, presetRoomTypes = [] }) {
   const [showPresets, setShowPresets] = useState(false)
-  const [customRoom, setCustomRoom] = useState({ name: '', price: 0, stock: 10, capacity: 2, bed_width: 180, area: 20, ceiling_height: 2.8, wifi: true, breakfast_included: false })
+  const [customRoom, setCustomRoom] = useState({ name: '', price: 0, stock: 10, capacity: 2, bed_width: 180, area: 20, ceiling_height: 2.8, wifi: true, breakfast_included: false, images: [] })
   const [showCustomInput, setShowCustomInput] = useState(false)
   const safeValue = Array.isArray(value) ? value : []
 
@@ -276,6 +276,7 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
       ceiling_height: preset.ceiling_height ?? 2.8,
       wifi: preset.wifi ?? true,
       breakfast_included: preset.breakfast_included ?? false,
+      images: [],
       is_active: true
     }
     const nextValue = [...safeValue, nextRoom]
@@ -350,6 +351,7 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
       ceiling_height: Number(customRoom.ceiling_height) || 0,
       wifi: !!customRoom.wifi,
       breakfast_included: !!customRoom.breakfast_included,
+      images: Array.isArray(customRoom.images) ? customRoom.images : [],
       is_active: true
     }
     const existingIndex = safeValue.findIndex((room) => room && room.name === nextRoom.name)
@@ -361,7 +363,7 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
       onChange?.([...safeValue, nextRoom])
     }
     onRequestNew?.(nextRoom)
-    setCustomRoom({ name: '', price: 0, stock: 10, capacity: 2, bed_width: 180, area: 20, ceiling_height: 2.8, wifi: true, breakfast_included: false })
+    setCustomRoom({ name: '', price: 0, stock: 10, capacity: 2, bed_width: 180, area: 20, ceiling_height: 2.8, wifi: true, breakfast_included: false, images: [] })
     setShowCustomInput(false)
     message.success('已提交申请，等待管理员审核')
   }
@@ -435,6 +437,12 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
                 <Typography.Text type="secondary" style={{ fontSize: 12 }}>早餐</Typography.Text>
                 <div style={{ marginTop: 6 }}><Checkbox checked={(room.breakfast_included ?? false) === true} onChange={(e) => handleChange(index, 'breakfast_included', e.target.checked)}>含早餐</Checkbox></div>
               </Col>
+              <Col flex="100%">
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>房型图片</Typography.Text>
+                <div style={{ marginTop: 6 }}>
+                  <ImageUploader value={room.images || []} onChange={(val) => handleChange(index, 'images', val)} />
+                </div>
+              </Col>
             </Row>
           </Card>
         )
@@ -454,13 +462,15 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
               const ceiling = req.data?.ceiling_height
               const wifi = req.data?.wifi
               const breakfast = req.data?.breakfast_included
+              const images = Array.isArray(req.data?.images) ? req.data?.images : []
               const detailParts = [
                 capacity ? `${capacity}人` : null,
                 bedWidth ? `${bedWidth}cm` : null,
                 area ? `${area}㎡` : null,
                 ceiling ? `${ceiling}m` : null,
                 wifi === true ? 'WiFi' : wifi === false ? '无WiFi' : null,
-                breakfast === true ? '含早' : breakfast === false ? '无早' : null
+                breakfast === true ? '含早' : breakfast === false ? '无早' : null,
+                images.length ? `图片${images.length}张` : null
               ].filter(Boolean)
               return (
                 <div key={`${req.id || req.name}-${idx}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -468,7 +478,7 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
                     <Tag color={exists ? 'default' : 'green'} style={{ marginRight: 8 }}>{req.name}</Tag>
                     <span style={{ color: '#999' }}>¥{price} / 库存 {stock}{detailParts.length ? ` / ${detailParts.join(' · ')}` : ''}</span>
                   </div>
-                  <GlassButton size="small" onClick={() => onReuseApproved?.(req, exists ? 'remove' : 'add')}>
+                    <GlassButton size="small" onClick={() => onReuseApproved?.(req, exists ? 'remove' : 'add')}>
                     {exists ? '撤销' : '添加'}
                   </GlassButton>
                 </div>
@@ -540,6 +550,12 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
             <Col flex="140px">
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>早餐</Typography.Text>
               <div style={{ marginTop: 6 }}><Checkbox checked={!!customRoom.breakfast_included} onChange={(e) => setCustomRoom({ ...customRoom, breakfast_included: e.target.checked })}>含早餐</Checkbox></div>
+            </Col>
+            <Col flex="100%">
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>房型图片</Typography.Text>
+              <div style={{ marginTop: 6 }}>
+                <ImageUploader value={customRoom.images || []} onChange={(val) => setCustomRoom({ ...customRoom, images: val })} />
+              </div>
             </Col>
             <Col flex="220px" style={{ display: 'flex', alignItems: 'flex-end' }}>
               <Space>
@@ -1146,7 +1162,8 @@ export default function HotelEdit() {
           area: room.area,
           ceiling_height: room.ceiling_height,
           wifi: room.wifi,
-          breakfast_included: room.breakfast_included
+          breakfast_included: room.breakfast_included,
+          images: Array.isArray(room.images) ? room.images : []
         }
       })
       setPendingRoomTypes([...pendingRoomTypes, { ...room, status: 'pending' }])
@@ -1212,7 +1229,8 @@ export default function HotelEdit() {
           area: req.data?.area,
           ceiling_height: req.data?.ceiling_height,
           wifi: req.data?.wifi,
-          breakfast_included: req.data?.breakfast_included
+            breakfast_included: req.data?.breakfast_included,
+            images: Array.isArray(req.data?.images) ? req.data?.images : []
         }]
       })
       handleFormChange()

@@ -56,7 +56,8 @@ module.exports = {
           hotel_id: { type: 'number' },
           name: { type: 'string' },
           price: { type: 'number' },
-          stock: { type: 'number' }
+          stock: { type: 'number' },
+          images: { type: 'array', items: { type: 'string' } }
         }
       },
       Promotion: {
