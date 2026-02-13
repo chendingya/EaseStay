@@ -5,6 +5,7 @@ import { List, Button, Avatar, Toast } from 'antd-mobile'
 import { UserOutline } from 'antd-mobile-icons'
 import { getCurrentUser } from '../../services/auth'
 import PageTopBar from '../../components/PageTopBar'
+import GlassButton from '../../components/GlassButton'
 import './index.css'
 
 export default function Account() {
@@ -95,9 +96,9 @@ export default function Account() {
 
       {isLogin && (
         <View className='logout-container'>
-          <Button block color='danger' onClick={handleLogout}>
+          <GlassButton block tone='danger' size='large' onClick={handleLogout}>
             退出登录
-          </Button>
+          </GlassButton>
         </View>
       )}
     </View>

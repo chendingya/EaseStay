@@ -514,22 +514,7 @@
 }
 
 .main-book-btn {
-  background: linear-gradient(135deg, #f5222d, #ff4d4f);
-  padding: 10px 28px;
-  border-radius: 22px;
-  transition: transform 0.18s ease, opacity 0.18s ease;
-}
-
-.main-book-btn.loading {
-  opacity: 0.75;
-  transform: scale(0.98);
-  pointer-events: none;
-}
-
-.main-book-text {
-  color: #fff;
-  font-size: 15px;
-  font-weight: 600;
+  min-width: 112px;
 }
 
 /* 加载和错误状态 */

@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { api } from '../../services/request'
 import { isFavoriteHotel, toggleFavoriteHotel } from '../../services/favorites'
 import PageTopBar from '../../components/PageTopBar'
+import GlassButton from '../../components/GlassButton'
 import './index.css'
 
 // 默认设施
@@ -501,16 +502,19 @@ export default function Detail() {
                 <Text className="price-value">{minRoomPrice}</Text>
                 <Text className="price-suffix">起</Text>
               </View>
-              <View
-                className={`main-book-btn ${isBooking ? 'loading' : ''}`}
+              <GlassButton
+                tone='primary'
+                size='large'
+                loading={isBooking}
+                className='main-book-btn'
                 onClick={() => {
                   if (!isBooking) {
                     handleBook(roomTypes[0])
                   }
                 }}
               >
-                <Text className="main-book-text">{isBooking ? '处理中...' : '立即预订'}</Text>
-              </View>
+                立即预订
+              </GlassButton>
             </>
           ) : (
             <View className="price-info" style={{ width: '100%', justifyContent: 'flex-end' }}>

@@ -1,0 +1,78 @@
+.glass-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(215, 225, 240, 0.9);
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 6px 16px rgba(23, 42, 68, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+.glass-button-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: #42556f;
+}
+
+.glass-button-default {
+  border-color: rgba(215, 225, 240, 0.9);
+  background: rgba(245, 248, 252, 0.75);
+}
+
+.glass-button-default .glass-button-text {
+  color: #42556f;
+}
+
+.glass-button-primary {
+  border-color: rgba(182, 213, 255, 0.9);
+  background: rgba(236, 245, 255, 0.75);
+}
+
+.glass-button-primary .glass-button-text {
+  color: #1677ff;
+}
+
+.glass-button-danger {
+  border-color: rgba(255, 204, 208, 0.9);
+  background: rgba(255, 245, 246, 0.75);
+}
+
+.glass-button-danger .glass-button-text {
+  color: #de3f45;
+}
+
+.glass-button-small {
+  height: 28px;
+  padding: 0 12px;
+}
+
+.glass-button-small .glass-button-text {
+  font-size: 12px;
+}
+
+.glass-button-medium {
+  height: 32px;
+}
+
+.glass-button-large {
+  height: 36px;
+  padding: 0 18px;
+}
+
+.glass-button-large .glass-button-text {
+  font-size: 14px;
+}
+
+.glass-button-block {
+  width: 100%;
+}
+
+.glass-button-disabled {
+  opacity: 0.7;
+  transform: scale(0.98);
+  pointer-events: none;
+}

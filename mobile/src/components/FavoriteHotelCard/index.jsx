@@ -1,5 +1,6 @@
 import { View, Text, Image } from '@tarojs/components'
 import { RightOutline } from 'antd-mobile-icons'
+import GlassButton from '../GlassButton'
 import './index.css'
 
 const formatSavedAt = (value) => {
@@ -86,9 +87,9 @@ export default function FavoriteHotelCard({ hotel, onOpen, onRemove, index, anim
       </View>
 
       <View className='favorite-hotel-actions'>
-        <View className='favorite-hotel-remove-btn' onClick={() => onRemove && onRemove(hotel?.id)}>
-          <Text className='favorite-hotel-remove-text'>取消收藏</Text>
-        </View>
+        <GlassButton tone='danger' size='small' onClick={() => onRemove && onRemove(hotel?.id)}>
+          取消收藏
+        </GlassButton>
       </View>
     </View>
   )
