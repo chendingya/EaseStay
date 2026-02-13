@@ -1,0 +1,131 @@
+.order-detail-page {
+  min-height: calc(100vh - 58px);
+  background: #f5f7fb;
+}
+
+.order-detail-content {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.order-detail-card {
+  background: #fff;
+  border: 1px solid #e6edf5;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.order-detail-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.order-detail-title {
+  display: block;
+  color: #1f2f42;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.order-detail-status {
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 600;
+  padding: 5px 8px;
+  border-radius: 999px;
+}
+
+.order-detail-status-pending-payment {
+  color: #d06a00;
+  background: rgba(208, 106, 0, 0.12);
+}
+
+.order-detail-status-pending-use {
+  color: #145ee2;
+  background: rgba(20, 94, 226, 0.12);
+}
+
+.order-detail-status-completed {
+  color: #2c8b14;
+  background: rgba(44, 139, 20, 0.13);
+}
+
+.order-detail-status-cancelled {
+  color: #c12c44;
+  background: rgba(193, 44, 68, 0.11);
+}
+
+.order-detail-status-default {
+  color: #6a778a;
+  background: #eef2f7;
+}
+
+.order-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  gap: 8px;
+}
+
+.order-detail-label {
+  color: #7d8ba0;
+  font-size: 12px;
+}
+
+.order-detail-value {
+  color: #273447;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: right;
+}
+
+.order-detail-divider {
+  margin-top: 10px;
+  height: 1px;
+  background: #eef3f8;
+}
+
+.order-detail-amount {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.order-detail-amount-label {
+  color: #667892;
+  font-size: 12px;
+}
+
+.order-detail-amount-value {
+  color: #e53935;
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.order-detail-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.order-detail-actions .adm-button {
+  flex: 1;
+}
+
+.order-detail-loading {
+  margin: 12px;
+  background: #fff;
+  border: 1px solid #e6edf5;
+  border-radius: 14px;
+  padding: 20px;
+  text-align: center;
+  color: #7d8ba0;
+  font-size: 12px;
+}

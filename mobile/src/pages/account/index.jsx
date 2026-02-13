@@ -4,6 +4,7 @@ import { View } from '@tarojs/components'
 import { List, Button, Avatar, Toast } from 'antd-mobile'
 import { UserOutline } from 'antd-mobile-icons'
 import { getCurrentUser } from '../../services/auth'
+import PageTopBar from '../../components/PageTopBar'
 import './index.css'
 
 export default function Account() {
@@ -67,6 +68,7 @@ export default function Account() {
 
   return (
     <View className='account-page'>
+      <PageTopBar title='我的' />
       <View className='header'>
         <View className='avatar-container'>
           <Avatar src='' style={{ '--size': '64px', '--border-radius': '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} fallback={<UserOutline fontSize={40} />} />

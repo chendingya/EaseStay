@@ -9,7 +9,11 @@ export default function PageTopBar({
   onBack,
   rightActions = [],
   showBack = true,
+  transparent = false,
+  fixed = false,
   elevated = false,
+  titleStyle,
+  titleClassName = '',
   children
 }) {
   const handleBack = () => {
@@ -26,8 +30,15 @@ export default function PageTopBar({
     Taro.reLaunch({ url: '/pages/index/index' })
   }
 
+  const wrapperClassName = [
+    'page-top-bar',
+    elevated ? 'elevated' : '',
+    transparent ? 'transparent' : '',
+    fixed ? 'fixed' : ''
+  ].filter(Boolean).join(' ')
+
   return (
-    <View className={`page-top-bar ${elevated ? 'elevated' : ''}`}>
+    <View className={wrapperClassName}>
       <NavBar
         backArrow={false}
         className='page-top-bar-navbar'
@@ -50,7 +61,9 @@ export default function PageTopBar({
           </View>
         )}
       >
-        <Text className='page-top-bar-title'>{title}</Text>
+        <Text className={`page-top-bar-title ${titleClassName}`} style={titleStyle}>
+          {title}
+        </Text>
       </NavBar>
       {children ? (
         <View className='page-top-bar-extra'>

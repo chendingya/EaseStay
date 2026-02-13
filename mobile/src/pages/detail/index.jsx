@@ -4,6 +4,7 @@ import Taro from '@tarojs/taro'
 import { useState, useEffect } from 'react'
 import { api } from '../../services/request'
 import { isFavoriteHotel, toggleFavoriteHotel } from '../../services/favorites'
+import PageTopBar from '../../components/PageTopBar'
 import './index.css'
 
 // 默认设施
@@ -69,10 +70,6 @@ export default function Detail() {
     // 滚动 100px 内渐变显示导航栏背景
     const opacity = Math.min(scrollTop / 100, 1)
     setNavOpacity(opacity)
-  }
-
-  const handleBack = () => {
-    Taro.navigateBack()
   }
 
   const handleBook = async (room) => {
@@ -211,23 +208,30 @@ export default function Detail() {
     return meta.length > 0 ? meta.join(' · ') : '以酒店实际安排为准'
   }
 
+  const isBooking = Boolean(bookingRoomId)
+
   return (
     <View className="detail-page">
-      {/* 透明渐变导航栏 */}
-      <View className="nav-bar" style={{ background: `rgba(255,255,255,${navOpacity})` }}>
-        <View className="nav-back" onClick={handleBack}>
-          <Text className="nav-icon">←</Text>
-        </View>
-        <Text className="nav-title" style={{ opacity: navOpacity }}>{hotel.name}</Text>
-        <View className="nav-actions">
-          <View className="nav-btn" onClick={handleShare}>
-            <Text className="nav-icon">↗</Text>
-          </View>
-          <View className="nav-btn" onClick={handleCollect}>
-            <Text className="nav-icon">{collected ? '♥' : '♡'}</Text>
-          </View>
-        </View>
-      </View>
+      <PageTopBar
+        title={hotel.name}
+        transparent
+        fixed
+        elevated={navOpacity >= 0.6}
+        titleStyle={{ opacity: navOpacity }}
+        rightActions={[
+          {
+            key: 'share',
+            icon: <Text className="detail-top-action-text">↗</Text>,
+            onClick: handleShare
+          },
+          {
+            key: 'collect',
+            icon: <Text className="detail-top-action-text">{collected ? '♥' : '♡'}</Text>,
+            onClick: handleCollect,
+            active: collected
+          }
+        ]}
+      />
 
       <ScrollView 
         className="detail-scroll" 
@@ -394,9 +398,13 @@ export default function Detail() {
                 })()}
                 <View 
                   className={`book-btn ${bookingRoomId === room.id ? 'loading' : ''}`}
-                  onClick={() => handleBook(room)}
+                  onClick={() => {
+                    if (bookingRoomId !== room.id) {
+                      handleBook(room)
+                    }
+                  }}
                 >
-                  {bookingRoomId === room.id ? '...' : '预订'}
+                  {bookingRoomId === room.id ? '预订中' : '预订'}
                 </View>
               </View>
             </View>
@@ -493,8 +501,15 @@ export default function Detail() {
                 <Text className="price-value">{minRoomPrice}</Text>
                 <Text className="price-suffix">起</Text>
               </View>
-              <View className="main-book-btn" onClick={() => handleBook(roomTypes[0])}>
-                <Text className="main-book-text">立即预订</Text>
+              <View
+                className={`main-book-btn ${isBooking ? 'loading' : ''}`}
+                onClick={() => {
+                  if (!isBooking) {
+                    handleBook(roomTypes[0])
+                  }
+                }}
+              >
+                <Text className="main-book-text">{isBooking ? '处理中...' : '立即预订'}</Text>
               </View>
             </>
           ) : (
