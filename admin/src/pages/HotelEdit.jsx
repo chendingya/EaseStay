@@ -275,7 +275,8 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
       area: preset.area ?? 20,
       ceiling_height: preset.ceiling_height ?? 2.8,
       wifi: preset.wifi ?? true,
-      breakfast_included: preset.breakfast_included ?? false
+      breakfast_included: preset.breakfast_included ?? false,
+      is_active: true
     }
     const nextValue = [...safeValue, nextRoom]
     console.log('[RoomType][PresetAdd]', { preset, nextRoom, nextValue })
@@ -283,7 +284,52 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
     message.success(`已添加${preset.name}`)
   }
 
-  const handleRemove = (index) => onChange?.(safeValue.filter((_, idx) => idx !== index))
+  const handleDeactivate = (index) => {
+    const room = safeValue[index] || {}
+    const stock = Number(room.stock) || 0
+    const used = Number(room.used_stock) || 0
+    const active = room.is_active !== false
+    const available = active ? Math.max(stock - used, 0) : 0
+    const roomName = room.name || `房型 ${index + 1}`
+    const hasOrders = room.has_orders === true
+    const isPersisted = !!room.id
+    const actionText = isPersisted ? '下架' : '删除'
+    Modal.confirm({
+      title: `确认${actionText} ${roomName}？`,
+      content: (
+        <div style={{ marginTop: 8 }}>
+          <Typography.Text type="secondary">操作仅在保存时生效。</Typography.Text>
+          <div style={{ marginTop: 8 }}>
+            <Typography.Text type="secondary">
+              {hasOrders ? '该房型已有订单，将标记为下架，库存总数不变。' : '将标记为下架，库存总数不变。'}
+            </Typography.Text>
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <Typography.Text type="secondary">库存 {stock} · 已用 {used} · 可售 {available}</Typography.Text>
+          </div>
+        </div>
+      ),
+      okText: actionText,
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk() {
+        if (isPersisted) {
+          const nextValue = [...safeValue]
+          nextValue[index] = { ...room, is_active: false }
+          onChange?.(nextValue)
+          return
+        }
+        onChange?.(safeValue.filter((_, idx) => idx !== index))
+      }
+    })
+  }
+
+  const handleRestore = (index) => {
+    const room = safeValue[index] || {}
+    const nextValue = [...safeValue]
+    nextValue[index] = { ...room, is_active: true }
+    onChange?.(nextValue)
+  }
 
   const handleChange = (index, field, val) => {
     const newValue = [...safeValue]
@@ -303,7 +349,8 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
       area: Number(customRoom.area) || 0,
       ceiling_height: Number(customRoom.ceiling_height) || 0,
       wifi: !!customRoom.wifi,
-      breakfast_included: !!customRoom.breakfast_included
+      breakfast_included: !!customRoom.breakfast_included,
+      is_active: true
     }
     const existingIndex = safeValue.findIndex((room) => room && room.name === nextRoom.name)
     if (existingIndex >= 0) {
@@ -322,6 +369,10 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 12 }}>
       {safeValue.map((room, index) => {
+        const stock = Number(room.stock) || 0
+        const used = Number(room.used_stock) || 0
+        const active = room.is_active !== false
+        const available = active ? Math.max(stock - used, 0) : 0
         const summaryParts = [
           (room.capacity ?? 2) ? `${room.capacity ?? 2}人` : null,
           (room.bed_width ?? 180) ? `${room.bed_width ?? 180}cm` : null,
@@ -335,9 +386,17 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Tag color="purple" style={{ margin: 0 }}>房型 {index + 1}</Tag>
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>{summaryParts.join(' · ')}</Typography.Text>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  {summaryParts.join(' · ')} · 库存 {stock} · 已用 {used} · 可售 {available}
+                </Typography.Text>
+                {!active && <Tag color="default">已下架</Tag>}
               </div>
-              <GlassButton type="link" danger icon={<DeleteOutlined />} onClick={() => handleRemove(index)}>删除</GlassButton>
+              <Space size={4}>
+                {!active && <GlassButton type="link" onClick={() => handleRestore(index)}>恢复上架</GlassButton>}
+                <GlassButton type="link" danger icon={<DeleteOutlined />} onClick={() => handleDeactivate(index)}>
+                  {room.id ? '下架' : '删除'}
+                </GlassButton>
+              </Space>
             </div>
             <Row gutter={[12, 12]}>
               <Col flex="220px">

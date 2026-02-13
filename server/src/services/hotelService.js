@@ -1,5 +1,11 @@
 const supabase = require('../config/supabase')
 const { sendNotification, NotificationTemplates } = require('./notificationService')
+const {
+  formatDateOnly,
+  getActiveOrderQtyMap,
+  computeRoomAvailability,
+  roundToTwo
+} = require('./roomAvailabilityService')
 
 const normalizeArray = (value) => (Array.isArray(value) ? value : [])
 const normalizeNumber = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0)
@@ -58,7 +64,7 @@ const getLowestPrices = async (hotelIds) => {
 
   const { data: roomTypes } = await supabase
     .from('room_types')
-    .select('hotel_id, price, discount_rate, discount_quota, discount_periods')
+    .select('id, hotel_id, price, discount_rate, discount_quota, discount_periods, stock, is_active')
     .in('hotel_id', hotelIds)
 
   const { data: hotels } = await supabase
@@ -76,8 +82,22 @@ const getLowestPrices = async (hotelIds) => {
     priceMap[id] = null
   })
 
+  let usedMap = new Map()
+  if (roomTypes && roomTypes.length) {
+    const roomTypeIds = roomTypes.map((room) => room.id).filter((id) => Number.isFinite(Number(id)))
+    const usedResult = await getActiveOrderQtyMap({ roomTypeIds, asOfDate: new Date() })
+    if (usedResult.ok) {
+      usedMap = usedResult.map
+    }
+  }
+
   if (roomTypes) {
     roomTypes.forEach((room) => {
+      const active = room.is_active !== false
+      const stock = normalizeNumber(room.stock)
+      const used = usedMap.get(room.id) || 0
+      const available = computeRoomAvailability({ stock, used, isActive: active }).available
+      if (available <= 0) return
       const base = Number(room.price) || 0
       const promos = hotelPromoMap[room.hotel_id] || []
       let finalPrice = applyPromotions(base, promos)
@@ -119,14 +139,20 @@ const getRoomTypeStatsByHotelIds = async (hotelIds) => {
     return { ok: false, status: 500, message: '获取房型统计失败：' + error.message }
   }
 
+  const roomTypeIds = (roomTypes || []).map((room) => room.id).filter((id) => Number.isFinite(Number(id)))
+  const usedResult = await getActiveOrderQtyMap({ roomTypeIds, asOfDate: new Date() })
+  if (!usedResult.ok) {
+    return { ok: false, status: 500, message: usedResult.message }
+  }
+
   const statsMap = {}
 
   ;(roomTypes || []).forEach((room) => {
     const name = room.name || '未知房型'
     const stock = normalizeNumber(room.stock)
-    const used = normalizeNumber(room.used_stock)
-    const offline = normalizeNumber(room.offline_stock)
-    const available = Math.max(stock - used - offline, 0)
+    const used = usedResult.map.get(room.id) || 0
+    const active = room.is_active !== false
+    const { available, offline } = computeRoomAvailability({ stock, used, isActive: active })
 
     if (!statsMap[name]) {
       statsMap[name] = { name, stock: 0, used: 0, offline: 0, available: 0 }
@@ -177,18 +203,23 @@ const batchSetRoomDiscount = async ({ hotelIds, roomTypeName, quantity, discount
     return { ok: false, status: 500, message: '批量折扣失败：' + error.message }
   }
 
+  const roomTypeIds = (roomTypes || []).map((room) => room.id).filter((id) => Number.isFinite(Number(id)))
+  const usedResult = await getActiveOrderQtyMap({ roomTypeIds, asOfDate: new Date() })
+  if (!usedResult.ok) {
+    return { ok: false, status: 500, message: usedResult.message }
+  }
+
   const isCancel = normalizedDiscount === 0
   const updates = await Promise.all(
     (roomTypes || []).map(async (room) => {
-      // 检查减免金额是否超过原价
       if (normalizedDiscount < 0 && Math.abs(normalizedDiscount) > normalizeNumber(room.price)) {
         return { ok: false, message: '减免金额不能大于房型原价' }
       }
 
       const stock = normalizeNumber(room.stock)
-      const used = normalizeNumber(room.used_stock)
-      const offline = normalizeNumber(room.offline_stock)
-      const available = Math.max(stock - used - offline, 0)
+      const used = usedResult.map.get(room.id) || 0
+      const active = room.is_active !== false
+      const available = computeRoomAvailability({ stock, used, isActive: active }).available
       const quota = isCancel ? 0 : (normalizedQuantity > 0 ? Math.min(normalizedQuantity, available) : 0)
 
       const { data: updated, error: updateError } = await supabase
@@ -246,21 +277,22 @@ const batchRoomOperation = async ({ hotelIds, roomTypeName, action, quantity, st
     return { ok: false, status: 500, message: '批量房型操作失败：' + error.message }
   }
 
+  const roomTypeIdsForUpdate = (roomTypes || []).map((room) => room.id).filter((id) => Number.isFinite(Number(id)))
+  const today = formatDateOnly(new Date())
+  const usedResultForUpdate = await getActiveOrderQtyMap({ roomTypeIds: roomTypeIdsForUpdate, checkIn: today, checkOut: '9999-12-31' })
+  if (!usedResultForUpdate.ok) {
+    return { ok: false, status: 500, message: usedResultForUpdate.message }
+  }
+
   const results = await Promise.all(
     (roomTypes || []).map(async (room) => {
       const currentStock = normalizeNumber(room.stock)
-      const used = normalizeNumber(room.used_stock)
-      const offline = normalizeNumber(room.offline_stock)
+      const used = usedResultForUpdate.map.get(room.id) || 0
 
       if (action === 'offline') {
-        const offlineQty = Math.max(normalizeNumber(quantity), 0)
-        const maxAvailable = Math.max(currentStock - used - offline, 0)
-        const applyQty = Math.min(offlineQty, maxAvailable)
-        const nextOffline = offline + applyQty
-
         const { data: updated, error: updateError } = await supabase
           .from('room_types')
-          .update({ offline_stock: nextOffline })
+          .update({ is_active: false })
           .eq('id', room.id)
           .select()
           .single()
@@ -275,11 +307,10 @@ const batchRoomOperation = async ({ hotelIds, roomTypeName, action, quantity, st
       if (nextStock < used) {
         return { ok: false, message: '库存不能小于已使用数量' }
       }
-      const nextOffline = Math.min(offline, Math.max(nextStock - used, 0))
 
       const { data: updated, error: updateError } = await supabase
         .from('room_types')
-        .update({ stock: nextStock, offline_stock: nextOffline })
+        .update({ stock: nextStock })
         .eq('id', room.id)
         .select()
         .single()
@@ -310,12 +341,18 @@ const getHotelRoomOverview = async ({ hotelId }) => {
     return { ok: false, status: 500, message: '获取房间总览失败：' + error.message }
   }
 
+  const roomTypeIds = (roomTypes || []).map((room) => room.id).filter((id) => Number.isFinite(Number(id)))
+  const usedResult = await getActiveOrderQtyMap({ roomTypeIds, asOfDate: new Date() })
+  if (!usedResult.ok) {
+    return { ok: false, status: 500, message: usedResult.message }
+  }
+
   const totals = (roomTypes || []).reduce(
     (acc, room) => {
       const stock = normalizeNumber(room.stock)
-      const used = normalizeNumber(room.used_stock)
-      const offline = normalizeNumber(room.offline_stock)
-      const available = Math.max(stock - used - offline, 0)
+      const used = usedResult.map.get(room.id) || 0
+      const active = room.is_active !== false
+      const { available, offline } = computeRoomAvailability({ stock, used, isActive: active })
       acc.total += stock
       acc.used += used
       acc.offline += offline
@@ -454,13 +491,13 @@ const getHotelOrderStats = async ({ merchantId, hotelId }) => {
   const statusStats = Object.keys(statusMap).map((key) => ({ status: key, count: statusMap[key] }))
   const monthly = Object.keys(monthlyMap)
     .sort()
-    .map((key) => ({ month: key, revenue: monthlyMap[key] }))
+    .map((key) => ({ month: key, revenue: roundToTwo(monthlyMap[key]) }))
 
   const roomTypeDaily = Object.values(dailyMap)
     .map((item) => {
       const stock = roomStockMap[item.roomTypeName] || 0
       const occupancyRate = stock ? Math.round((item.nights / stock) * 100) : 0
-      return { ...item, occupancyRate }
+      return { ...item, revenue: roundToTwo(item.revenue), occupancyRate }
     })
     .sort((a, b) => a.date.localeCompare(b.date) || a.roomTypeName.localeCompare(b.roomTypeName))
 
@@ -470,7 +507,7 @@ const getHotelOrderStats = async ({ merchantId, hotelId }) => {
       const [year, month] = item.month.split('-').map((v) => Number(v))
       const daysInMonth = year && month ? new Date(year, month, 0).getDate() : 0
       const occupancyRate = stock && daysInMonth ? Math.round((item.nights / (stock * daysInMonth)) * 100) : 0
-      return { ...item, occupancyRate }
+      return { ...item, revenue: roundToTwo(item.revenue), occupancyRate }
     })
     .sort((a, b) => a.month.localeCompare(b.month) || a.roomTypeName.localeCompare(b.roomTypeName))
 
@@ -481,12 +518,12 @@ const getHotelOrderStats = async ({ merchantId, hotelId }) => {
     return {
       roomTypeName: item.roomTypeName,
       nights: item.nights,
-      revenue: Math.round(item.revenue * 100) / 100,
+      revenue: roundToTwo(item.revenue),
       occupancyRate
     }
   }).sort((a, b) => b.revenue - a.revenue)
 
-  return { ok: true, status: 200, data: { totalOrders: data?.length || 0, revenue, statusStats, monthly, roomTypeDaily, roomTypeMonthly, roomTypeSummary } }
+  return { ok: true, status: 200, data: { totalOrders: data?.length || 0, revenue: roundToTwo(revenue), statusStats, monthly, roomTypeDaily, roomTypeMonthly, roomTypeSummary } }
 }
 
 const getMerchantOverview = async ({ merchantId }) => {
@@ -501,9 +538,15 @@ const getMerchantOverview = async ({ merchantId }) => {
 
   const hotelIds = (hotels || []).map((hotel) => hotel.id)
   const { data: roomTypes } = hotelIds.length
-    ? await supabase.from('room_types').select('hotel_id, name, stock, used_stock, offline_stock')
+    ? await supabase.from('room_types').select('id, hotel_id, name, stock, is_active')
       .in('hotel_id', hotelIds)
     : { data: [] }
+
+  const roomTypeIds = (roomTypes || []).map((room) => room.id).filter((id) => Number.isFinite(Number(id)))
+  const usedResult = await getActiveOrderQtyMap({ roomTypeIds, asOfDate: new Date() })
+  if (!usedResult.ok) {
+    return { ok: false, status: 500, message: usedResult.message }
+  }
 
   const totals = { totalRooms: 0, usedRooms: 0, availableRooms: 0, offlineRooms: 0, roomTypeCount: 0 }
   const hotelStatsMap = {}
@@ -514,9 +557,9 @@ const getMerchantOverview = async ({ merchantId }) => {
 
   ;(roomTypes || []).forEach((room) => {
     const stock = normalizeNumber(room.stock)
-    const used = normalizeNumber(room.used_stock)
-    const offline = normalizeNumber(room.offline_stock)
-    const available = Math.max(stock - used - offline, 0)
+    const used = usedResult.map.get(room.id) || 0
+    const active = room.is_active !== false
+    const { available, offline } = computeRoomAvailability({ stock, used, isActive: active })
     totals.totalRooms += stock
     totals.usedRooms += used
     totals.offlineRooms += offline
@@ -533,15 +576,17 @@ const getMerchantOverview = async ({ merchantId }) => {
   })
 
   const hotelStats = Object.values(hotelStatsMap).map((item) => {
-    const occupancyRate = item.totalRooms ? Math.round((item.usedRooms / item.totalRooms) * 100) : 0
-    const availableRate = item.totalRooms ? Math.round((item.availableRooms / item.totalRooms) * 100) : 0
-    const offlineRate = item.totalRooms ? Math.round((item.offlineRooms / item.totalRooms) * 100) : 0
+    const activeRooms = Math.max(item.totalRooms - item.offlineRooms, 0)
+    const occupancyRate = activeRooms ? roundToTwo((item.usedRooms / activeRooms) * 100) : 0
+    const availableRate = activeRooms ? roundToTwo((item.availableRooms / activeRooms) * 100) : 0
+    const offlineRate = item.totalRooms ? roundToTwo((item.offlineRooms / item.totalRooms) * 100) : 0
     return { ...item, occupancyRate, availableRate, offlineRate }
   })
 
-  const occupancyRate = totals.totalRooms ? Math.round((totals.usedRooms / totals.totalRooms) * 100) : 0
-  const availableRate = totals.totalRooms ? Math.round((totals.availableRooms / totals.totalRooms) * 100) : 0
-  const offlineRate = totals.totalRooms ? Math.round((totals.offlineRooms / totals.totalRooms) * 100) : 0
+  const totalActiveRooms = Math.max(totals.totalRooms - totals.offlineRooms, 0)
+  const occupancyRate = totalActiveRooms ? roundToTwo((totals.usedRooms / totalActiveRooms) * 100) : 0
+  const availableRate = totalActiveRooms ? roundToTwo((totals.availableRooms / totalActiveRooms) * 100) : 0
+  const offlineRate = totals.totalRooms ? roundToTwo((totals.offlineRooms / totals.totalRooms) * 100) : 0
 
   const now = new Date()
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
@@ -558,7 +603,7 @@ const getMerchantOverview = async ({ merchantId }) => {
     return { ok: false, status: 500, message: '获取收入统计失败：' + orderError.message }
   }
 
-  const monthlyRevenue = (orders || []).reduce((sum, order) => sum + normalizeNumber(order.total_price), 0)
+  const monthlyRevenue = roundToTwo((orders || []).reduce((sum, order) => sum + normalizeNumber(order.total_price), 0))
 
   return {
     ok: true,
@@ -671,7 +716,8 @@ const createHotel = async ({ merchantId, payload }) => {
         area: room.area !== undefined ? Number(room.area) || 0 : undefined,
         ceiling_height: room.ceiling_height !== undefined ? Number(room.ceiling_height) || 0 : undefined,
         wifi: room.wifi !== undefined ? !!room.wifi : undefined,
-        breakfast_included: room.breakfast_included !== undefined ? !!room.breakfast_included : undefined
+        breakfast_included: room.breakfast_included !== undefined ? !!room.breakfast_included : undefined,
+        is_active: true
       }))
 
     if (roomTypesToInsert.length > 0) {
@@ -776,20 +822,20 @@ const updateHotel = async ({ merchantId, hotelId, payload }) => {
   }
 
   // 更新房型
+  let archiveWarning = null
   if (Array.isArray(roomTypes)) {
-    // 删除旧房型
-    const { error: deleteRoomsError } = await supabase
+    const { data: existingRoomTypes, error: existingRoomTypesError } = await supabase
       .from('room_types')
-      .delete()
+      .select('*')
       .eq('hotel_id', hotelId)
-    if (deleteRoomsError) {
-      return { ok: false, status: 500, message: '删除旧房型失败：' + deleteRoomsError.message }
+    if (existingRoomTypesError) {
+      return { ok: false, status: 500, message: '获取房型失败：' + existingRoomTypesError.message }
     }
 
-    // 插入新房型
-    const roomTypesToInsert = roomTypes
+    const normalizedIncoming = roomTypes
       .filter((room) => room && room.name)
       .map((room) => ({
+        id: room.id ? Number(room.id) : undefined,
         hotel_id: hotelId,
         name: room.name,
         price: Number(room.price) || 0,
@@ -802,16 +848,109 @@ const updateHotel = async ({ merchantId, hotelId, payload }) => {
         area: room.area !== undefined ? Number(room.area) || 0 : undefined,
         ceiling_height: room.ceiling_height !== undefined ? Number(room.ceiling_height) || 0 : undefined,
         wifi: room.wifi !== undefined ? !!room.wifi : undefined,
-        breakfast_included: room.breakfast_included !== undefined ? !!room.breakfast_included : undefined
+        breakfast_included: room.breakfast_included !== undefined ? !!room.breakfast_included : undefined,
+        is_active: room.is_active !== undefined ? !!room.is_active : undefined
       }))
 
-    if (roomTypesToInsert.length > 0) {
-      const { data: insertedRooms, error: insertRoomsError } = await supabase
+    const existingByName = new Map((existingRoomTypes || []).map((room) => [room.name, room]))
+    const incomingWithResolvedId = normalizedIncoming.map((room) => {
+      if (room.id) return room
+      const existing = existingByName.get(room.name)
+      if (existing && existing.id) {
+        const nextActive = room.is_active !== undefined ? room.is_active : existing.is_active
+        return { ...room, id: existing.id, is_active: nextActive }
+      }
+      return room
+    })
+
+    const existingIds = new Set((existingRoomTypes || []).map((room) => room.id).filter((id) => Number.isFinite(id)))
+    const incomingIds = new Set(incomingWithResolvedId.map((room) => room.id).filter((id) => Number.isFinite(id)))
+
+    const existingIdList = Array.from(existingIds)
+    const orderRows = existingIdList.length
+      ? await supabase
+        .from('orders')
+        .select('room_type_id, status, quantity')
+        .in('room_type_id', existingIdList)
+      : { data: [], error: null }
+    if (orderRows.error) {
+      return { ok: false, status: 500, message: '校验房型订单失败：' + orderRows.error.message }
+    }
+    const anyOrderMap = new Map()
+    ;(orderRows.data || []).forEach((row) => {
+      const roomId = row.room_type_id
+      anyOrderMap.set(roomId, true)
+    })
+
+    const today = formatDateOnly(new Date())
+    const usedResult = await getActiveOrderQtyMap({ roomTypeIds: existingIdList, checkIn: today, checkOut: '9999-12-31' })
+    if (!usedResult.ok) {
+      return { ok: false, status: 500, message: usedResult.message }
+    }
+    const activeQtyMap = usedResult.map
+
+    const stockViolations = incomingWithResolvedId.find((room) => {
+      if (!room.id || !existingIds.has(room.id)) return false
+      const activeQty = activeQtyMap.get(room.id) || 0
+      if (activeQty <= 0) return false
+      return normalizeNumber(room.stock) < activeQty
+    })
+    if (stockViolations) {
+      const activeQty = activeQtyMap.get(stockViolations.id) || 0
+      return { ok: false, status: 400, message: `房型 ${stockViolations.name} 库存不能小于未完成订单数量 ${activeQty}` }
+    }
+
+    const updateTargets = incomingWithResolvedId.filter((room) => room.id && existingIds.has(room.id))
+    for (const room of updateTargets) {
+      const { id, ...updates } = room
+      const { error: updateRoomError } = await supabase
         .from('room_types')
-        .insert(roomTypesToInsert)
-        .select()
+        .update(updates)
+        .eq('id', id)
+      if (updateRoomError) {
+        return { ok: false, status: 500, message: '更新房型失败：' + updateRoomError.message }
+      }
+    }
+
+    const insertTargets = incomingWithResolvedId
+      .filter((room) => !room.id)
+      .map(({ id, ...rest }) => rest)
+    if (insertTargets.length > 0) {
+      const { error: insertRoomsError } = await supabase
+        .from('room_types')
+        .insert(insertTargets)
       if (insertRoomsError) {
         return { ok: false, status: 500, message: '插入房型失败：' + insertRoomsError.message }
+      }
+    }
+
+    const removedRooms = (existingRoomTypes || [])
+      .filter((room) => room && room.id && !incomingIds.has(room.id))
+    const toArchive = removedRooms.filter((room) => anyOrderMap.get(room.id))
+    const toDeactivate = removedRooms
+
+    if (toArchive.length > 0) {
+      const archiveNames = toArchive.map((room) => room.name).filter((name) => name)
+      if (archiveNames.length) {
+        archiveWarning = `房型 ${archiveNames.join('、')} 已有关联订单，已自动标记为下架`
+      } else {
+        archiveWarning = '存在已被订单引用的房型，已自动标记为下架'
+      }
+    }
+
+    if (toDeactivate.length > 0) {
+      const deactivateResults = await Promise.all(
+        toDeactivate.map(async (room) => {
+          const { error: deactivateError } = await supabase
+            .from('room_types')
+            .update({ is_active: false })
+            .eq('id', room.id)
+          return deactivateError ? deactivateError : null
+        })
+      )
+      const deactivateError = deactivateResults.find((err) => err)
+      if (deactivateError) {
+        return { ok: false, status: 500, message: '下架房型失败：' + deactivateError.message }
       }
     }
   }
@@ -827,7 +966,17 @@ const updateHotel = async ({ merchantId, hotelId, payload }) => {
     .select('*')
     .eq('hotel_id', hotelId)
 
-  return { ok: true, status: 200, data: { ...updatedHotel, roomTypes: currentRoomTypes || [] } }
+  const currentRoomTypeIds = (currentRoomTypes || []).map((room) => room.id).filter((id) => Number.isFinite(Number(id)))
+  const usedResult = await getActiveOrderQtyMap({ roomTypeIds: currentRoomTypeIds, asOfDate: new Date() })
+  if (!usedResult.ok) {
+    return { ok: false, status: 500, message: usedResult.message }
+  }
+  const enrichedRoomTypes = (currentRoomTypes || []).map((room) => ({
+    ...room,
+    used_stock: usedResult.map.get(room.id) || 0
+  }))
+
+  return { ok: true, status: 200, data: { ...updatedHotel, roomTypes: enrichedRoomTypes }, warning: archiveWarning }
 }
 
 // 应用优惠到房型
@@ -859,14 +1008,22 @@ const listMerchantHotels = async ({ merchantId, status }) => {
   if (hotelIds.length) {
     const { data: roomTypes } = await supabase
       .from('room_types')
-      .select('hotel_id, name, price, stock, used_stock, offline_stock, discount_rate, discount_quota')
+      .select('id, hotel_id, name, price, stock, is_active, discount_rate, discount_quota')
       .in('hotel_id', hotelIds)
 
+    const roomTypeIds = (roomTypes || []).map((room) => room.id).filter((id) => Number.isFinite(Number(id)))
+    const usedResult = await getActiveOrderQtyMap({ roomTypeIds, asOfDate: new Date() })
+    if (!usedResult.ok) {
+      return { ok: false, status: 500, message: usedResult.message }
+    }
+
     ;(roomTypes || []).forEach((room) => {
+      const used = usedResult.map.get(room.id) || 0
+      const enrichedRoom = { ...room, used_stock: used }
       if (!roomTypeMap[room.hotel_id]) {
         roomTypeMap[room.hotel_id] = []
       }
-      roomTypeMap[room.hotel_id].push(room)
+      roomTypeMap[room.hotel_id].push(enrichedRoom)
     })
   }
 
@@ -900,7 +1057,28 @@ const getMerchantHotel = async ({ merchantId, hotelId }) => {
     .select('*')
     .eq('hotel_id', hotelId)
 
-  return { ok: true, status: 200, data: { ...hotel, roomTypes: roomTypes || [] } }
+  const roomTypeIds = (roomTypes || []).map((room) => room.id).filter((id) => Number.isFinite(Number(id)))
+  const usedResult = await getActiveOrderQtyMap({ roomTypeIds, asOfDate: new Date() })
+  if (!usedResult.ok) {
+    return { ok: false, status: 500, message: usedResult.message }
+  }
+  const orderRows = roomTypeIds.length
+    ? await supabase
+      .from('orders')
+      .select('room_type_id')
+      .in('room_type_id', roomTypeIds)
+    : { data: [], error: null }
+  if (orderRows.error) {
+    return { ok: false, status: 500, message: '查询房型订单失败：' + orderRows.error.message }
+  }
+  const orderRoomSet = new Set((orderRows.data || []).map((row) => row.room_type_id))
+  const enrichedRoomTypes = (roomTypes || []).map((room) => ({
+    ...room,
+    has_orders: orderRoomSet.has(room.id),
+    used_stock: usedResult.map.get(room.id) || 0
+  }))
+
+  return { ok: true, status: 200, data: { ...hotel, roomTypes: enrichedRoomTypes } }
 }
 
 // 管理员酒店列表
@@ -1041,7 +1219,7 @@ const listPublicHotels = async ({ query }) => {
   // 1. 如果有价格筛选，先找出符合价格范围的酒店 ID
   let priceFilteredIds = null
   if (minPrice || maxPrice) {
-    let priceQuery = supabase.from('room_types').select('hotel_id')
+    let priceQuery = supabase.from('room_types').select('hotel_id').eq('is_active', true)
     
     // 简化处理：只筛选原始价格，不考虑复杂的折扣计算（性能考量）
     // 若要严谨，需使用数据库函数或存储过程计算最终价格
@@ -1185,7 +1363,21 @@ const getPublicHotel = async ({ hotelId }) => {
     .eq('hotel_id', hotelId)
     .order('price', { ascending: true })
 
-  return { ok: true, status: 200, data: { ...hotel, roomTypes: roomTypes || [] } }
+  const roomTypeIds = (roomTypes || []).map((room) => room.id).filter((id) => Number.isFinite(Number(id)))
+  const usedResult = await getActiveOrderQtyMap({ roomTypeIds, asOfDate: new Date() })
+  if (!usedResult.ok) {
+    return { ok: false, status: 500, message: usedResult.message }
+  }
+
+  const availableRoomTypes = (roomTypes || []).filter((room) => {
+    const stock = normalizeNumber(room.stock)
+    const used = usedResult.map.get(room.id) || 0
+    const active = room.is_active !== false
+    const available = computeRoomAvailability({ stock, used, isActive: active }).available
+    return available > 0
+  })
+
+  return { ok: true, status: 200, data: { ...hotel, roomTypes: availableRoomTypes } }
 }
 
 const createPublicOrder = async ({ hotelId, userId, payload }) => {
@@ -1240,13 +1432,7 @@ const createPublicOrder = async ({ hotelId, userId, payload }) => {
 
   const normalizedQuantity = Math.max(normalizeNumber(quantity), 1)
   const stock = normalizeNumber(room.stock)
-  const used = normalizeNumber(room.used_stock)
-  const offline = normalizeNumber(room.offline_stock)
-  const available = Math.max(stock - used - offline, 0)
-
-  if (available < normalizedQuantity) {
-    return { ok: false, status: 400, message: '房型库存不足' }
-  }
+  const active = room.is_active !== false
 
   let nights = 1
   let checkInValue = null
@@ -1265,6 +1451,20 @@ const createPublicOrder = async ({ hotelId, userId, payload }) => {
     nights = Math.max(1, Math.round(diff))
     checkInValue = checkIn
     checkOutValue = checkOut
+  }
+
+  const usedResult = await getActiveOrderQtyMap({ roomTypeIds: [room.id], checkIn: checkInValue, checkOut: checkOutValue })
+  if (!usedResult.ok) {
+    return { ok: false, status: 500, message: usedResult.message }
+  }
+  const used = usedResult.map.get(room.id) || 0
+  const available = computeRoomAvailability({ stock, used, isActive: active }).available
+
+  if (!active) {
+    return { ok: false, status: 400, message: '房型已下架' }
+  }
+  if (available < normalizedQuantity) {
+    return { ok: false, status: 400, message: '房型库存不足' }
   }
 
   const pricePerNight = normalizeNumber(room.price)
@@ -1327,16 +1527,6 @@ const createPublicOrder = async ({ hotelId, userId, payload }) => {
     return { ok: false, status: 500, message: '创建订单失败：' + orderError.message }
   }
 
-  const { error: updateError } = await supabase
-    .from('room_types')
-    .update({ used_stock: used + normalizedQuantity })
-    .eq('id', room.id)
-
-  if (updateError) {
-    await supabase.from('orders').delete().eq('id', order.id)
-    return { ok: false, status: 500, message: '更新库存失败：' + updateError.message }
-  }
-
   // 如果使用了折扣配额，更新配额
   if (discountCount > 0) {
     const newQuota = Math.max(0, discountQuota - discountCount)
@@ -1368,7 +1558,17 @@ const getAdminHotelDetail = async ({ hotelId }) => {
     .eq('hotel_id', hotelId)
     .order('price', { ascending: true })
 
-  return { ok: true, status: 200, data: { ...hotel, roomTypes: roomTypes || [] } }
+  const roomTypeIds = (roomTypes || []).map((room) => room.id).filter((id) => Number.isFinite(Number(id)))
+  const usedResult = await getActiveOrderQtyMap({ roomTypeIds, asOfDate: new Date() })
+  if (!usedResult.ok) {
+    return { ok: false, status: 500, message: usedResult.message }
+  }
+  const enrichedRoomTypes = (roomTypes || []).map((room) => ({
+    ...room,
+    used_stock: usedResult.map.get(room.id) || 0
+  }))
+
+  return { ok: true, status: 200, data: { ...hotel, roomTypes: enrichedRoomTypes } }
 }
 
 // 商户更新酒店状态（只能下线/恢复上架自己的酒店）

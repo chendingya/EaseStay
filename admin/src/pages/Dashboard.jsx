@@ -152,13 +152,13 @@ export default function Dashboard() {
       }
 
       const base = role === 'admin' ? '/api/admin/hotels' : '/api/merchant/hotels'
-      const data = await api.post(`${base}/batch-room`, {
+      const payload = {
         hotelIds: targetHotels.map((h) => h.id),
         roomTypeName: values.roomTypeName,
         action: values.action,
-        quantity: values.quantity,
         stock: values.stock
-      })
+      }
+      const data = await api.post(`${base}/batch-room`, payload)
       message.success(`已处理 ${data.successCount || 0} 个房型`)
       
       setRoomModal(false)
@@ -495,19 +495,6 @@ export default function Dashboard() {
               <Form.Item name="stock" label="库存数量" rules={[{ required: true }]}>
                 <InputNumber
                   min={0}
-                  style={{ width: 150 }}
-                  formatter={(value) => `${value} 间`}
-                  parser={(value) => value?.replace(/[^\d]/g, '')}
-                />
-              </Form.Item>
-            )}
-          </Form.Item>
-
-          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.action !== cur.action}>
-            {({ getFieldValue }) => getFieldValue('action') === 'offline' && (
-              <Form.Item name="quantity" label="下架数量" rules={[{ required: true }]}>
-                <InputNumber
-                  min={1}
                   style={{ width: 150 }}
                   formatter={(value) => `${value} 间`}
                   parser={(value) => value?.replace(/[^\d]/g, '')}

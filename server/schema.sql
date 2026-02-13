@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS room_types (
   stock INT DEFAULT 0,
   used_stock INT DEFAULT 0,
   offline_stock INT DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
   discount_rate DECIMAL,
   discount_quota INT DEFAULT 0,
   discount_periods JSONB DEFAULT '[]',
@@ -270,6 +271,7 @@ CREATE POLICY "hotels_no_anon_delete" ON hotels FOR DELETE USING (false);
 CREATE POLICY "room_types_public_read" ON room_types
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM hotels WHERE hotels.id = room_types.hotel_id AND hotels.status = 'approved')
+    AND room_types.is_active = true
   );
 CREATE POLICY "room_types_no_anon_insert" ON room_types FOR INSERT WITH CHECK (false);
 CREATE POLICY "room_types_no_anon_update" ON room_types FOR UPDATE USING (false) WITH CHECK (false);
@@ -333,6 +335,7 @@ ALTER TABLE requests ADD CONSTRAINT requests_type_check
   CHECK (type IN ('facility', 'room_type', 'promotion', 'hotel_delete'));
 
 ALTER TABLE room_types ADD COLUMN IF NOT EXISTS discount_periods JSONB DEFAULT '[]';
+ALTER TABLE room_types ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
 ALTER TABLE room_types ADD COLUMN IF NOT EXISTS capacity INT DEFAULT 2;
 ALTER TABLE room_types ADD COLUMN IF NOT EXISTS bed_width INT DEFAULT 180;
 ALTER TABLE room_types ADD COLUMN IF NOT EXISTS area DECIMAL(10, 2) DEFAULT 20;

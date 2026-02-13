@@ -32,6 +32,10 @@ const update = async (req, res) => {
     res.status(result.status).json({ message: result.message })
     return
   }
+  if (result.warning) {
+    res.status(result.status).json({ ...result.data, warning: result.warning })
+    return
+  }
   res.status(result.status).json(result.data)
 }
 

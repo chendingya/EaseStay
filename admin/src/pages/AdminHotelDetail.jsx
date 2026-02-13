@@ -265,8 +265,8 @@ export default function AdminHotelDetail() {
       render: (_, record) => {
         const stock = Number(record.stock) || 0
         const used = Number(record.used_stock) || 0
-        const offline = Number(record.offline_stock) || 0
-        return Math.max(stock - used - offline, 0)
+        const active = record.is_active !== false
+        return active ? Math.max(stock - used, 0) : 0
       }
     }
   ]
@@ -309,8 +309,9 @@ export default function AdminHotelDetail() {
       (acc, room) => {
         const stock = Number(room.stock) || 0
         const used = Number(room.used_stock) || 0
-        const offline = Number(room.offline_stock) || 0
-        const available = Math.max(stock - used - offline, 0)
+        const active = room.is_active !== false
+        const available = active ? Math.max(stock - used, 0) : 0
+        const offline = active ? 0 : Math.max(stock - used, 0)
         acc.total += stock
         acc.used += used
         acc.offline += offline
@@ -322,8 +323,9 @@ export default function AdminHotelDetail() {
     return totals
   })()
   const overviewTotal = computedOverview.total || 0
-  const usedPercent = overviewTotal ? Math.round((computedOverview.used / overviewTotal) * 100) : 0
-  const availablePercent = overviewTotal ? Math.round((computedOverview.available / overviewTotal) * 100) : 0
+  const activeTotal = Math.max(overviewTotal - (computedOverview.offline || 0), 0)
+  const usedPercent = activeTotal ? Math.round((computedOverview.used / activeTotal) * 100) : 0
+  const availablePercent = activeTotal ? Math.round((computedOverview.available / activeTotal) * 100) : 0
   const offlinePercent = overviewTotal ? Math.round((computedOverview.offline / overviewTotal) * 100) : 0
   
 
@@ -423,22 +425,22 @@ export default function AdminHotelDetail() {
                     </Row>
                     <div style={{ marginTop: 16 }}>
                       <Progress
-                        percent={computedOverview.total ? Math.round((computedOverview.used / computedOverview.total) * 100) : 0}
+                        percent={activeTotal ? Math.round((computedOverview.used / activeTotal) * 100) : 0}
                         status="active"
                         format={(p) => `入住率 ${p}%`}
                       />
                     </div>
                     <Row gutter={16} style={{ marginTop: 16 }}>
                       <Col span={8} style={{ textAlign: 'center' }}>
-                        <Progress type="circle" percent={usedPercent} strokeColor="#faad14" />
+                        <Progress type="circle" percent={usedPercent} strokeColor="#faad14" format={(p) => `${p}%`} />
                         <div style={{ marginTop: 8 }}>已使用占比</div>
                       </Col>
                       <Col span={8} style={{ textAlign: 'center' }}>
-                        <Progress type="circle" percent={availablePercent} strokeColor="#52c41a" />
+                        <Progress type="circle" percent={availablePercent} strokeColor="#52c41a" format={(p) => `${p}%`} />
                         <div style={{ marginTop: 8 }}>空闲占比</div>
                       </Col>
                       <Col span={8} style={{ textAlign: 'center' }}>
-                        <Progress type="circle" percent={offlinePercent} strokeColor="#999" />
+                        <Progress type="circle" percent={offlinePercent} strokeColor="#999" format={(p) => `${p}%`} />
                         <div style={{ marginTop: 8 }}>下架占比</div>
                       </Col>
                     </Row>

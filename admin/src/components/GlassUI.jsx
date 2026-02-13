@@ -84,7 +84,10 @@ export function GanttTimeline({
       if (!end || e.isAfter(end)) end = e
     }
   })
-  if (!start || !end || !start.isValid() || !end.isValid() || !end.isAfter(start)) {
+  if (start && end && start.isValid() && end.isValid() && end.isAfter(start)) {
+    start = start.startOf('day')
+    end = end.endOf('day')
+  } else {
     start = dayjs().startOf('day')
     end = dayjs().add(7, 'day').endOf('day')
   }
@@ -96,11 +99,13 @@ export function GanttTimeline({
       const s = dayjs(period.start)
       const e = dayjs(period.end)
       const safeStart = s.isValid() ? s : start
-      const safeEnd = e.isValid() && e.isAfter(safeStart) ? e : safeStart.add(1, 'hour')
+      const safeEnd = e.isValid() ? e : safeStart
+      const boundedStart = safeStart.isBefore(start) ? start : safeStart
+      const boundedEnd = safeEnd.isAfter(end) ? end : safeEnd
       const rawLeft = safeStart.diff(start) / totalMs
-      const rawWidth = safeEnd.diff(safeStart) / totalMs
-      const left = Math.min(Math.max(0, rawLeft), 1)
-      let width = Math.max(rawWidth, 0)
+      const rawRight = safeEnd.diff(start) / totalMs
+      const left = Math.min(Math.max(0, boundedStart.diff(start) / totalMs), 1)
+      let width = Math.max(boundedEnd.diff(boundedStart) / totalMs, 0)
       if (width === 0 && minBarWidth > 0) {
         width = minBarWidth
       }
@@ -108,7 +113,7 @@ export function GanttTimeline({
         width = Math.max(0, 1 - left)
       }
       const markerStart = Math.min(Math.max(0, rawLeft), 1)
-      const markerEnd = Math.min(Math.max(0, rawLeft + rawWidth), 1)
+      const markerEnd = Math.min(Math.max(0, rawRight), 1)
       return {
         left,
         width,

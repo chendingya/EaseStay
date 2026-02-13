@@ -37,6 +37,9 @@ request.interceptors.response.use(
       message.error(data.message || '请求失败')
       return Promise.reject(new Error(data.message || '请求失败'))
     }
+    if (data && data.warning) {
+      message.warning(data.warning)
+    }
     return response
   },
   (error) => {
