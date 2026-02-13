@@ -1,8 +1,8 @@
 import { View, Text } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useEffect, useState, useRef } from 'react'
-import { Dropdown, InfiniteScroll, Radio, Checkbox, Button, Empty, Space } from 'antd-mobile'
-import { SearchOutline } from 'antd-mobile-icons'
+import { Dropdown, InfiniteScroll, Radio, Checkbox, Button, Empty, Space, CalendarPicker } from 'antd-mobile'
+import { SearchOutline, CalendarOutline } from 'antd-mobile-icons'
 import { api } from '../../services/request'
 import HotelCard from '../../components/HotelCard'
 import PageTopBar from '../../components/PageTopBar'
@@ -23,10 +23,25 @@ export default function List() {
     }
   }
 
+  const formatDate = (date) => {
+    if (!date || Number.isNaN(date.getTime())) return ''
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+
+  const getDefaultDates = () => {
+    const today = new Date()
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000)
+    return { checkIn: formatDate(today), checkOut: formatDate(tomorrow) }
+  }
+
+  const defaultDates = getDefaultDates()
   const [city, setCity] = useState(() => safeDecode(paramsRef.current.city))
   const [keyword, setKeyword] = useState(() => safeDecode(paramsRef.current.keyword))
-  const [checkIn, setCheckIn] = useState(() => paramsRef.current.checkIn || '')
-  const [checkOut, setCheckOut] = useState(() => paramsRef.current.checkOut || '')
+  const [checkIn, setCheckIn] = useState(() => paramsRef.current.checkIn || defaultDates.checkIn)
+  const [checkOut, setCheckOut] = useState(() => paramsRef.current.checkOut || defaultDates.checkOut)
   const [minPrice, setMinPrice] = useState(() => paramsRef.current.minPrice || '')
   const [maxPrice, setMaxPrice] = useState(() => paramsRef.current.maxPrice || '')
   const [userLat, setUserLat] = useState(() => paramsRef.current.userLat || '')
@@ -46,6 +61,7 @@ export default function List() {
     return safeDecode(paramsRef.current.tags).split(',').filter(Boolean)
   })
   const [tagOptions, setTagOptions] = useState([])
+  const [calendarVisible, setCalendarVisible] = useState(false)
   
   const dropdownRef = useRef(null)
   const isFirstLoad = useRef(true)
@@ -97,8 +113,6 @@ export default function List() {
       queryParams.append('page', nextPage)
       queryParams.append('pageSize', 10)
 
-      console.log('Fetching hotels with params:', queryParams.toString())
-
       const res = await api.get(`/api/hotels?${queryParams.toString()}`)
       
       if (res && res.list) {
@@ -130,7 +144,7 @@ export default function List() {
     setPage(1)
     setList([])
     setHasMore(true) // This should trigger InfiniteScroll to call loadMore
-  }, [sort, selectedStars, selectedTags, city, keyword, minPrice, maxPrice]) // checkIn/checkOut usually don't change in list page interaction unless we add date picker
+  }, [sort, selectedStars, selectedTags, city, keyword, minPrice, maxPrice, checkIn, checkOut])
 
   // Handle Search Bar Click -> Go back to search or expand
   const handleSearchClick = () => {
@@ -144,21 +158,41 @@ export default function List() {
     return Math.round(diff)
   })()
 
+  const handleDateConfirm = (val) => {
+    if (val && val[0] && val[1]) {
+      setCheckIn(formatDate(val[0]))
+      setCheckOut(formatDate(val[1]))
+      setCalendarVisible(false)
+    }
+  }
+
   return (
     <View className="list-page">
       <PageTopBar title="酒店列表">
         <View className="list-top-extra">
-          <View className="header-search-box" onClick={handleSearchClick}>
-            <SearchOutline className="search-icon" />
-            <Text className="search-text">
-              {city} · {keyword || '搜索酒店'}
-            </Text>
-            <Text className="search-date">
-              {checkIn && checkOut ? `${checkIn.slice(5).replace('-','/')} - ${checkOut.slice(5).replace('-','/')} · ${nights}晚` : ''}
-            </Text>
+          <View className="list-search-card">
+            <View className="list-search-row" onClick={handleSearchClick}>
+              <SearchOutline className="search-icon" />
+              <Text className="search-text">
+                {city || '城市'} · {keyword || '搜索酒店'}
+              </Text>
+              <Text className="search-action">修改条件</Text>
+            </View>
+            <View className="list-date-row" onClick={() => setCalendarVisible(true)}>
+              <View className="list-date-item">
+                <Text className="list-date-label">入住</Text>
+                <Text className="list-date-value">{checkIn ? `${checkIn.slice(5).replace('-', '/')} ` : '--/-- '}</Text>
+              </View>
+              <View className="list-date-nights">{nights}晚</View>
+              <View className="list-date-item">
+                <Text className="list-date-label">离店</Text>
+                <Text className="list-date-value">{checkOut ? `${checkOut.slice(5).replace('-', '/')} ` : '--/-- '}</Text>
+              </View>
+              <CalendarOutline className="list-date-icon" />
+            </View>
           </View>
 
-          <Dropdown ref={dropdownRef} className="filter-dropdown">
+          <Dropdown ref={dropdownRef} className="filter-dropdown list-filter-dropdown">
             <Dropdown.Item key="sort" title={
               sort === 'recommend' ? '推荐排序' : 
               sort === 'price_asc' ? '价格低→高' : 
@@ -290,6 +324,14 @@ export default function List() {
           <Empty description="暂无符合条件的酒店" />
         )}
       </View>
+
+      <CalendarPicker
+        selectionMode='range'
+        visible={calendarVisible}
+        onClose={() => setCalendarVisible(false)}
+        onConfirm={handleDateConfirm}
+        defaultValue={[new Date(checkIn), new Date(checkOut)]}
+      />
     </View>
   )
 }
