@@ -4,7 +4,7 @@ import { View, Text } from '@tarojs/components'
 import { Button, Popup, Selector, Input } from 'antd-mobile'
 import { FilterOutline } from 'antd-mobile-icons'
 import { getMyOrders } from '../../services/auth'
-import OrderList from '../../components/OrderList'
+import { createListByType } from '../../components/OrderList'
 import PageTopBar from '../../components/PageTopBar'
 import './index.css'
 
@@ -275,8 +275,6 @@ export default function Orders() {
     ? '正在刷新订单...'
     : (pullDistance >= pullThreshold ? '松手立即刷新' : (pullDistance > 0 ? '下拉刷新订单' : ''))
 
-  const summaryText = isFilterActive ? `筛选后 ${displayList.length} 条` : `共 ${total} 条订单`
-
   return (
     <View className='orders-page'>
       <PageTopBar
@@ -313,24 +311,23 @@ export default function Orders() {
         </View>
       ) : (
         <View className='orders-content'>
-          <OrderList
-            list={displayList}
-            total={isFilterActive ? displayList.length : total}
-            summaryText={summaryText}
-            hasMore={hasMore}
-            loading={loading}
-            refreshing={refreshing}
-            pullLabel={pullLabel}
-            pullDistance={pullDistance}
-            pullThreshold={pullThreshold}
-            onLoadMore={loadOrders}
-            onRefresh={handleRefresh}
-            onPulling={handlePulling}
-            onPullEnd={handlePullEnd}
-            onScrollChange={handleScrollChange}
-            onPay={handlePayOrder}
-            onDetail={handleOpenDetail}
-          />
+          {createListByType({
+            type: 'order',
+            items: displayList,
+            hasMore,
+            loading,
+            refreshing,
+            pullLabel,
+            pullDistance,
+            pullThreshold,
+            onLoadMore: loadOrders,
+            onRefresh: handleRefresh,
+            onPulling: handlePulling,
+            onPullEnd: handlePullEnd,
+            onScrollChange: handleScrollChange,
+            onPay: handlePayOrder,
+            onDetail: handleOpenDetail
+          })}
         </View>
       )}
 

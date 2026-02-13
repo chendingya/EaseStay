@@ -40,6 +40,33 @@ if (Array.isArray(cityData)) {
     })
 }
 
+/**
+ * 城市名称标准化：将简称转为标准全称
+ * 例如：上海 -> 上海市，北京 -> 北京市
+ */
+const normalizeCityName = (input) => {
+  if (!input || typeof input !== 'string') return input
+  const trimmed = input.trim()
+  
+  // 1. 精确匹配（已存在标准名称）
+  if (cityLookup.has(trimmed)) {
+    return cityLookup.get(trimmed)
+  }
+  
+  // 2. 尝试去除后缀后再匹配
+  const noSuffix = trimmed.replace(/(市|省|自治区|特别行政区)$/, '')
+  if (cityLookup.has(noSuffix)) {
+    return cityLookup.get(noSuffix)
+  }
+  
+  // 3. 未找到匹配，保持原样（但统一加"市"后缀作为默认格式）
+  if (!trimmed.endsWith('市') && !trimmed.endsWith('省') && !trimmed.endsWith('自治区') && !trimmed.endsWith('特别行政区')) {
+    return trimmed + '市'
+  }
+  
+  return trimmed
+}
+
 const {
   formatDateOnly,
   getActiveOrderQtyMap,
@@ -684,6 +711,7 @@ const createHotel = async ({ merchantId, payload }) => {
   }
 
   const normalizedName = String(name).trim()
+  const normalizedCity = normalizeCityName(city)
   const { data: existingHotel, error: existingError } = await supabase
     .from('hotels')
     .select('id')
@@ -705,7 +733,7 @@ const createHotel = async ({ merchantId, payload }) => {
       name: normalizedName,
       name_en: name_en || '',
       address,
-      city,
+      city: normalizedCity,
       star_rating: Number(star_rating) || 0,
       opening_time: opening_time || '',
       description: description || '',
@@ -839,7 +867,7 @@ const updateHotel = async ({ merchantId, hotelId, payload }) => {
   if (name !== undefined) updates.name = String(name).trim()
   if (name_en !== undefined) updates.name_en = name_en
   if (address !== undefined) updates.address = address
-  if (city !== undefined) updates.city = city
+  if (city !== undefined) updates.city = normalizeCityName(city)
   if (star_rating !== undefined) updates.star_rating = Number(star_rating) || 0
   if (opening_time !== undefined) updates.opening_time = opening_time
   if (description !== undefined) updates.description = description

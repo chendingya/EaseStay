@@ -1,10 +1,10 @@
 import { View, Text } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useEffect, useState, useRef } from 'react'
-import { Dropdown, InfiniteScroll, Radio, Checkbox, Button, Empty, Space, CalendarPicker, Popup, SearchBar, Cascader } from 'antd-mobile'
+import { Dropdown, Radio, Checkbox, Button, Space, CalendarPicker, Popup, SearchBar, Cascader } from 'antd-mobile'
 import { SearchOutline, CalendarOutline } from 'antd-mobile-icons'
 import { api } from '../../services/request'
-import HotelCard from '../../components/HotelCard'
+import { createListByType } from '../../components/OrderList'
 import PageTopBar from '../../components/PageTopBar'
 import { cityData } from '../../utils/cityData'
 import './index.css'
@@ -80,6 +80,7 @@ export default function List() {
   const dropdownRef = useRef(null)
   const isFirstLoad = useRef(true)
   const loadingRef = useRef(false)
+  const pageRef = useRef(page)
 
   // Use refs for current search params to avoid stale closures in loadMore if called async
   const searchParamsRef = useRef({ city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags, userLat, userLng })
@@ -88,6 +89,10 @@ export default function List() {
   useEffect(() => {
     searchParamsRef.current = { city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags, userLat, userLng }
   }, [city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags, userLat, userLng])
+
+  useEffect(() => {
+    pageRef.current = page
+  }, [page])
 
   useEffect(() => {
     Taro.setStorageSync(SEARCH_STORAGE_KEY, {
@@ -125,7 +130,7 @@ export default function List() {
     try {
       // Use ref values to ensure latest params
       const currentParams = searchParamsRef.current
-      const nextPage = page // Use state page, assuming it's managed correctly with setPage
+      const nextPage = pageRef.current
       
       const queryParams = new URLSearchParams()
       if (currentParams.city) queryParams.append('city', currentParams.city)
@@ -149,6 +154,7 @@ export default function List() {
         setList(prev => nextPage === 1 ? res.list : [...prev, ...res.list])
         setHasMore(res.list.length >= 10)
         setPage(nextPage + 1)
+        pageRef.current = nextPage + 1
       } else {
         setHasMore(false)
       }
@@ -165,15 +171,14 @@ export default function List() {
   useEffect(() => {
     if (isFirstLoad.current) {
       isFirstLoad.current = false
-      // Don't return here! InfiniteScroll might not trigger if content is empty initially?
-      // Actually InfiniteScroll usually triggers loadMore on mount if hasMore is true.
-      // But let's verify if we need manual trigger.
-      // For now, standard InfiniteScroll behavior is enough.
+      loadMore()
       return
     }
     setPage(1)
+    pageRef.current = 1
     setList([])
-    setHasMore(true) // This should trigger InfiniteScroll to call loadMore
+    setHasMore(true)
+    loadMore()
   }, [sort, selectedStars, selectedTags, city, keyword, minPrice, maxPrice, checkIn, checkOut])
 
   const handleSearchClick = () => {
@@ -339,27 +344,20 @@ export default function List() {
 
       {/* List Content */}
       <View className="list-content">
-        {list.map((hotel, index) => (
-          <HotelCard 
-            key={hotel.id} 
-            hotel={hotel} 
-            index={index}
-            animate
-            onClick={() => Taro.navigateTo({
-              url: `/pages/detail/index?id=${hotel.id}&checkIn=${checkIn}&checkOut=${checkOut}`
-            })} 
-          />
-        ))}
-        
-        <InfiniteScroll loadMore={loadMore} hasMore={hasMore} />
-
-        <View className='list-load-tip'>
-          {hasMore ? (loadingMore ? '正在加载更多酒店...' : '上拉加载更多酒店') : (list.length > 0 ? '已全部加载完成' : '')}
-        </View>
-        
-        {!hasMore && list.length === 0 && (
-          <Empty description="暂无符合条件的酒店" />
-        )}
+        {createListByType({
+          type: 'hotel',
+          items: list,
+          loading: loadingMore,
+          hasMore,
+          onLoadMore: loadMore,
+          loadTipText: hasMore
+            ? (loadingMore ? '正在加载更多酒店...' : '上拉加载更多酒店')
+            : (list.length > 0 ? '已全部加载完成' : ''),
+          emptyText: '暂无符合条件的酒店',
+          onOpen: (hotelId) => Taro.navigateTo({
+            url: `/pages/detail/index?id=${hotelId}&checkIn=${checkIn}&checkOut=${checkOut}`
+          })
+        })}
       </View>
 
       <CalendarPicker

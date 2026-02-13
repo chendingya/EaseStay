@@ -1,12 +1,12 @@
-.hotel-order-list {
+.list-container {
   height: 100%;
 }
 
-.hotel-order-scroll {
+.list-scroll {
   height: 100%;
 }
 
-.hotel-order-pull {
+.list-pull {
   margin-top: 0;
   overflow: hidden;
   display: flex;
@@ -17,12 +17,12 @@
   transition: opacity 0.1s ease, transform 0.1s ease, height 0.1s ease;
 }
 
-.hotel-order-pull.visible {
+.list-pull.visible {
   opacity: 1;
   transform: translateY(0);
 }
 
-.hotel-order-pull-dot {
+.list-pull-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -31,85 +31,85 @@
   transition: transform 0.1s ease, background-color 0.1s ease;
 }
 
-.hotel-order-pull.loading .hotel-order-pull-dot {
-  animation: order-pull-dot 0.9s linear infinite;
+.list-pull.loading .list-pull-dot {
+  animation: list-pull-dot 0.9s linear infinite;
 }
 
-.hotel-order-pull.ready .hotel-order-pull-dot {
+.list-pull.ready .list-pull-dot {
   background: #1a6dff;
 }
 
-.hotel-order-pull-text {
+.list-pull-text {
   font-size: 11px;
   color: #64758a;
 }
 
-.hotel-order-cards {
+.list-items {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.hotel-order-empty {
+.list-empty {
   background: #fff;
   border-radius: 14px;
   padding: 20px 0;
   border: 1px solid #e9eef4;
 }
 
-.hotel-order-bottom-skeleton {
+.list-bottom-skeleton {
   margin-top: 10px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.hotel-order-skeleton-card {
+.list-skeleton-card {
   background: #fff;
   border: 1px solid #e9eef4;
   border-radius: 14px;
   padding: 12px;
 }
 
-.hotel-order-skeleton-line {
+.list-skeleton-line {
   height: 10px;
   border-radius: 6px;
   background: linear-gradient(90deg, #edf1f6 10%, #f8fbff 50%, #edf1f6 90%);
   background-size: 200% 100%;
-  animation: order-skeleton 1.2s ease-in-out infinite;
+  animation: list-skeleton 1.2s ease-in-out infinite;
   margin-top: 8px;
 }
 
-.hotel-order-skeleton-line:first-child {
+.list-skeleton-line:first-child {
   margin-top: 0;
 }
 
-.hotel-order-skeleton-line.title {
+.list-skeleton-line.title {
   width: 68%;
   height: 12px;
 }
 
-.hotel-order-skeleton-line.short {
+.list-skeleton-line.short {
   width: 44%;
 }
 
-.hotel-order-skeleton-line.tiny {
+.list-skeleton-line.tiny {
   width: 110px;
 }
 
-.hotel-order-skeleton-line.price {
+.list-skeleton-line.price {
   width: 56px;
   height: 14px;
 }
 
-.hotel-order-skeleton-footer {
+.list-skeleton-footer {
   margin-top: 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.hotel-order-footer {
+.list-footer {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -117,25 +117,43 @@
   padding: 12px 0 8px;
 }
 
-.hotel-order-total-pill {
+.list-total-pill {
   background: #edf4ff;
   border: 1px solid #dce9fd;
   border-radius: 999px;
   padding: 5px 12px;
 }
 
-.hotel-order-total-pill-text {
+.list-total-pill-text {
   color: #2f5cbb;
   font-size: 11px;
   font-weight: 600;
 }
 
-.hotel-order-load-tip {
+.list-load-tip {
   font-size: 11px;
   color: #8f9aad;
 }
 
-@keyframes order-skeleton {
+.list-swipe .adm-swipe-action-content {
+  background: transparent;
+  overflow: visible;
+}
+
+.list-swipe .adm-swipe-action-track {
+  background: transparent;
+  overflow: visible;
+}
+
+.list-swipe.adm-swipe-action {
+  background: transparent;
+}
+
+.list-swipe .adm-swipe-action-actions {
+  background: transparent;
+}
+
+@keyframes list-skeleton {
   0% {
     background-position: 100% 50%;
   }
@@ -144,7 +162,7 @@
   }
 }
 
-@keyframes order-pull-dot {
+@keyframes list-pull-dot {
   0% {
     transform: scale(1);
     opacity: 1;

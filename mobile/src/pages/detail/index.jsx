@@ -54,7 +54,15 @@ export default function Detail() {
   }, [id])
 
   useEffect(() => {
-    setCollected(isFavoriteHotel(id))
+    const loadFavoriteStatus = async () => {
+      try {
+        const next = await isFavoriteHotel(id)
+        setCollected(next)
+      } catch (error) {
+        setCollected(false)
+      }
+    }
+    loadFavoriteStatus()
   }, [id])
 
   useEffect(() => {
@@ -122,14 +130,18 @@ export default function Detail() {
     })
   }
 
-  const handleCollect = () => {
-    const { collected: nextCollected } = toggleFavoriteHotel({
-      ...hotel,
-      id,
-      lowestPrice: minRoomPrice
-    })
-    setCollected(nextCollected)
-    Taro.showToast({ title: nextCollected ? '收藏成功' : '已取消收藏', icon: 'success' })
+  const handleCollect = async () => {
+    try {
+      const { collected: nextCollected } = await toggleFavoriteHotel({
+        ...hotel,
+        id,
+        lowestPrice: minRoomPrice
+      })
+      setCollected(nextCollected)
+      Taro.showToast({ title: nextCollected ? '收藏成功' : '已取消收藏', icon: 'success' })
+    } catch (error) {
+      Taro.showToast({ title: '操作失败，请稍后重试', icon: 'none' })
+    }
   }
 
   if (loading) {

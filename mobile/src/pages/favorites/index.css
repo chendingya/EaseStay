@@ -22,17 +22,6 @@
   gap: 8px;
 }
 
-.favorites-footer {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 4px 0 6px;
-}
-
-.favorites-footer-text {
-  color: #8a98ac;
-  font-size: 11px;
-}
 
 .favorites-empty-card {
   background: #fff;

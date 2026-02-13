@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { RightOutline } from 'antd-mobile-icons'
 import './index.css'
 
-export default function HotelCard({ hotel, onClick, index, animate = false }) {
+export default function HotelCard({ hotel, onClick, index, animate = false, badgeText, extraMetaItems = [] }) {
   const imageSrc = (Array.isArray(hotel.images) && hotel.images[0]) || hotel.cover_image || ''
   const [imageFailed, setImageFailed] = useState(false)
   const openingYear = hotel.opening_time ? String(hotel.opening_time).slice(0, 4) : ''
@@ -11,6 +11,11 @@ export default function HotelCard({ hotel, onClick, index, animate = false }) {
   const delay = animate && Number.isFinite(index) ? `${Math.min(index, 10) * 20}ms` : '0ms'
   const hotelName = hotel?.name || hotel?.name_en || `酒店 #${hotel?.id ?? '--'}`
   const address = `${hotel?.city || ''} ${hotel?.address || ''}`.trim() || '地址信息待完善'
+  const metaItems = [
+    hotel?.star_rating ? `${hotel.star_rating}星级` : '暂无评级',
+    openingYear ? `${openingYear}年开业` : '',
+    ...extraMetaItems
+  ].filter(Boolean)
 
   useEffect(() => {
     setImageFailed(false)
@@ -36,6 +41,11 @@ export default function HotelCard({ hotel, onClick, index, animate = false }) {
         <View className="hotel-card-info">
           <View className="hotel-card-title-row">
             <Text className="hotel-card-name">{hotelName}</Text>
+            {badgeText ? (
+              <View className="hotel-card-badge">
+                <Text className="hotel-card-badge-text">{badgeText}</Text>
+              </View>
+            ) : null}
             {hotel?.star_rating ? (
               <View className="hotel-card-star">
                 <Text className="hotel-card-star-text">{hotel.star_rating}星</Text>
@@ -47,8 +57,9 @@ export default function HotelCard({ hotel, onClick, index, animate = false }) {
           ) : null}
           <Text className="hotel-card-address">{address}</Text>
           <View className="hotel-card-meta">
-            <Text className="hotel-card-meta-item">{hotel?.star_rating ? `${hotel.star_rating}星级` : '暂无评级'}</Text>
-            {openingYear ? <Text className="hotel-card-meta-item">{openingYear}年开业</Text> : null}
+            {metaItems.map((item, idx) => (
+              <Text key={`${item}-${idx}`} className="hotel-card-meta-item">{item}</Text>
+            ))}
           </View>
           {facilities.length > 0 ? (
             <View className="hotel-card-tags">

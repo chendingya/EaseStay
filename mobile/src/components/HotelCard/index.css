@@ -4,7 +4,6 @@
   overflow: hidden;
   background: #fff;
   border: 1px solid #e6edf5;
-  box-shadow: 0 8px 22px rgba(23, 42, 68, 0.06);
 }
 
 .hotel-card.stagger-enter {
@@ -53,6 +52,21 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.hotel-card-badge {
+  background: #edf4ff;
+  border: 1px solid #d8e8ff;
+  border-radius: 999px;
+  padding: 2px 8px;
+  color: #2f5cb8;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.hotel-card-badge-text {
+  line-height: 1;
 }
 
 .hotel-card-name {

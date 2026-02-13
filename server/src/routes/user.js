@@ -17,6 +17,12 @@ router.post('/orders/:id/pay', authRequired, userController.payOrder)
 router.post('/orders/:id/cancel', authRequired, userController.cancelOrder)
 router.post('/orders/:id/use', authRequired, userController.useOrder)
 
+router.get('/favorites', authRequired, userController.getMyFavorites)
+router.get('/favorites/:hotelId', authRequired, userController.getFavoriteStatus)
+router.post('/favorites', authRequired, userController.addFavorite)
+router.delete('/favorites/:hotelId', authRequired, userController.removeFavorite)
+router.delete('/favorites', authRequired, userController.clearFavorites)
+
 // 修改密码
 router.post('/change-password', authRequired, userController.changePassword)
 

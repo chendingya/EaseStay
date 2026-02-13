@@ -19,7 +19,6 @@
   border-radius: 16px;
   border: 1px solid #e6edf5;
   background: #fff;
-  box-shadow: 0 6px 18px rgba(23, 42, 68, 0.06);
 }
 
 .list-search-row {
@@ -99,7 +98,6 @@
   border-radius: 14px;
   background: #fff;
   border: 1px solid #e6edf5;
-  box-shadow: 0 6px 18px rgba(23, 42, 68, 0.06);
   overflow: hidden;
 }
 
@@ -125,8 +123,8 @@
 
 .list-content {
   flex: 1;
+  min-height: 0;
   padding: 12px;
-  overflow-y: auto;
 }
 
 .hotel-card {

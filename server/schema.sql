@@ -70,6 +70,15 @@ CREATE TABLE orders (
   CHECK (check_out > check_in)
 );
 
+-- 收藏酒店表
+CREATE TABLE favorite_hotels (
+  id SERIAL PRIMARY KEY,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE (user_id, hotel_id)
+);
+
 -- 短信验证码表（临时存储）
 CREATE TABLE sms_codes (
   id SERIAL PRIMARY KEY,

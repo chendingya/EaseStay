@@ -4,8 +4,8 @@ import { View, Text } from '@tarojs/components'
 import { Empty, Dialog, Button } from 'antd-mobile'
 import { DeleteOutline } from 'antd-mobile-icons'
 import PageTopBar from '../../components/PageTopBar'
-import FavoriteHotelList from '../../components/FavoriteHotelList'
-import { getFavoriteHotels, saveFavoriteHotels } from '../../services/favorites'
+import { createListByType } from '../../components/OrderList'
+import { clearFavoriteHotels, getFavoriteHotels, removeFavoriteHotel } from '../../services/favorites'
 import './index.css'
 
 const formatDate = (date) => {
@@ -18,15 +18,20 @@ const formatDate = (date) => {
 export default function Favorites() {
   const [list, setList] = useState([])
 
-  const refresh = () => {
-    const next = getFavoriteHotels()
-      .slice()
-      .sort((a, b) => {
-        const ta = new Date(a?.savedAt || 0).getTime()
-        const tb = new Date(b?.savedAt || 0).getTime()
-        return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0)
-      })
-    setList(next)
+  const refresh = async () => {
+    try {
+      const next = await getFavoriteHotels()
+      const sorted = next
+        .slice()
+        .sort((a, b) => {
+          const ta = new Date(a?.savedAt || 0).getTime()
+          const tb = new Date(b?.savedAt || 0).getTime()
+          return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0)
+        })
+      setList(sorted)
+    } catch (error) {
+      setList([])
+    }
   }
 
   useDidShow(() => {
@@ -48,9 +53,8 @@ export default function Favorites() {
       content: '确认取消收藏该酒店吗？'
     }).catch(() => false)
     if (!result) return
-    const next = list.filter((item) => String(item.id) !== String(id))
-    saveFavoriteHotels(next)
-    setList(next)
+    await removeFavoriteHotel(id)
+    await refresh()
   }
 
   const clearFavorites = async () => {
@@ -58,7 +62,7 @@ export default function Favorites() {
       content: '确认清空全部收藏酒店吗？'
     }).catch(() => false)
     if (!result) return
-    saveFavoriteHotels([])
+    await clearFavoriteHotels()
     setList([])
   }
 
@@ -92,14 +96,22 @@ export default function Favorites() {
           </View>
         ) : (
           <View className='favorites-list-wrap'>
-            <FavoriteHotelList
-              list={list}
-              onOpen={openHotel}
-              onRemove={removeFavorite}
-            />
-            <View className='favorites-footer'>
-              <Text className='favorites-footer-text'>已展示全部收藏酒店</Text>
-            </View>
+            {createListByType({
+              type: 'favorite',
+              items: list,
+              onOpen: openHotel,
+              onRemove: removeFavorite,
+              badgeText: '已收藏',
+              footer: null,
+              extraMetaItemsResolver: (hotel) => {
+                if (!hotel?.savedAt) return []
+                const date = new Date(hotel.savedAt)
+                if (Number.isNaN(date.getTime())) return []
+                const pad = (n) => String(n).padStart(2, '0')
+                const savedAt = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+                return [`收藏于 ${savedAt}`]
+              }
+            })}
           </View>
         )}
       </View>
