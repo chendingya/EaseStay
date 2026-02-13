@@ -183,7 +183,7 @@ export default function OrderDetail() {
           ) : null}
           {canOperate ? (
             <>
-              <GlassButton tone='danger' fill='outline' size='small' loading={actionLoading} onClick={handleCancel}>
+              <GlassButton tone='danger' fill='outline' size='middle' loading={actionLoading} onClick={handleCancel}>
                 取消订单
               </GlassButton>
               <GlassButton tone='primary' fill='solid' size='middle' loading={actionLoading} onClick={handleUse}>

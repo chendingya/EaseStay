@@ -29,16 +29,20 @@ const formatDate = (date) => {
 const AMAP_KEY = 'ddced92dcf9226be15b73e95708224f9' // 请替换为您的高德地图 Key
 
 export default function Index() {
-  const [city, setCity] = useState('上海')
-  const [keyword, setKeyword] = useState('')
+  const SEARCH_STORAGE_KEY = 'hotel_search_params'
+  const storedParams = Taro.getStorageSync(SEARCH_STORAGE_KEY) || {}
+  const [city, setCity] = useState(() => storedParams.city || '上海')
+  const [keyword, setKeyword] = useState(() => storedParams.keyword || '')
   const [quickTags, setQuickTags] = useState([]) // Load from backend
   
   // Initialize with valid dates to prevent flash of empty/NaN content
   const [checkIn, setCheckIn] = useState(() => {
+    if (storedParams.checkIn) return storedParams.checkIn
     const d = new Date()
     return formatDate(d)
   })
   const [checkOut, setCheckOut] = useState(() => {
+    if (storedParams.checkOut) return storedParams.checkOut
     const d = new Date()
     d.setDate(d.getDate() + 1)
     return formatDate(d)
@@ -46,11 +50,11 @@ export default function Index() {
 
   const [calendarVisible, setCalendarVisible] = useState(false)
   const [filterVisible, setFilterVisible] = useState(false)
-  const [selectedStar, setSelectedStar] = useState(null)
-  const [selectedPrice, setSelectedPrice] = useState(null) // null, '0-150', '150-300', '300-450', '450-600', '600-1000', '1000+'
+  const [selectedStar, setSelectedStar] = useState(() => storedParams.selectedStar ?? null)
+  const [selectedPrice, setSelectedPrice] = useState(() => storedParams.selectedPrice ?? null) // null, '0-150', '150-300', '300-450', '450-600', '600-1000', '1000+'
   const [hotHotels, setHotHotels] = useState([])
-  const [latitude, setLatitude] = useState(31.2304) // Default Shanghai
-  const [longitude, setLongitude] = useState(121.4737)
+  const [latitude, setLatitude] = useState(() => Number(storedParams.userLat) || 31.2304) // Default Shanghai
+  const [longitude, setLongitude] = useState(() => Number(storedParams.userLng) || 121.4737)
   const [mapVisible, setMapVisible] = useState(false)
   const [mapInstance, setMapInstance] = useState(null)
   const [markerInstance, setMarkerInstance] = useState(null)
@@ -65,20 +69,18 @@ export default function Index() {
     // fetchCities() // No longer needed
   }, [])
 
-  /*
-  const fetchCities = async () => {
-    try {
-      const res = await api.get('/api/presets/cities')
-      if (res && res.success && Array.isArray(res.data)) {
-         // Format for Picker: [[{ label: 'Shanghai', value: 'Shanghai' }, ...]]
-         const formatted = res.data.map(c => ({ label: c.name, value: c.name }))
-         setCityList([formatted])
-      }
-    } catch (e) {
-      console.error('Fetch cities failed', e)
-    }
-  }
-  */
+  useEffect(() => {
+    Taro.setStorageSync(SEARCH_STORAGE_KEY, {
+      city,
+      keyword,
+      checkIn,
+      checkOut,
+      selectedStar,
+      selectedPrice,
+      userLat: latitude,
+      userLng: longitude
+    })
+  }, [city, keyword, checkIn, checkOut, selectedStar, selectedPrice, latitude, longitude])
 
   const fetchQuickTags = async () => {
     try {

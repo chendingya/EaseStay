@@ -1,15 +1,18 @@
 import { View, Text } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useEffect, useState, useRef } from 'react'
-import { Dropdown, InfiniteScroll, Radio, Checkbox, Button, Empty, Space, CalendarPicker } from 'antd-mobile'
+import { Dropdown, InfiniteScroll, Radio, Checkbox, Button, Empty, Space, CalendarPicker, Popup, SearchBar, Cascader } from 'antd-mobile'
 import { SearchOutline, CalendarOutline } from 'antd-mobile-icons'
 import { api } from '../../services/request'
 import HotelCard from '../../components/HotelCard'
 import PageTopBar from '../../components/PageTopBar'
+import { cityData } from '../../utils/cityData'
 import './index.css'
 
 export default function List() {
   const router = useRouter()
+  const SEARCH_STORAGE_KEY = 'hotel_search_params'
+  const storedParams = Taro.getStorageSync(SEARCH_STORAGE_KEY) || {}
   // Use a ref to ensure we parse params only once and correctly on mount
   const paramsRef = useRef(router.params || {})
   
@@ -38,14 +41,14 @@ export default function List() {
   }
 
   const defaultDates = getDefaultDates()
-  const [city, setCity] = useState(() => safeDecode(paramsRef.current.city))
-  const [keyword, setKeyword] = useState(() => safeDecode(paramsRef.current.keyword))
-  const [checkIn, setCheckIn] = useState(() => paramsRef.current.checkIn || defaultDates.checkIn)
-  const [checkOut, setCheckOut] = useState(() => paramsRef.current.checkOut || defaultDates.checkOut)
-  const [minPrice, setMinPrice] = useState(() => paramsRef.current.minPrice || '')
-  const [maxPrice, setMaxPrice] = useState(() => paramsRef.current.maxPrice || '')
-  const [userLat, setUserLat] = useState(() => paramsRef.current.userLat || '')
-  const [userLng, setUserLng] = useState(() => paramsRef.current.userLng || '')
+  const [city, setCity] = useState(() => safeDecode(paramsRef.current.city) || storedParams.city || '')
+  const [keyword, setKeyword] = useState(() => safeDecode(paramsRef.current.keyword) || storedParams.keyword || '')
+  const [checkIn, setCheckIn] = useState(() => paramsRef.current.checkIn || storedParams.checkIn || defaultDates.checkIn)
+  const [checkOut, setCheckOut] = useState(() => paramsRef.current.checkOut || storedParams.checkOut || defaultDates.checkOut)
+  const [minPrice, setMinPrice] = useState(() => paramsRef.current.minPrice || storedParams.minPrice || '')
+  const [maxPrice, setMaxPrice] = useState(() => paramsRef.current.maxPrice || storedParams.maxPrice || '')
+  const [userLat, setUserLat] = useState(() => paramsRef.current.userLat || storedParams.userLat || '')
+  const [userLng, setUserLng] = useState(() => paramsRef.current.userLng || storedParams.userLng || '')
 
   // Data State
   const [list, setList] = useState([])
@@ -55,13 +58,24 @@ export default function List() {
   
   // Filter State
   const [sort, setSort] = useState('recommend') // recommend, price_asc, price_desc, star
-  const [selectedStars, setSelectedStars] = useState(() => paramsRef.current.stars ? paramsRef.current.stars.split(',') : [])
+  const [selectedStars, setSelectedStars] = useState(() => {
+    if (paramsRef.current.stars) return paramsRef.current.stars.split(',')
+    if (Array.isArray(storedParams.selectedStars)) return storedParams.selectedStars
+    return []
+  })
   const [selectedTags, setSelectedTags] = useState(() => {
-    if (!paramsRef.current.tags) return []
-    return safeDecode(paramsRef.current.tags).split(',').filter(Boolean)
+    if (paramsRef.current.tags) {
+      return safeDecode(paramsRef.current.tags).split(',').filter(Boolean)
+    }
+    if (Array.isArray(storedParams.selectedTags)) return storedParams.selectedTags
+    return []
   })
   const [tagOptions, setTagOptions] = useState([])
   const [calendarVisible, setCalendarVisible] = useState(false)
+  const [searchVisible, setSearchVisible] = useState(false)
+  const [cityPickerVisible, setCityPickerVisible] = useState(false)
+  const [draftCity, setDraftCity] = useState('')
+  const [draftKeyword, setDraftKeyword] = useState('')
   
   const dropdownRef = useRef(null)
   const isFirstLoad = useRef(true)
@@ -73,6 +87,22 @@ export default function List() {
   // Sync refs with state
   useEffect(() => {
     searchParamsRef.current = { city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags, userLat, userLng }
+  }, [city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags, userLat, userLng])
+
+  useEffect(() => {
+    Taro.setStorageSync(SEARCH_STORAGE_KEY, {
+      city,
+      keyword,
+      checkIn,
+      checkOut,
+      minPrice,
+      maxPrice,
+      sort,
+      selectedStars,
+      selectedTags,
+      userLat,
+      userLng
+    })
   }, [city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags, userLat, userLng])
 
   useEffect(() => {
@@ -146,9 +176,10 @@ export default function List() {
     setHasMore(true) // This should trigger InfiniteScroll to call loadMore
   }, [sort, selectedStars, selectedTags, city, keyword, minPrice, maxPrice, checkIn, checkOut])
 
-  // Handle Search Bar Click -> Go back to search or expand
   const handleSearchClick = () => {
-    Taro.navigateBack()
+    setDraftCity(city)
+    setDraftKeyword(keyword)
+    setSearchVisible(true)
   }
 
   const nights = (() => {
@@ -164,6 +195,12 @@ export default function List() {
       setCheckOut(formatDate(val[1]))
       setCalendarVisible(false)
     }
+  }
+
+  const handleSearchApply = () => {
+    setCity(draftCity)
+    setKeyword(draftKeyword)
+    setSearchVisible(false)
   }
 
   return (
@@ -331,6 +368,46 @@ export default function List() {
         onClose={() => setCalendarVisible(false)}
         onConfirm={handleDateConfirm}
         defaultValue={[new Date(checkIn), new Date(checkOut)]}
+      />
+
+      <Popup
+        visible={searchVisible}
+        onMaskClick={() => setSearchVisible(false)}
+        bodyStyle={{ borderTopLeftRadius: '16px', borderTopRightRadius: '16px' }}
+      >
+        <View className="list-search-popup">
+          <View className="list-search-popup-header">修改查询条件</View>
+          <View className="list-search-popup-body">
+            <View className="list-search-popup-row" onClick={() => setCityPickerVisible(true)}>
+              <Text className="list-search-popup-label">城市</Text>
+              <Text className="list-search-popup-value">{draftCity || '请选择城市'}</Text>
+            </View>
+            <View className="list-search-popup-row">
+              <Text className="list-search-popup-label">关键词</Text>
+              <SearchBar
+                value={draftKeyword}
+                placeholder="酒店名/位置/关键词"
+                onChange={setDraftKeyword}
+                style={{ '--background': '#f5f6fa' }}
+              />
+            </View>
+          </View>
+          <View className="list-search-popup-actions">
+            <Button onClick={() => setSearchVisible(false)} fill="outline">取消</Button>
+            <Button color="primary" onClick={handleSearchApply}>应用</Button>
+          </View>
+        </View>
+      </Popup>
+
+      <Cascader
+        options={cityData}
+        visible={cityPickerVisible}
+        onClose={() => setCityPickerVisible(false)}
+        value={[]}
+        onConfirm={(v) => {
+          const selected = v[v.length - 1]
+          if (selected) setDraftCity(selected)
+        }}
       />
     </View>
   )

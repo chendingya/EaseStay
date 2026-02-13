@@ -6,6 +6,7 @@ import { api } from '../../services/request'
 import { isFavoriteHotel, toggleFavoriteHotel } from '../../services/favorites'
 import PageTopBar from '../../components/PageTopBar'
 import GlassButton from '../../components/GlassButton'
+import { SendOutline, HeartOutline, HeartFill, MessageOutline } from 'antd-mobile-icons'
 import './index.css'
 
 // 默认设施
@@ -45,6 +46,8 @@ export default function Detail() {
   const [navOpacity, setNavOpacity] = useState(0)
   const [bookingRoomId, setBookingRoomId] = useState(null)
   const [collected, setCollected] = useState(false)
+  const [bannerImageError, setBannerImageError] = useState({})
+  const [roomImageError, setRoomImageError] = useState({})
 
   useEffect(() => {
     fetchHotelDetail()
@@ -52,6 +55,11 @@ export default function Detail() {
 
   useEffect(() => {
     setCollected(isFavoriteHotel(id))
+  }, [id])
+
+  useEffect(() => {
+    setBannerImageError({})
+    setRoomImageError({})
   }, [id])
 
   const fetchHotelDetail = async () => {
@@ -222,12 +230,12 @@ export default function Detail() {
         rightActions={[
           {
             key: 'share',
-            icon: <Text className="detail-top-action-text">↗</Text>,
+            icon: <SendOutline className="detail-top-action-icon" />,
             onClick: handleShare
           },
           {
             key: 'collect',
-            icon: <Text className="detail-top-action-text">{collected ? '♥' : '♡'}</Text>,
+            icon: collected ? <HeartFill className="detail-top-action-icon" /> : <HeartOutline className="detail-top-action-icon" />,
             onClick: handleCollect,
             active: collected
           }
@@ -245,8 +253,13 @@ export default function Detail() {
           <Swiper className="banner-swiper" indicatorDots indicatorColor="rgba(255,255,255,0.5)" indicatorActiveColor="#fff">
             {images.map((img, idx) => (
               <SwiperItem key={idx}>
-                {img ? (
-                  <Image className="banner-img" src={img} mode="aspectFill" />
+                {img && !bannerImageError[idx] ? (
+                  <Image
+                    className="banner-img"
+                    src={img}
+                    mode="aspectFill"
+                    onError={() => setBannerImageError((prev) => ({ ...prev, [idx]: true }))}
+                  />
                 ) : (
                   <View className="banner-placeholder">
                     <Text className="placeholder-text">暂无图片</Text>
@@ -345,14 +358,24 @@ export default function Detail() {
               <Text style={{ color: '#999' }}>该酒店暂无上架房型</Text>
             </View>
           ) : (
-            roomTypes.map((room) => (
+            roomTypes.map((room, roomIndex) => (
             <View key={room.id} className="room-card glass-card">
               <View className="room-img-wrap">
-                {((Array.isArray(room.images) && room.images[0]) || room.image) ? (
-                  <Image className="room-img" src={(Array.isArray(room.images) && room.images[0]) || room.image} mode="aspectFill" />
-                ) : (
-                  <View className="room-img-placeholder"></View>
-                )}
+                {(() => {
+                  const roomImageSrc = (Array.isArray(room.images) && room.images[0]) || room.image
+                  const roomKey = room.id ?? `room-${roomIndex}`
+                  if (roomImageSrc && !roomImageError[roomKey]) {
+                    return (
+                      <Image
+                        className="room-img"
+                        src={roomImageSrc}
+                        mode="aspectFill"
+                        onError={() => setRoomImageError((prev) => ({ ...prev, [roomKey]: true }))}
+                      />
+                    )
+                  }
+                  return <View className="room-img-placeholder"></View>
+                })()}
               </View>
               <View className="room-info">
                 <Text className="room-name">{room.name}</Text>
@@ -486,11 +509,11 @@ export default function Detail() {
       <View className="bottom-bar glass-card">
         <View className="bottom-left">
           <View className="bottom-action" onClick={handleCollect}>
-            <Text className="action-icon">{collected ? '♥' : '♡'}</Text>
+            {collected ? <HeartFill className="action-icon" /> : <HeartOutline className="action-icon" />}
             <Text className="action-text">{collected ? '已收藏' : '收藏'}</Text>
           </View>
           <View className="bottom-action" onClick={() => Taro.showToast({ title: '客服咨询开发中', icon: 'none' })}>
-            <Text className="action-icon">💬</Text>
+            <MessageOutline className="action-icon" />
             <Text className="action-text">咨询</Text>
           </View>
         </View>
