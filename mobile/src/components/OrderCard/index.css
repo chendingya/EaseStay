@@ -1,24 +1,9 @@
 .hotel-order-card {
   background: #fff;
-  border-radius: 14px;
-  border: 1px solid #ecf0f4;
+  border-radius: 16px;
+  border: 1px solid #e6edf5;
   padding: 12px;
   cursor: pointer;
-}
-
-.hotel-order-card.stagger-enter {
-  animation: order-card-enter 0.22s ease-out both;
-}
-
-@keyframes order-card-enter {
-  from {
-    opacity: 0;
-    transform: translateY(6px) scale(0.995);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
 }
 
 .hotel-order-top {
@@ -35,8 +20,8 @@
 
 .hotel-order-name {
   display: block;
-  color: #1f2a38;
-  font-size: 15px;
+  color: #172b4d;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.2;
   white-space: nowrap;
@@ -47,7 +32,7 @@
 .hotel-order-name-en {
   display: block;
   margin-top: 2px;
-  color: #8a96a6;
+  color: #8a97a8;
   font-size: 11px;
   white-space: nowrap;
   overflow: hidden;
@@ -103,7 +88,7 @@
 }
 
 .hotel-order-label {
-  color: #8b95a3;
+  color: #5e6c84;
   font-size: 12px;
 }
 
@@ -150,8 +135,8 @@
 }
 
 .hotel-order-price {
-  color: #e63d3d;
-  font-size: 20px;
+  color: #ff4d4f;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1;
 }
@@ -167,7 +152,7 @@
   height: 24px;
   border-radius: 12px;
   padding: 0 10px;
-  background: #1677ff;
+  background: #1a6dff;
   display: flex;
   align-items: center;
   justify-content: center;

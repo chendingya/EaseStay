@@ -40,6 +40,7 @@ function ListContainer({
   pullLabel,
   pullDistance,
   pullThreshold = 72,
+  animate = false,
   onLoadMore,
   onRefresh,
   onPulling,
@@ -165,11 +166,18 @@ function ListContainer({
 
         {data.length > 0 ? (
           <View className={`list-items${listClassName ? ` ${listClassName}` : ''}`}>
-            {data.map((item, index) => (
-              <View key={resolveKey(item, index)}>
+            {data.map((item, index) => {
+              const delay = animate && Number.isFinite(index) ? `${Math.min(index, 10) * 20}ms` : '0ms'
+              return (
+                <View
+                  key={resolveKey(item, index)}
+                  className={`list-item${animate ? ' list-stagger-enter' : ''}`}
+                  style={animate ? { animationDelay: delay } : undefined}
+                >
                 {renderItem ? renderItem(item, index) : null}
-              </View>
-            ))}
+                </View>
+              )
+            })}
           </View>
         ) : null}
 
@@ -224,13 +232,12 @@ export const createListByType = ({
         emptyText={emptyText || '暂无订单'}
         renderSkeleton={renderOrderSkeletonCards}
         keyExtractor={getOrderKey}
+        animate={animate}
         renderItem={(order, index) => (
           <OrderCard
             order={order}
             onPay={onPay}
             onDetail={onDetail}
-            index={index}
-            animate={animate}
           />
         )}
         {...rest}
@@ -244,13 +251,12 @@ export const createListByType = ({
         items={items}
         showSummary={false}
         emptyText={emptyText || '暂无收藏酒店'}
+        animate={animate}
         renderItem={(hotel, index) => {
           const extraMetaItems = extraMetaItemsResolver ? extraMetaItemsResolver(hotel) : []
           const cardNode = (
             <HotelCard
               hotel={hotel}
-              index={index}
-              animate={animate}
               badgeText={badgeText}
               extraMetaItems={extraMetaItems}
               onClick={() => onOpen && onOpen(hotel?.id)}
@@ -282,11 +288,10 @@ export const createListByType = ({
       items={items}
       showSummary={false}
       emptyText={emptyText || '暂无符合条件的酒店'}
+      animate={animate}
       renderItem={(hotel, index) => (
         <HotelCard
           hotel={hotel}
-          index={index}
-          animate={animate}
           onClick={() => onOpen && onOpen(hotel?.id)}
         />
       )}

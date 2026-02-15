@@ -3,12 +3,11 @@ import { useEffect, useState } from 'react'
 import { RightOutline } from 'antd-mobile-icons'
 import './index.css'
 
-export default function HotelCard({ hotel, onClick, index, animate = false, badgeText, extraMetaItems = [] }) {
+export default function HotelCard({ hotel, onClick, badgeText, extraMetaItems = [] }) {
   const imageSrc = (Array.isArray(hotel.images) && hotel.images[0]) || hotel.cover_image || ''
   const [imageFailed, setImageFailed] = useState(false)
   const openingYear = hotel.opening_time ? String(hotel.opening_time).slice(0, 4) : ''
   const facilities = Array.isArray(hotel.facilities) ? hotel.facilities.slice(0, 2) : []
-  const delay = animate && Number.isFinite(index) ? `${Math.min(index, 10) * 20}ms` : '0ms'
   const hotelName = hotel?.name || hotel?.name_en || `酒店 #${hotel?.id ?? '--'}`
   const address = `${hotel?.city || ''} ${hotel?.address || ''}`.trim() || '地址信息待完善'
   const metaItems = [
@@ -24,8 +23,7 @@ export default function HotelCard({ hotel, onClick, index, animate = false, badg
   return (
     <View
       onClick={onClick}
-      className={`hotel-card ${animate ? 'stagger-enter' : ''}`}
-      style={animate ? { animationDelay: delay } : undefined}
+      className='hotel-card'
     >
       <View className="hotel-card-main">
         {imageSrc && !imageFailed ? (

@@ -676,13 +676,13 @@ Query：page、pageSize、status（可选）
 
 ### 11.2 订单页与支付页
 - `pages/orders`：顶部栏 + 状态分段 + 订单列表，支持筛选弹层（关键词、金额排序、时间排序）
-- `components/OrderList`：ScrollView + 下拉刷新 + 上拉加载 + 骨架屏
-- `components/OrderCard`：展示酒店名、房型、入住离店、间夜、订单号、价格；待付款订单展示“去支付”
+- `components/OrderList`：统一列表容器（ScrollView + 下拉刷新 + 上拉加载 + 骨架屏 + 分步入场动效），复用于订单/收藏/酒店列表
+- `components/OrderCard`：订单卡片（酒店名、房型、入住离店、间夜、订单号、价格；待付款展示“去支付”）
 - `pages/order-detail`：订单详情页，待使用订单可取消/确认使用，完成后状态刷新
 - `pages/order-pay`：订单详情确认、支付渠道选择、模拟支付后回到订单页“待使用”
 
 ### 11.3 收藏页
 - `pages/favorites`：顶部栏 + 收藏列表 + 空状态
-- `components/FavoriteHotelList`：收藏数量汇总与列表容器
-- `components/FavoriteHotelCard`：酒店图文卡片（中英名、地址、星级/开业、收藏时间、价格）
+- `components/OrderList`：收藏列表容器，支持滑动取消收藏
+- `components/HotelCard`：酒店图文卡片（中英名、地址、星级/开业、收藏时间、价格）
 - 收藏存储：`services/favorites` 基于本地存储，支持单条取消收藏与批量清空

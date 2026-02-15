@@ -43,7 +43,7 @@ const getHotelNameEn = (order) => {
   return fallback
 }
 
-function OrderCard({ order, onPay, onDetail, index, animate = false }) {
+function OrderCard({ order, onPay, onDetail }) {
   const statusText = statusTextMap[order?.status] || order?.status || '未知'
   const statusClass = statusClassMap[order?.status] || 'hotel-order-status-default'
   const hotelName = getHotelName(order)
@@ -57,12 +57,9 @@ function OrderCard({ order, onPay, onDetail, index, animate = false }) {
   const createdAt = formatDateTime(order?.created_at)
   const canPay = order?.status === 'pending_payment'
 
-  const delay = animate && Number.isFinite(index) ? `${Math.min(index, 10) * 20}ms` : '0ms'
-
   return (
     <View
-      className={`hotel-order-card ${animate ? 'stagger-enter' : ''}`}
-      style={animate ? { animationDelay: delay } : undefined}
+      className='hotel-order-card'
       onClick={() => onDetail && onDetail(order)}
     >
       <View className='hotel-order-top'>

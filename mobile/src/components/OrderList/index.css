@@ -50,6 +50,10 @@
   gap: 10px;
 }
 
+.list-item.list-stagger-enter {
+  animation: list-item-enter 0.22s ease-out both;
+}
+
 .list-empty {
   background: #fff;
   border-radius: 14px;
@@ -174,5 +178,16 @@
   100% {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+@keyframes list-item-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
