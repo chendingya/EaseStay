@@ -1,7 +1,7 @@
 import { View, Text } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useEffect, useState, useRef } from 'react'
-import { Dropdown, Radio, Checkbox, Button, Space, CalendarPicker, Popup, SearchBar, Cascader } from 'antd-mobile'
+import { Dropdown, Radio, Checkbox, Button, Space, CalendarPicker, Popup, SearchBar, Cascader, Slider, Tag } from 'antd-mobile'
 import { SearchOutline, CalendarOutline } from 'antd-mobile-icons'
 import { api } from '../../services/request'
 import { createListByType } from '../../components/OrderList'
@@ -41,14 +41,23 @@ export default function List() {
   }
 
   const defaultDates = getDefaultDates()
+  const hasKeywordParam = Object.prototype.hasOwnProperty.call(paramsRef.current, 'keyword')
   const [city, setCity] = useState(() => safeDecode(paramsRef.current.city) || storedParams.city || '')
-  const [keyword, setKeyword] = useState(() => safeDecode(paramsRef.current.keyword) || storedParams.keyword || '')
+  const [keyword, setKeyword] = useState(() => (hasKeywordParam ? safeDecode(paramsRef.current.keyword) : (storedParams.keyword || '')))
   const [checkIn, setCheckIn] = useState(() => paramsRef.current.checkIn || storedParams.checkIn || defaultDates.checkIn)
   const [checkOut, setCheckOut] = useState(() => paramsRef.current.checkOut || storedParams.checkOut || defaultDates.checkOut)
   const [minPrice, setMinPrice] = useState(() => paramsRef.current.minPrice || storedParams.minPrice || '')
   const [maxPrice, setMaxPrice] = useState(() => paramsRef.current.maxPrice || storedParams.maxPrice || '')
   const [userLat, setUserLat] = useState(() => paramsRef.current.userLat || storedParams.userLat || '')
   const [userLng, setUserLng] = useState(() => paramsRef.current.userLng || storedParams.userLng || '')
+  
+  const [priceRange, setPriceRange] = useState([0, 2100])
+
+  useEffect(() => {
+    const min = minPrice ? parseInt(minPrice) : 0
+    const max = maxPrice ? parseInt(maxPrice) : 2100
+    setPriceRange([min, max])
+  }, [minPrice, maxPrice])
 
   // Data State
   const [list, setList] = useState([])
@@ -81,14 +90,17 @@ export default function List() {
   const isFirstLoad = useRef(true)
   const loadingRef = useRef(false)
   const pageRef = useRef(page)
+  const hasMoreRef = useRef(hasMore)
 
-  // Use refs for current search params to avoid stale closures in loadMore if called async
   const searchParamsRef = useRef({ city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags, userLat, userLng })
 
-  // Sync refs with state
   useEffect(() => {
     searchParamsRef.current = { city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags, userLat, userLng }
   }, [city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags, userLat, userLng])
+
+  useEffect(() => {
+    hasMoreRef.current = hasMore
+  }, [hasMore])
 
   useEffect(() => {
     pageRef.current = page
@@ -124,11 +136,10 @@ export default function List() {
 
   // Fetch Data
   async function loadMore() {
-    if (loadingRef.current || !hasMore) return
+    if (loadingRef.current || !hasMoreRef.current) return
     loadingRef.current = true
     setLoadingMore(true)
     try {
-      // Use ref values to ensure latest params
       const currentParams = searchParamsRef.current
       const nextPage = pageRef.current
       
@@ -152,32 +163,36 @@ export default function List() {
       
       if (res && res.list) {
         setList(prev => nextPage === 1 ? res.list : [...prev, ...res.list])
-        setHasMore(res.list.length >= 10)
+        const nextHasMore = res.list.length >= 10
+        setHasMore(nextHasMore)
+        hasMoreRef.current = nextHasMore
         setPage(nextPage + 1)
         pageRef.current = nextPage + 1
       } else {
         setHasMore(false)
+        hasMoreRef.current = false
       }
     } catch (e) {
       console.error(e)
       setHasMore(false)
+      hasMoreRef.current = false
     } finally {
       loadingRef.current = false
       setLoadingMore(false)
     }
   }
 
-  // Reset and Reload when filters change
   useEffect(() => {
-    if (isFirstLoad.current) {
-      isFirstLoad.current = false
-      loadMore()
-      return
-    }
     setPage(1)
     pageRef.current = 1
     setList([])
     setHasMore(true)
+    hasMoreRef.current = true
+    loadingRef.current = false
+    searchParamsRef.current = { city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags, userLat, userLng }
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false
+    }
     loadMore()
   }, [sort, selectedStars, selectedTags, city, keyword, minPrice, maxPrice, checkIn, checkOut])
 
@@ -206,6 +221,11 @@ export default function List() {
     setCity(draftCity)
     setKeyword(draftKeyword)
     setSearchVisible(false)
+    searchParamsRef.current = {
+      ...searchParamsRef.current,
+      city: draftCity,
+      keyword: draftKeyword
+    }
   }
 
   return (
@@ -236,10 +256,9 @@ export default function List() {
 
           <Dropdown ref={dropdownRef} className="filter-dropdown list-filter-dropdown">
             <Dropdown.Item key="sort" title={
-              sort === 'recommend' ? '推荐排序' : 
-              sort === 'price_asc' ? '价格低→高' : 
-              sort === 'price_desc' ? '价格高→低' : 
-              sort === 'star' ? '星级高→低' : '排序'
+              <span className={sort !== 'recommend' ? 'active-filter-label' : ''}>
+                {sort === 'recommend' ? '推荐' : '排序'}
+              </span>
             }>
               <View className="dropdown-content">
                 <Radio.Group value={sort} onChange={(val) => {
@@ -257,50 +276,123 @@ export default function List() {
             </Dropdown.Item>
 
             <Dropdown.Item key="price" title={
-              (minPrice || maxPrice) ? '价格(已选)' : '价格范围'
+              <span className={(minPrice || maxPrice) ? 'active-filter-label' : ''}>
+                价格
+              </span>
             }>
               <View className="dropdown-content">
-                <Radio.Group 
-                  value={
-                    minPrice === '1000' && !maxPrice ? '1000+' :
-                    minPrice && maxPrice ? `${minPrice}-${maxPrice}` : 
-                    'unlimited'
-                  }
-                  onChange={(val) => {
-                    if (val === 'unlimited') {
-                      setMinPrice('')
-                      setMaxPrice('')
-                    } else if (val === '1000+') {
-                      setMinPrice('1000')
-                      setMaxPrice('')
-                    } else {
-                      const [min, max] = val.split('-')
-                      setMinPrice(min)
-                      setMaxPrice(max)
-                    }
-                    dropdownRef.current?.close()
-                  }}
-                >
-                  <Space direction='vertical' block>
-                    <Radio value='unlimited'>不限</Radio>
-                    <Radio value='0-150'>¥150以下</Radio>
-                    <Radio value='150-300'>¥150-300</Radio>
-                    <Radio value='300-450'>¥300-450</Radio>
-                    <Radio value='450-600'>¥450-600</Radio>
-                    <Radio value='600-1000'>¥600-1000</Radio>
-                    <Radio value='1000+'>¥1000以上</Radio>
-                  </Space>
-                </Radio.Group>
+                <View style={{ marginBottom: 32, padding: '0 12px' }}>
+                   <View style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, color: '#333', fontSize: 14 }}>
+                     <Text>¥{priceRange[0]}</Text>
+                     <Text>¥{priceRange[1] === 2100 ? '2100+' : priceRange[1]}</Text>
+                   </View>
+                   <Slider
+                     range
+                     min={0}
+                     max={2100}
+                     step={50}
+                     value={priceRange}
+                     onChange={val => setPriceRange(val)}
+                     style={{ '--fill-color': '#0086F6' }}
+                   />
+                </View>
+
+                <View style={{ marginBottom: 24 }}>
+                   <View style={{ fontSize: 14, color: '#999', marginBottom: 12 }}>价格区间</View>
+                   <Space wrap style={{ '--gap': '12px' }}>
+                     {[
+                       { label: '不限', value: null },
+                       { label: '¥150以下', value: '0-150' },
+                       { label: '¥150-300', value: '150-300' },
+                       { label: '¥300-450', value: '300-450' },
+                       { label: '¥450-600', value: '450-600' },
+                       { label: '¥600-1000', value: '600-1000' },
+                       { label: '¥1000以上', value: '1000+' },
+                     ].map(item => {
+                       let isActive = false
+                       if (item.value === null) isActive = priceRange[0] === 0 && priceRange[1] === 2100
+                       else if (item.value.endsWith('+')) isActive = priceRange[0] === parseInt(item.value) && priceRange[1] === 2100
+                       else {
+                          const [min, max] = item.value.split('-').map(Number)
+                          isActive = priceRange[0] === min && priceRange[1] === max
+                       }
+                       
+                       return (
+                         <Tag
+                           key={item.label}
+                           fill={isActive ? 'solid' : 'outline'}
+                           color='primary'
+                           style={{ 
+                             padding: '6px 16px', 
+                             borderRadius: 4, 
+                             minWidth: 80, 
+                             textAlign: 'center',
+                             backgroundColor: isActive ? '#0086F6' : '#f5f5f5',
+                             color: isActive ? '#fff' : '#333',
+                             border: 'none'
+                           }}
+                           onClick={() => {
+                              if (item.value === null) setPriceRange([0, 2100])
+                              else if (item.value.endsWith('+')) setPriceRange([parseInt(item.value), 2100])
+                              else {
+                                const [min, max] = item.value.split('-').map(Number)
+                                setPriceRange([min, max])
+                              }
+                           }}
+                         >
+                           {item.label}
+                         </Tag>
+                       )
+                     })}
+                   </Space>
+                </View>
+
+                <View style={{ display: 'flex', gap: 12 }}>
+                   <Button block shape='rounded' onClick={() => setPriceRange([0, 2100])} style={{ flex: 1, background: '#f5f5f5', border: 'none', color: '#666' }}>重置</Button>
+                   <Button 
+                     block 
+                     shape='rounded' 
+                     color='primary' 
+                     onClick={() => {
+                        const [min, max] = priceRange
+                        if (min === 0 && max === 2100) {
+                          setMinPrice('')
+                          setMaxPrice('')
+                        } else if (max === 2100) {
+                          setMinPrice(min.toString())
+                          setMaxPrice('')
+                        } else {
+                          setMinPrice(min.toString())
+                          setMaxPrice(max.toString())
+                        }
+                        dropdownRef.current?.close()
+                     }}
+                     style={{ flex: 1 }}
+                   >
+                     确定
+                   </Button>
+                </View>
               </View>
             </Dropdown.Item>
 
-            <Dropdown.Item key="tags" title={selectedTags.length ? `标签(${selectedTags.length})` : '标签筛选'}>
+            <Dropdown.Item key="tags" title={
+              <span className={selectedTags.length ? 'active-filter-label' : ''}>
+                标签
+              </span>
+            }>
               <View className="dropdown-content">
                 <View className="filter-section-title">常用标签</View>
                 <Checkbox.Group value={selectedTags} onChange={(val) => setSelectedTags(val)}>
                   <Space direction='vertical' block>
                     {tagOptions.map((tag) => (
-                      <Checkbox key={tag} value={tag}>{tag}</Checkbox>
+                      <Checkbox 
+                        key={tag} 
+                        value={tag}
+                        style={{ '--icon-size': '18px', '--font-size': '14px' }}
+                        className="square-checkbox"
+                      >
+                        {tag}
+                      </Checkbox>
                     ))}
                   </Space>
                 </Checkbox.Group>
@@ -315,7 +407,11 @@ export default function List() {
               </View>
             </Dropdown.Item>
             
-            <Dropdown.Item key="filter" title={selectedStars.length ? `星级(${selectedStars.length})` : '星级筛选'}>
+            <Dropdown.Item key="filter" title={
+              <span className={selectedStars.length ? 'active-filter-label' : ''}>
+                星级
+              </span>
+            }>
               <View className="dropdown-content">
                 <View className="filter-section-title">星级</View>
                 <Checkbox.Group value={selectedStars} onChange={val => setSelectedStars(val)}>
@@ -403,8 +499,11 @@ export default function List() {
         onClose={() => setCityPickerVisible(false)}
         value={[]}
         onConfirm={(v) => {
-          const selected = v[v.length - 1]
-          if (selected) setDraftCity(selected)
+          if (v && v.length > 0) {
+            const selected = v[v.length - 1]
+            setDraftCity(selected)
+            setDraftKeyword('')
+          }
         }}
       />
     </View>
