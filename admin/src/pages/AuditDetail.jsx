@@ -7,7 +7,7 @@ import {
   GiftOutlined, AppstoreOutlined, CarOutlined, ShopOutlined, CompassOutlined,
   ExclamationCircleOutlined
 } from '@ant-design/icons'
-import { GlassButton, glassMessage as message } from '../components'
+import { GlassButton, GanttTimeline, glassMessage as message } from '../components'
 import { api } from '../services'
 import dayjs from 'dayjs'
 import { useTranslation } from 'react-i18next'
@@ -123,6 +123,15 @@ export default function AuditDetail() {
     if (val > 0) return t('auditDetail.promo.discountRate', { count: val })
     return ''
   }
+  const getRoomImages = (room) => {
+    const candidates = [room?.images, room?.image_urls, room?.room_images]
+    for (const source of candidates) {
+      if (Array.isArray(source) && source.length > 0) {
+        return source.filter(Boolean)
+      }
+    }
+    return []
+  }
 
   const roomColumns = [
     { title: t('auditDetail.room.name'), dataIndex: 'name', key: 'name' },
@@ -131,6 +140,33 @@ export default function AuditDetail() {
     { title: t('auditDetail.room.bedWidth'), dataIndex: 'bed_width', key: 'bed_width', width: 80, render: (v) => v ? t('auditDetail.room.bedWidthValue', { value: v }) : '-' },
     { title: t('auditDetail.room.area'), dataIndex: 'area', key: 'area', width: 80, render: (v) => v ? t('auditDetail.room.areaValue', { value: v }) : '-' },
     { title: t('auditDetail.room.ceiling'), dataIndex: 'ceiling_height', key: 'ceiling_height', width: 80, render: (v) => v ? t('auditDetail.room.ceilingValue', { value: v }) : '-' },
+    {
+      title: t('auditDetail.room.images'),
+      dataIndex: 'images',
+      key: 'images',
+      width: 180,
+      render: (_, record) => {
+        const images = getRoomImages(record)
+        if (!images.length) return <Typography.Text type="secondary">{t('auditDetail.room.noImages')}</Typography.Text>
+        const preview = images.slice(0, 3)
+        return (
+          <Image.PreviewGroup>
+            <Space size={6} wrap>
+              {preview.map((url, idx) => (
+                <Image
+                  key={`${record.id || record.name}-img-${idx}`}
+                  src={url}
+                  width={44}
+                  height={32}
+                  style={{ objectFit: 'cover', borderRadius: 4 }}
+                />
+              ))}
+              {images.length > 3 && <Tag>{`+${images.length - 3}`}</Tag>}
+            </Space>
+          </Image.PreviewGroup>
+        )
+      }
+    },
     { 
       title: t('auditDetail.room.price'), 
       dataIndex: 'price', 
@@ -179,11 +215,13 @@ export default function AuditDetail() {
         const discountRate = Number(record.discount_rate) || 0
         const discountQuota = Number(record.discount_quota) || 0
         if (discountQuota > 0 && ((discountRate > 0 && discountRate <= 10) || discountRate < 0)) {
+          const period = formatPeriodLabel(record.discount_periods)
           tags.push(
             <Tag color="purple" key={`batch-${record.id || record.name}`}>
               {discountRate > 0
-                ? t('auditDetail.room.batchDiscountRate', { count: discountRate, quota: discountQuota, period: formatPeriodLabel(record.discount_periods) })
-                : t('auditDetail.room.batchDiscountAmount', { count: Math.abs(discountRate), quota: discountQuota, period: formatPeriodLabel(record.discount_periods) })}
+                ? t('auditDetail.room.batchDiscountRate', { count: discountRate, quota: discountQuota })
+                : t('auditDetail.room.batchDiscountAmount', { count: Math.abs(discountRate), quota: discountQuota })}
+              {period ? ` · ${period}` : ''}
             </Tag>
           )
         }
@@ -369,32 +407,42 @@ export default function AuditDetail() {
 
           <Card title={<><GiftOutlined /> {t('auditDetail.sections.promotions')}</>}>
             {promotionList.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {promotionList.map((promo, idx) => {
-                  const effective = isPeriodEffective(promo.periods)
-                  const valText = getValueLabel(promo.value)
-                  const periodText = formatPeriodLabel(promo.periods)
-                  return (
-                    <div key={idx} style={{ 
-                      padding: '12px 16px', 
-                      background: effective ? '#fff7e6' : '#fafafa', 
-                      borderRadius: 8,
-                      border: effective ? '1px solid #ffe58f' : '1px solid #f0f0f0',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
-                    }}>
-                      <span>
-                        {promo.type && <Tag color="orange">{promo.type}</Tag>}
-                        {promo.title}
-                        {valText && <span style={{ color: '#f5222d', marginLeft: 8, fontWeight: 600 }}>{valText}</span>}
-                        {periodText && <span style={{ marginLeft: 8, color: '#999' }}>{periodText}</span>}
-                      </span>
-                      <Tag color={effective ? 'green' : 'default'}>{effective ? t('auditDetail.promo.active') : t('auditDetail.promo.inactive')}</Tag>
-                    </div>
-                  )
-                })}
-              </div>
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {promotionList.map((promo, idx) => {
+                    const effective = isPeriodEffective(promo.periods)
+                    const valText = getValueLabel(promo.value)
+                    const periodText = formatPeriodLabel(promo.periods)
+                    return (
+                      <div key={idx} style={{ 
+                        padding: '12px 16px', 
+                        background: effective ? '#fff7e6' : '#fafafa', 
+                        borderRadius: 8,
+                        border: effective ? '1px solid #ffe58f' : '1px solid #f0f0f0',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <span>
+                          {promo.type && <Tag color="orange">{promo.type}</Tag>}
+                          {promo.title}
+                          {valText && <span style={{ color: '#f5222d', marginLeft: 8, fontWeight: 600 }}>{valText}</span>}
+                          {periodText && <span style={{ marginLeft: 8, color: '#999' }}>{periodText}</span>}
+                        </span>
+                        <Tag color={effective ? 'green' : 'default'}>{effective ? t('auditDetail.promo.active') : t('auditDetail.promo.inactive')}</Tag>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div style={{ marginTop: 12 }}>
+                  <GanttTimeline
+                    items={promotionList}
+                    getTitle={(promo) => promo.title || promo.type || t('auditDetail.room.promoFallback')}
+                    getPeriods={(promo) => promo.periods}
+                    formatAxisLabel={(value) => dayjs(value).format('YYYY-MM-DD')}
+                  />
+                </div>
+              </>
             ) : (
               <Empty description={t('auditDetail.emptyPromotions')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
             )}

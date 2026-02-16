@@ -173,6 +173,15 @@ export default function AdminHotelDetail() {
     if (val > 0) return t('adminHotelDetail.promo.discountRate', { count: val })
     return ''
   }
+  const getRoomImages = (room) => {
+    const candidates = [room?.images, room?.image_urls, room?.room_images]
+    for (const source of candidates) {
+      if (Array.isArray(source) && source.length > 0) {
+        return source.filter(Boolean)
+      }
+    }
+    return []
+  }
 
   // Columns definitions
   const roomColumns = [
@@ -182,6 +191,33 @@ export default function AdminHotelDetail() {
     { title: t('adminHotelDetail.room.bedWidth'), dataIndex: 'bed_width', key: 'bed_width', width: 80, render: (v) => v ? t('adminHotelDetail.room.bedWidthValue', { value: v }) : '-' },
     { title: t('adminHotelDetail.room.area'), dataIndex: 'area', key: 'area', width: 80, render: (v) => v ? t('adminHotelDetail.room.areaValue', { value: v }) : '-' },
     { title: t('adminHotelDetail.room.ceiling'), dataIndex: 'ceiling_height', key: 'ceiling_height', width: 80, render: (v) => v ? t('adminHotelDetail.room.ceilingValue', { value: v }) : '-' },
+    {
+      title: t('adminHotelDetail.room.images'),
+      dataIndex: 'images',
+      key: 'images',
+      width: 180,
+      render: (_, record) => {
+        const images = getRoomImages(record)
+        if (!images.length) return <Typography.Text type="secondary">{t('adminHotelDetail.room.noImages')}</Typography.Text>
+        const preview = images.slice(0, 3)
+        return (
+          <Image.PreviewGroup>
+            <Space size={6} wrap>
+              {preview.map((url, idx) => (
+                <Image
+                  key={`${record.id || record.name}-img-${idx}`}
+                  src={url}
+                  width={44}
+                  height={32}
+                  style={{ objectFit: 'cover', borderRadius: 4 }}
+                />
+              ))}
+              {images.length > 3 && <Tag>{`+${images.length - 3}`}</Tag>}
+            </Space>
+          </Image.PreviewGroup>
+        )
+      }
+    },
     {
       title: t('adminHotelDetail.room.price'),
       dataIndex: 'price',
@@ -230,11 +266,13 @@ export default function AdminHotelDetail() {
         const discountRate = Number(record.discount_rate) || 0
         const discountQuota = Number(record.discount_quota) || 0
         if (discountQuota > 0 && ((discountRate > 0 && discountRate <= 10) || discountRate < 0)) {
+          const period = formatPeriodLabel(record.discount_periods)
           tags.push(
             <Tag color="purple" key={`batch-${record.id || record.name}`}>
               {discountRate > 0
                 ? t('adminHotelDetail.room.batchDiscountRate', { count: discountRate, quota: discountQuota })
                 : t('adminHotelDetail.room.batchDiscountAmount', { count: Math.abs(discountRate), quota: discountQuota })}
+              {period ? ` · ${period}` : ''}
             </Tag>
           )
         }

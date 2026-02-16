@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Card, Descriptions, Tag, Image, Space, Typography, Table, Spin, Row, Col, Tabs, Progress, Statistic, Modal, Form, InputNumber, Radio, DatePicker } from 'antd'
 import { StarFilled, EnvironmentOutlined, CalendarOutlined } from '@ant-design/icons'
@@ -108,16 +108,23 @@ export default function HotelDetail() {
     if (val > 0) return t('hotelDetail.promo.discountRate', { value: val })
     return ''
   }
-
-  const roomActionColumnWidth = useMemo(() => {
-    return estimateActionColumnWidth(
-      [[t('hotelDetail.room.setDiscount'), t('hotelDetail.room.cancelDiscount')]],
-      {
-        minColumnWidth: 180,
-        maxColumnWidth: 380
+  const getRoomImages = (room) => {
+    const candidates = [room?.images, room?.image_urls, room?.room_images]
+    for (const source of candidates) {
+      if (Array.isArray(source) && source.length > 0) {
+        return source.filter(Boolean)
       }
-    )
-  }, [t])
+    }
+    return []
+  }
+
+  const roomActionColumnWidth = estimateActionColumnWidth(
+    [[t('hotelDetail.room.setDiscount'), t('hotelDetail.room.cancelDiscount')]],
+    {
+      minColumnWidth: 180,
+      maxColumnWidth: 380
+    }
+  )
 
   const openDiscountModal = (room) => {
     setSelectedRoom(room)
@@ -186,6 +193,33 @@ export default function HotelDetail() {
     { title: t('hotelDetail.room.area'), dataIndex: 'area', key: 'area', width: 80, render: (v) => v ? t('hotelDetail.room.areaValue', { value: v }) : '-' },
     { title: t('hotelDetail.room.ceiling'), dataIndex: 'ceiling_height', key: 'ceiling_height', width: 80, render: (v) => v ? t('hotelDetail.room.ceilingValue', { value: v }) : '-' },
     {
+      title: t('hotelDetail.room.images'),
+      dataIndex: 'images',
+      key: 'images',
+      width: 180,
+      render: (_, record) => {
+        const images = getRoomImages(record)
+        if (!images.length) return <Typography.Text type="secondary">{t('hotelDetail.room.noImages')}</Typography.Text>
+        const preview = images.slice(0, 3)
+        return (
+          <Image.PreviewGroup>
+            <Space size={6} wrap>
+              {preview.map((url, idx) => (
+                <Image
+                  key={`${record.id || record.name}-img-${idx}`}
+                  src={url}
+                  width={44}
+                  height={32}
+                  style={{ objectFit: 'cover', borderRadius: 4 }}
+                />
+              ))}
+              {images.length > 3 && <Tag>{`+${images.length - 3}`}</Tag>}
+            </Space>
+          </Image.PreviewGroup>
+        )
+      }
+    },
+    {
       title: t('hotelDetail.room.price'),
       dataIndex: 'price',
       key: 'price',
@@ -235,11 +269,13 @@ export default function HotelDetail() {
         const discountRate = Number(record.discount_rate) || 0
         const discountQuota = Number(record.discount_quota) || 0
         if (discountQuota > 0 && ((discountRate > 0 && discountRate <= 10) || discountRate < 0)) {
+          const period = formatPeriodLabel(record.discount_periods)
           tags.push(
             <Tag color="purple" key={`batch-${record.id || record.name}`}>
               {discountRate > 0
                 ? t('hotelDetail.room.batchDiscountRate', { rate: discountRate, quota: discountQuota })
                 : t('hotelDetail.room.batchDiscountAmount', { value: Math.abs(discountRate), quota: discountQuota })}
+              {period ? ` · ${period}` : ''}
             </Tag>
           )
         }
