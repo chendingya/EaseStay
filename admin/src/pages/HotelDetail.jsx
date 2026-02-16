@@ -5,17 +5,12 @@ import { StarFilled, EnvironmentOutlined, CalendarOutlined } from '@ant-design/i
 import { GlassButton, GanttTimeline, glassMessage as message } from '../components'
 import dayjs from 'dayjs'
 import { api } from '../services'
-
-const statusMap = {
-  pending: { color: 'orange', label: '待审核' },
-  approved: { color: 'green', label: '已上架' },
-  rejected: { color: 'red', label: '已驳回' },
-  offline: { color: 'default', label: '已下线' }
-}
+import { useTranslation } from 'react-i18next'
 
 export default function HotelDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [hotel, setHotel] = useState(null)
   const [loading, setLoading] = useState(true)
   const [overview, setOverview] = useState(null)
@@ -51,7 +46,7 @@ export default function HotelDetail() {
         const data = await api.get(`/api/merchant/hotels/${id}/overview`)
         setOverview(data)
       } catch (error) {
-        console.error('获取酒店概览失败:', error)
+        console.error(t('hotelDetail.errors.overviewFailed'), error)
         setOverview(null)
       }
     }
@@ -64,7 +59,7 @@ export default function HotelDetail() {
         setOrders(data.list || [])
         setOrdersTotal(data.total || 0)
       } catch (error) {
-        console.error('获取订单列表失败:', error)
+        console.error(t('hotelDetail.errors.ordersFailed'), error)
       } finally {
         setOrdersLoading(false)
       }
@@ -72,7 +67,7 @@ export default function HotelDetail() {
 
     fetchOverview()
     fetchOrders()
-  }, [id, ordersPage])
+  }, [id, ordersPage, t])
 
   if (loading) {
     return (
@@ -86,11 +81,17 @@ export default function HotelDetail() {
     return null
   }
 
+  const statusMap = {
+    pending: { color: 'orange', label: t('status.pending') },
+    approved: { color: 'green', label: t('status.approved') },
+    rejected: { color: 'red', label: t('status.rejected') },
+    offline: { color: 'default', label: t('status.offline') }
+  }
   const statusInfo = statusMap[hotel.status] || { color: 'default', label: hotel.status }
 
   const formatPeriodLabel = (periods) => {
     const list = Array.isArray(periods) ? periods : []
-    if (!list.length) return '长期'
+    if (!list.length) return t('hotelDetail.promo.longTerm')
     return list.map((p) => `${dayjs(p.start).format('YYYY-MM-DD HH:mm')}~${dayjs(p.end).format('YYYY-MM-DD HH:mm')}`).join('，')
   }
   const isPeriodEffective = (periods) => {
@@ -101,9 +102,9 @@ export default function HotelDetail() {
   }
   const getPromotionValueText = (value) => {
     const val = Number(value) || 0
-    if (val < 0) return `立减 ${Math.abs(val)} 元`
-    if (val > 10) return `立减 ${val} 元`
-    if (val > 0) return `${val} 折`
+    if (val < 0) return t('hotelDetail.promo.discountAmount', { value: Math.abs(val) })
+    if (val > 10) return t('hotelDetail.promo.discountAmount', { value: val })
+    if (val > 0) return t('hotelDetail.promo.discountRate', { value: val })
     return ''
   }
 
@@ -124,16 +125,16 @@ export default function HotelDetail() {
         periods: values.periods
       })
       if (res && res.data && res.data.successCount === 0) {
-          message.warning('设置折扣未生效，请检查是否超出限制')
+        message.warning(t('hotelDetail.discount.notEffective'))
       } else {
-          message.success('折扣已设置')
+        message.success(t('hotelDetail.discount.success'))
       }
       setDiscountModal(false)
       setSelectedRoom(null)
       await fetchHotel()
     } catch (error) {
-      console.error('设置折扣失败:', error)
-      message.error('设置折扣失败，请重试')
+      console.error(t('hotelDetail.discount.failed'), error)
+      message.error(t('hotelDetail.discount.failedRetry'))
     } finally {
       setDiscountLoading(false)
     }
@@ -141,10 +142,10 @@ export default function HotelDetail() {
 
   const handleCancelDiscount = (room) => {
     Modal.confirm({
-      title: '确认取消该房型折扣？',
-      content: `房型：${room?.name || ''}`,
-      okText: '确认取消',
-      cancelText: '取消',
+      title: t('hotelDetail.discount.cancelTitle'),
+      content: t('hotelDetail.discount.cancelContent', { name: room?.name || '' }),
+      okText: t('hotelDetail.discount.cancelConfirm'),
+      cancelText: t('common.cancel'),
       okButtonProps: { danger: true },
       async onOk() {
         try {
@@ -155,11 +156,11 @@ export default function HotelDetail() {
             quantity: 0,
             discount: 0
           })
-          message.success('折扣已取消')
+          message.success(t('hotelDetail.discount.cancelSuccess'))
           await fetchHotel()
         } catch (error) {
-          console.error('取消折扣失败:', error)
-          message.error('取消折扣失败，请重试')
+          console.error(t('hotelDetail.discount.cancelFailed'), error)
+          message.error(t('hotelDetail.discount.cancelFailedRetry'))
         } finally {
           setDiscountLoading(false)
         }
@@ -168,13 +169,13 @@ export default function HotelDetail() {
   }
 
   const roomColumns = [
-    { title: '房型名称', dataIndex: 'name', key: 'name' },
-    { title: '可住', dataIndex: 'capacity', key: 'capacity', width: 80, render: (v) => v ? `${v}人` : '-' },
-    { title: '床宽', dataIndex: 'bed_width', key: 'bed_width', width: 80, render: (v) => v ? `${v}cm` : '-' },
-    { title: '面积', dataIndex: 'area', key: 'area', width: 80, render: (v) => v ? `${v}㎡` : '-' },
-    { title: '层高', dataIndex: 'ceiling_height', key: 'ceiling_height', width: 80, render: (v) => v ? `${v}m` : '-' },
+    { title: t('hotelDetail.room.name'), dataIndex: 'name', key: 'name' },
+    { title: t('hotelDetail.room.capacity'), dataIndex: 'capacity', key: 'capacity', width: 80, render: (v) => v ? t('hotelDetail.room.capacityValue', { value: v }) : '-' },
+    { title: t('hotelDetail.room.bedWidth'), dataIndex: 'bed_width', key: 'bed_width', width: 80, render: (v) => v ? t('hotelDetail.room.bedWidthValue', { value: v }) : '-' },
+    { title: t('hotelDetail.room.area'), dataIndex: 'area', key: 'area', width: 80, render: (v) => v ? t('hotelDetail.room.areaValue', { value: v }) : '-' },
+    { title: t('hotelDetail.room.ceiling'), dataIndex: 'ceiling_height', key: 'ceiling_height', width: 80, render: (v) => v ? t('hotelDetail.room.ceilingValue', { value: v }) : '-' },
     {
-      title: '价格',
+      title: t('hotelDetail.room.price'),
       dataIndex: 'price',
       key: 'price',
       render: (price, record) => {
@@ -209,14 +210,14 @@ export default function HotelDetail() {
 
         return (
           <div>
-            <div style={{ color: '#999' }}>基础价 ¥{basePrice}</div>
-            <div style={{ color: '#f5222d', fontWeight: 600 }}>当前售价 ¥{discounted}</div>
+            <div style={{ color: '#999' }}>{t('hotelDetail.room.basePrice', { value: basePrice })}</div>
+            <div style={{ color: '#f5222d', fontWeight: 600 }}>{t('hotelDetail.room.currentPrice', { value: discounted })}</div>
           </div>
         )
       }
     },
     {
-      title: '优惠',
+      title: t('hotelDetail.room.discount'),
       key: 'discount',
       render: (_, record) => {
         const tags = []
@@ -225,7 +226,9 @@ export default function HotelDetail() {
         if (discountQuota > 0 && ((discountRate > 0 && discountRate <= 10) || discountRate < 0)) {
           tags.push(
             <Tag color="purple" key={`batch-${record.id || record.name}`}>
-              {discountRate > 0 ? `批量折扣 ${discountRate}折 余${discountQuota}` : `立减 ${Math.abs(discountRate)}元 余${discountQuota}`}
+              {discountRate > 0
+                ? t('hotelDetail.room.batchDiscountRate', { rate: discountRate, quota: discountQuota })
+                : t('hotelDetail.room.batchDiscountAmount', { value: Math.abs(discountRate), quota: discountQuota })}
             </Tag>
           )
         }
@@ -239,24 +242,24 @@ export default function HotelDetail() {
         effectivePromos.forEach((promo, index) => {
           tags.push(
             <Tag color="blue" key={`promo-${record.id || record.name}-${index}`}>
-              {promo.title || promo.type || '优惠'}
+              {promo.title || promo.type || t('hotelDetail.promo.fallback')}
             </Tag>
           )
         })
-        return tags.length ? <Space size={[4, 4]} wrap>{tags}</Space> : <Tag>无优惠</Tag>
+        return tags.length ? <Space size={[4, 4]} wrap>{tags}</Space> : <Tag>{t('hotelDetail.room.noDiscount')}</Tag>
       }
     },
-    { title: '库存', dataIndex: 'stock', key: 'stock' },
-    { title: 'WiFi', dataIndex: 'wifi', key: 'wifi', width: 70, render: (v) => v === true ? '有' : v === false ? '无' : '-' },
-    { title: '含早', dataIndex: 'breakfast_included', key: 'breakfast_included', width: 70, render: (v) => v === true ? '是' : v === false ? '否' : '-' },
+    { title: t('hotelDetail.room.stock'), dataIndex: 'stock', key: 'stock' },
+    { title: t('hotelDetail.room.wifi'), dataIndex: 'wifi', key: 'wifi', width: 70, render: (v) => v === true ? t('hotelDetail.room.wifiYes') : v === false ? t('hotelDetail.room.wifiNo') : '-' },
+    { title: t('hotelDetail.room.breakfast'), dataIndex: 'breakfast_included', key: 'breakfast_included', width: 70, render: (v) => v === true ? t('hotelDetail.room.breakfastYes') : v === false ? t('hotelDetail.room.breakfastNo') : '-' },
     {
-      title: '已用',
+      title: t('hotelDetail.room.used'),
       dataIndex: 'used_stock',
       key: 'used_stock',
       render: (value) => value || 0
     },
     {
-      title: '空闲',
+      title: t('hotelDetail.room.available'),
       key: 'available',
       render: (_, record) => {
         const stock = Number(record.stock) || 0
@@ -266,7 +269,7 @@ export default function HotelDetail() {
       }
     },
     {
-      title: '操作',
+      title: t('hotelDetail.room.action'),
       key: 'action',
       render: (_, record) => {
         const discountRate = Number(record.discount_rate) || 0
@@ -274,8 +277,8 @@ export default function HotelDetail() {
         const hasDiscount = discountQuota > 0 && ((discountRate > 0 && discountRate <= 10) || discountRate < 0)
         return (
           <Space size="small">
-            <GlassButton type="link" size="small" onClick={() => openDiscountModal(record)}>设置折扣</GlassButton>
-            <GlassButton type="link" size="small" danger disabled={!hasDiscount} onClick={() => handleCancelDiscount(record)}>取消折扣</GlassButton>
+            <GlassButton type="link" size="small" onClick={() => openDiscountModal(record)}>{t('hotelDetail.room.setDiscount')}</GlassButton>
+            <GlassButton type="link" size="small" danger disabled={!hasDiscount} onClick={() => handleCancelDiscount(record)}>{t('hotelDetail.room.cancelDiscount')}</GlassButton>
           </Space>
         )
       }
@@ -283,31 +286,31 @@ export default function HotelDetail() {
   ]
 
   const orderColumns = [
-    { title: '订单号', dataIndex: 'id', key: 'id', width: 90 },
-    { title: '房型', dataIndex: 'room_type_name', key: 'room_type_name' },
-    { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 70 },
+    { title: t('hotelDetail.order.id'), dataIndex: 'id', key: 'id', width: 90 },
+    { title: t('hotelDetail.order.roomType'), dataIndex: 'room_type_name', key: 'room_type_name' },
+    { title: t('hotelDetail.order.quantity'), dataIndex: 'quantity', key: 'quantity', width: 70 },
     {
-      title: '单价',
+      title: t('hotelDetail.order.price'),
       dataIndex: 'price_per_night',
       key: 'price_per_night',
       render: (price) => <span style={{ color: '#f5222d' }}>¥{price}</span>
     },
-    { title: '间夜', dataIndex: 'nights', key: 'nights', width: 70 },
+    { title: t('hotelDetail.order.nights'), dataIndex: 'nights', key: 'nights', width: 70 },
     {
-      title: '总价',
+      title: t('hotelDetail.order.totalPrice'),
       dataIndex: 'total_price',
       key: 'total_price',
       render: (price) => <span style={{ color: '#f5222d', fontWeight: 600 }}>¥{price}</span>
     },
-    { title: '状态', dataIndex: 'status', key: 'status', width: 90 },
+    { title: t('hotelDetail.order.status'), dataIndex: 'status', key: 'status', width: 90 },
     {
-      title: '入住',
+      title: t('hotelDetail.order.checkIn'),
       dataIndex: 'check_in',
       key: 'check_in',
       render: (value) => value || '-'
     },
     {
-      title: '下单时间',
+      title: t('hotelDetail.order.createdAt'),
       dataIndex: 'created_at',
       key: 'created_at',
       render: (value) => value ? new Date(value).toLocaleString() : '-'
@@ -354,7 +357,7 @@ export default function HotelDetail() {
         </div>
         <Space>
           <GlassButton type="primary" onClick={() => navigate(`/hotels/edit/${hotel.id}`)}>
-            编辑酒店
+            {t('hotelDetail.actions.edit')}
           </GlassButton>
         </Space>
       </div>
@@ -376,15 +379,15 @@ export default function HotelDetail() {
       <Row gutter={24}>
         <Col span={16}>
           {/* 基本信息 */}
-          <Card title="基本信息" style={{ marginBottom: 24 }}>
+          <Card title={t('hotelDetail.sections.basic')} style={{ marginBottom: 24 }}>
             <Descriptions column={2}>
-              <Descriptions.Item label={<><EnvironmentOutlined /> 城市</>}>{hotel.city}</Descriptions.Item>
-              <Descriptions.Item label="地址">{hotel.address}</Descriptions.Item>
-              <Descriptions.Item label={<><StarFilled style={{ color: '#faad14' }} /> 星级</>}>
-                {hotel.star_rating ? `${hotel.star_rating} 星级` : '未评级'}
+              <Descriptions.Item label={<><EnvironmentOutlined /> {t('hotelDetail.basic.city')}</>}>{hotel.city}</Descriptions.Item>
+              <Descriptions.Item label={t('hotelDetail.basic.address')}>{hotel.address}</Descriptions.Item>
+              <Descriptions.Item label={<><StarFilled style={{ color: '#faad14' }} /> {t('hotelDetail.basic.star')}</>}>
+                {hotel.star_rating ? t('hotelDetail.basic.starValue', { value: hotel.star_rating }) : t('hotelDetail.basic.unrated')}
               </Descriptions.Item>
-              <Descriptions.Item label={<><CalendarOutlined /> 开业时间</>}>
-                {hotel.opening_time || '未填写'}
+              <Descriptions.Item label={<><CalendarOutlined /> {t('hotelDetail.basic.openingTime')}</>}>
+                {hotel.opening_time || t('common.notFilled')}
               </Descriptions.Item>
             </Descriptions>
             {hotel.description && (
@@ -396,42 +399,42 @@ export default function HotelDetail() {
             items={[
               {
                 key: 'overview',
-                label: '房间总览',
+                label: t('hotelDetail.tabs.overview'),
                 children: (
                   <Card style={{ marginBottom: 24 }}>
                     <Row gutter={16}>
                       <Col span={6}>
-                        <Statistic title="总房间" value={computedOverview.total} suffix="间" />
+                        <Statistic title={t('hotelDetail.overview.total')} value={computedOverview.total} suffix={t('hotelDetail.overview.suffixRoom')} />
                       </Col>
                       <Col span={6}>
-                        <Statistic title="已使用" value={computedOverview.used} styles={{ content: { color: '#faad14' } }} suffix="间" />
+                        <Statistic title={t('hotelDetail.overview.used')} value={computedOverview.used} styles={{ content: { color: '#faad14' } }} suffix={t('hotelDetail.overview.suffixRoom')} />
                       </Col>
                       <Col span={6}>
-                        <Statistic title="空闲" value={computedOverview.available} styles={{ content: { color: '#52c41a' } }} suffix="间" />
+                        <Statistic title={t('hotelDetail.overview.available')} value={computedOverview.available} styles={{ content: { color: '#52c41a' } }} suffix={t('hotelDetail.overview.suffixRoom')} />
                       </Col>
                       <Col span={6}>
-                        <Statistic title="已下架" value={computedOverview.offline} styles={{ content: { color: '#999' } }} suffix="间" />
+                        <Statistic title={t('hotelDetail.overview.offline')} value={computedOverview.offline} styles={{ content: { color: '#999' } }} suffix={t('hotelDetail.overview.suffixRoom')} />
                       </Col>
                     </Row>
                     <div style={{ marginTop: 16 }}>
                       <Progress
                         percent={activeTotal ? Math.round((computedOverview.used / activeTotal) * 100) : 0}
                         status="active"
-                        format={(p) => `入住率 ${p}%`}
+                        format={(p) => t('hotelDetail.overview.occupancyRate', { value: p })}
                       />
                     </div>
                     <Row gutter={16} style={{ marginTop: 16 }}>
                       <Col span={8} style={{ textAlign: 'center' }}>
                         <Progress type="circle" percent={usedPercent} strokeColor="#faad14" format={(p) => `${p}%`} />
-                        <div style={{ marginTop: 8 }}>已使用占比</div>
+                        <div style={{ marginTop: 8 }}>{t('hotelDetail.overview.usedRate')}</div>
                       </Col>
                       <Col span={8} style={{ textAlign: 'center' }}>
                         <Progress type="circle" percent={availablePercent} strokeColor="#52c41a" format={(p) => `${p}%`} />
-                        <div style={{ marginTop: 8 }}>空闲占比</div>
+                        <div style={{ marginTop: 8 }}>{t('hotelDetail.overview.availableRate')}</div>
                       </Col>
                       <Col span={8} style={{ textAlign: 'center' }}>
                         <Progress type="circle" percent={offlinePercent} strokeColor="#999" format={(p) => `${p}%`} />
-                        <div style={{ marginTop: 8 }}>下架占比</div>
+                        <div style={{ marginTop: 8 }}>{t('hotelDetail.overview.offlineRate')}</div>
                       </Col>
                     </Row>
                   </Card>
@@ -439,7 +442,7 @@ export default function HotelDetail() {
               },
               {
                 key: 'rooms',
-                label: '房型列表',
+                label: t('hotelDetail.tabs.rooms'),
                 children: (
                   <Card style={{ marginBottom: 24 }}>
                     <Table
@@ -448,21 +451,21 @@ export default function HotelDetail() {
                       rowKey="id"
                       pagination={false}
                       scroll={{ x: 'max-content' }}
-                      locale={{ emptyText: '暂无房型信息' }}
+                      locale={{ emptyText: t('hotelDetail.emptyRooms') }}
                     />
                   </Card>
                 )
               },
               {
                 key: 'orders',
-                label: '订单展示',
+                label: t('hotelDetail.tabs.orders'),
                 children: (
                   <Card
                     title={(
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>订单列表</span>
+                        <span>{t('hotelDetail.order.title')}</span>
                         <GlassButton type="primary" onClick={() => navigate(`/hotels/${hotel.id}/stats`)}>
-                          订单统计
+                          {t('hotelDetail.order.stats')}
                         </GlassButton>
                       </div>
                     )}
@@ -480,7 +483,7 @@ export default function HotelDetail() {
                         onChange: (page) => setOrdersPage(page)
                       }}
                       scroll={{ x: 'max-content' }}
-                      locale={{ emptyText: '暂无订单' }}
+                      locale={{ emptyText: t('hotelDetail.emptyOrders') }}
                     />
                   </Card>
                 )
@@ -491,7 +494,7 @@ export default function HotelDetail() {
 
           {/* 图片展示 */}
           {hotel.images && hotel.images.length > 1 && (
-            <Card title="酒店图片">
+            <Card title={t('hotelDetail.sections.images')}>
               <Image.PreviewGroup>
                 <Space wrap>
                   {hotel.images.slice(1).map((url, index) => (
@@ -513,7 +516,7 @@ export default function HotelDetail() {
         <Col span={8}>
           {/* 设施标签 */}
           {hotel.facilities && hotel.facilities.length > 0 && (
-            <Card title="设施服务" size="small" style={{ marginBottom: 16 }}>
+            <Card title={t('hotelDetail.sections.facilities')} size="small" style={{ marginBottom: 16 }}>
               <Space wrap>
                 {hotel.facilities.map((item, index) => (
                   <Tag key={index} color="blue">{item}</Tag>
@@ -526,7 +529,7 @@ export default function HotelDetail() {
           {hotel.promotions && hotel.promotions.length > 0 && (() => {
             const promotionList = hotel.promotions.filter((promo) => promo && (promo.title || promo.type))
             return (
-              <Card title="优惠活动" size="small" style={{ marginBottom: 16 }}>
+              <Card title={t('hotelDetail.sections.promotions')} size="small" style={{ marginBottom: 16 }}>
                 <Space style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
                   {promotionList.map((promo, index) => {
                     const valueText = getPromotionValueText(promo.value)
@@ -534,9 +537,9 @@ export default function HotelDetail() {
                       <div key={index} style={{ padding: '8px 12px', background: '#fff7e6', borderRadius: 4 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                           {promo.type && <Tag color="orange">{promo.type}</Tag>}
-                          <span>{promo.title || '优惠活动'}</span>
+                          <span>{promo.title || t('hotelDetail.promo.fallback')}</span>
                           {valueText && <span style={{ color: '#f5222d' }}>{valueText}</span>}
-                          <span style={{ color: '#999' }}>有效期 {formatPeriodLabel(promo.periods)}</span>
+                          <span style={{ color: '#999' }}>{t('hotelDetail.promo.period', { value: formatPeriodLabel(promo.periods) })}</span>
                         </div>
                       </div>
                     )
@@ -546,7 +549,7 @@ export default function HotelDetail() {
                   <div style={{ marginTop: 12 }}>
                     <GanttTimeline
                       items={promotionList}
-                      getTitle={(promo) => promo.title || promo.type || '优惠'}
+                      getTitle={(promo) => promo.title || promo.type || t('hotelDetail.promo.fallback')}
                       getPeriods={(promo) => promo.periods}
                       formatAxisLabel={(value) => dayjs(value).format('YYYY-MM-DD')}
                     />
@@ -557,10 +560,10 @@ export default function HotelDetail() {
           })()}
 
           {/* 周边信息 */}
-          <Card title="周边信息" size="small">
+          <Card title={t('hotelDetail.sections.nearby')} size="small">
             {hotel.nearby_attractions && hotel.nearby_attractions.length > 0 && (
               <div style={{ marginBottom: 12 }}>
-                <Typography.Text type="secondary">热门景点</Typography.Text>
+                <Typography.Text type="secondary">{t('hotelDetail.nearby.attractions')}</Typography.Text>
                 <div style={{ marginTop: 4 }}>
                   {hotel.nearby_attractions.map((item, index) => (
                     <Tag key={index}>{item}</Tag>
@@ -570,7 +573,7 @@ export default function HotelDetail() {
             )}
             {hotel.nearby_transport && hotel.nearby_transport.length > 0 && (
               <div style={{ marginBottom: 12 }}>
-                <Typography.Text type="secondary">交通出行</Typography.Text>
+                <Typography.Text type="secondary">{t('hotelDetail.nearby.transport')}</Typography.Text>
                 <div style={{ marginTop: 4 }}>
                   {hotel.nearby_transport.map((item, index) => (
                     <Tag key={index}>{item}</Tag>
@@ -580,7 +583,7 @@ export default function HotelDetail() {
             )}
             {hotel.nearby_malls && hotel.nearby_malls.length > 0 && (
               <div>
-                <Typography.Text type="secondary">购物商场</Typography.Text>
+                <Typography.Text type="secondary">{t('hotelDetail.nearby.malls')}</Typography.Text>
                 <div style={{ marginTop: 4 }}>
                   {hotel.nearby_malls.map((item, index) => (
                     <Tag key={index}>{item}</Tag>
@@ -607,6 +610,7 @@ export default function HotelDetail() {
 
 function DiscountModal({ open, selectedRoom, onClose, onSubmit, loading }) {
   const [form] = Form.useForm()
+  const { t } = useTranslation()
   const formDiscountType = Form.useWatch('type', form) || 'rate'
 
   useEffect(() => {
@@ -633,50 +637,50 @@ function DiscountModal({ open, selectedRoom, onClose, onSubmit, loading }) {
 
   return (
     <Modal
-      title={selectedRoom ? `设置折扣 - ${selectedRoom.name}` : '设置折扣'}
+      title={selectedRoom ? t('hotelDetail.discount.titleWithRoom', { name: selectedRoom.name }) : t('hotelDetail.discount.title')}
       open={open}
       onCancel={handleClose}
       footer={null}
       destroyOnHidden
     >
       <Form form={form} layout="vertical" initialValues={{ quantity: 1, discount: 9, type: 'rate', amount: 50 }} onFinish={handleFinish}>
-        <Form.Item name="quantity" label="折扣数量" rules={[{ required: true }]}>
+        <Form.Item name="quantity" label={t('hotelDetail.discount.quantity')} rules={[{ required: true }]}>
           <InputNumber
             min={1}
             style={{ width: 150 }}
-            formatter={(value) => `${value} 间`}
+            formatter={(value) => t('hotelDetail.discount.quantityValue', { value })}
             parser={(value) => value?.replace(/[^\d]/g, '')}
           />
         </Form.Item>
 
-        <Form.Item name="type" label="折扣类型" rules={[{ required: true }]}>
+        <Form.Item name="type" label={t('hotelDetail.discount.type')} rules={[{ required: true }]}>
           <Radio.Group>
-            <Radio value="rate">折扣率</Radio>
-            <Radio value="amount">固定减免</Radio>
+            <Radio value="rate">{t('hotelDetail.discount.typeRate')}</Radio>
+            <Radio value="amount">{t('hotelDetail.discount.typeAmount')}</Radio>
           </Radio.Group>
         </Form.Item>
 
         {formDiscountType === 'rate' ? (
-          <Form.Item name="discount" label="折扣力度" rules={[{ required: true }]}>
+          <Form.Item name="discount" label={t('hotelDetail.discount.rate')} rules={[{ required: true }]}>
             <InputNumber
               min={0.1}
               max={10}
               step={0.5}
               style={{ width: 150 }}
-              formatter={(value) => `${value} 折`}
+              formatter={(value) => t('hotelDetail.discount.rateValue', { value })}
               parser={(value) => value?.replace(/[^\d.]/g, '')}
             />
           </Form.Item>
         ) : (
           <Form.Item 
             name="amount" 
-            label="减免金额" 
+            label={t('hotelDetail.discount.amount')} 
             rules={[
               { required: true },
               {
                 validator: (_, value) => {
                   if (selectedRoom && value > Number(selectedRoom.price)) {
-                    return Promise.reject('减免金额不能超过房型原价')
+                    return Promise.reject(t('hotelDetail.discount.amountTooHigh'))
                   }
                   return Promise.resolve()
                 }
@@ -687,21 +691,21 @@ function DiscountModal({ open, selectedRoom, onClose, onSubmit, loading }) {
               min={1}
               max={selectedRoom ? Number(selectedRoom.price) : undefined}
               style={{ width: 150 }}
-              formatter={(value) => `¥ ${value}`}
+              formatter={(value) => t('hotelDetail.discount.amountValue', { value })}
               parser={(value) => value?.replace(/[^\d]/g, '')}
             />
           </Form.Item>
         )}
-        <Form.Item name="periods" label="生效时间">
+        <Form.Item name="periods" label={t('hotelDetail.discount.periods')}>
           <DatePicker.RangePicker showTime style={{ width: 360 }} />
         </Form.Item>
 
         <Form.Item>
           <Space>
             <GlassButton type="primary" loading={loading} onClick={() => form.submit()}>
-              确认设置
+              {t('common.confirm')}
             </GlassButton>
-            <GlassButton onClick={handleClose}>取消</GlassButton>
+            <GlassButton onClick={handleClose}>{t('common.cancel')}</GlassButton>
           </Space>
         </Form.Item>
       </Form>

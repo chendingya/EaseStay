@@ -11,9 +11,11 @@ import {
 import { GlassButton, glassMessage as message } from '../components'
 import { api } from '../services'
 import dayjs from 'dayjs'
+import { useTranslation } from 'react-i18next'
 
 // ========== 地图选择组件 ==========
 function MapPicker({ onAddressChange }) {
+  const { t } = useTranslation()
   const [searchText, setSearchText] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [showResults, setShowResults] = useState(false)
@@ -42,12 +44,12 @@ function MapPicker({ onAddressChange }) {
         setSearchResults(results)
         setShowResults(true)
       } else {
-        message.warning(result.message || '未找到相关地点')
+        message.warning(result.message || t('hotelEdit.map.noResult'))
         setSearchResults([])
       }
     } catch (err) {
       console.error('搜索失败:', err)
-      message.error('搜索失败，请重试')
+      message.error(t('hotelEdit.map.searchError'))
     } finally {
       setSearching(false)
     }
@@ -70,14 +72,14 @@ function MapPicker({ onAddressChange }) {
         <Row gutter={8}>
           <Col flex="auto">
             <Input
-              placeholder="搜索城市或地址..."
+              placeholder={t('hotelEdit.map.searchPlaceholder')}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               onPressEnter={handleSearch}
               prefix={<SearchOutlined />}
             />
           </Col>
-          <Col><GlassButton onClick={handleSearch} loading={searching}>搜索</GlassButton></Col>
+          <Col><GlassButton onClick={handleSearch} loading={searching}>{t('hotelEdit.map.searchButton')}</GlassButton></Col>
         </Row>
 
         {showResults && searchResults.length > 0 && (
@@ -103,12 +105,13 @@ function MapPicker({ onAddressChange }) {
 
 // ========== 图片上传组件 ==========
 function ImageUploader({ value = [], onChange }) {
+  const { t } = useTranslation()
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewImage, setPreviewImage] = useState('')
   const [urlInput, setUrlInput] = useState('')
   const [showUrlInput, setShowUrlInput] = useState(false)
 
-  const fileList = value.map((url, idx) => ({ uid: `-${idx}`, name: `图片${idx + 1}`, status: 'done', url }))
+  const fileList = value.map((url, idx) => ({ uid: `-${idx}`, name: t('hotelEdit.imageUploader.imageName', { index: idx + 1 }), status: 'done', url }))
 
   const handlePreview = (file) => {
     setPreviewImage(file.url)
@@ -124,20 +127,20 @@ function ImageUploader({ value = [], onChange }) {
       const fakeUrl = `https://picsum.photos/800/600?random=${Date.now()}`
       onChange?.([...value, fakeUrl])
       onSuccess?.('ok')
-      message.success('图片上传成功')
+      message.success(t('hotelEdit.imageUploader.uploadSuccess'))
     }, 1000)
   }
 
   const handleAddUrl = () => {
     if (!urlInput.trim()) return
     if (!urlInput.startsWith('http')) {
-      message.error('请输入有效的图片链接')
+      message.error(t('hotelEdit.imageUploader.invalidUrl'))
       return
     }
     onChange?.([...value, urlInput.trim()])
     setUrlInput('')
     setShowUrlInput(false)
-    message.success('图片添加成功')
+    message.success(t('hotelEdit.imageUploader.addSuccess'))
   }
 
   return (
@@ -153,26 +156,26 @@ function ImageUploader({ value = [], onChange }) {
           multiple
         >
           {fileList.length < 10 && (
-            <div><PlusOutlined /><div style={{ marginTop: 8 }}>上传图片</div></div>
+            <div><PlusOutlined /><div style={{ marginTop: 8 }}>{t('hotelEdit.imageUploader.uploadButton')}</div></div>
           )}
         </Upload>
 
         {showUrlInput ? (
           <Row gutter={8}>
             <Col flex="auto">
-              <Input placeholder="输入图片链接..." value={urlInput} onChange={(e) => setUrlInput(e.target.value)} onPressEnter={handleAddUrl} />
+              <Input placeholder={t('hotelEdit.imageUploader.urlPlaceholder')} value={urlInput} onChange={(e) => setUrlInput(e.target.value)} onPressEnter={handleAddUrl} />
             </Col>
-            <Col><GlassButton onClick={handleAddUrl}>添加</GlassButton></Col>
-            <Col><GlassButton onClick={() => setShowUrlInput(false)}>取消</GlassButton></Col>
+            <Col><GlassButton onClick={handleAddUrl}>{t('hotelEdit.imageUploader.addButton')}</GlassButton></Col>
+            <Col><GlassButton onClick={() => setShowUrlInput(false)}>{t('hotelEdit.imageUploader.cancelButton')}</GlassButton></Col>
           </Row>
         ) : (
           <GlassButton type="dashed" icon={<PlusOutlined />} onClick={() => setShowUrlInput(true)} block>
-            添加图片链接
+            {t('hotelEdit.imageUploader.addUrl')}
           </GlassButton>
         )}
       </div>
       <Modal open={previewOpen} footer={null} onCancel={() => setPreviewOpen(false)}>
-        <img alt="preview" style={{ width: '100%' }} src={previewImage} />
+        <img alt={t('hotelEdit.imageUploader.previewAlt')} style={{ width: '100%' }} src={previewImage} />
       </Modal>
     </>
   )
@@ -180,6 +183,7 @@ function ImageUploader({ value = [], onChange }) {
 
 // ========== 设施标签选择器 ==========
 function FacilitySelector({ value = [], onChange, pendingRequests = [], approvedRequests = [], onRequestNew, onReuseApproved, presetFacilities = [] }) {
+  const { t } = useTranslation()
   const [customFacility, setCustomFacility] = useState('')
   const [showCustomInput, setShowCustomInput] = useState(false)
 
@@ -190,22 +194,22 @@ function FacilitySelector({ value = [], onChange, pendingRequests = [], approved
   }
 
   const handleRequestNew = () => {
-    if (!customFacility.trim()) { message.error('请输入设施名称'); return }
-    if (facilityNames.includes(customFacility) || value.includes(customFacility)) { message.warning('该设施已存在'); return }
+    if (!customFacility.trim()) { message.error(t('hotelEdit.facility.customRequired')); return }
+    if (facilityNames.includes(customFacility) || value.includes(customFacility)) { message.warning(t('hotelEdit.facility.exists')); return }
     onRequestNew?.(customFacility)
     setCustomFacility('')
     setShowCustomInput(false)
-    message.success('已提交申请，等待管理员审核')
+    message.success(t('hotelEdit.facility.requestSuccess'))
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 12 }}>
       <div>
-        <Typography.Text type="secondary" style={{ fontSize: 12 }}>预设设施（点击选择）：</Typography.Text>
+        <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.facility.presetTitle')}</Typography.Text>
         <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {facilityNames.map(facility => (
             <Tag key={facility} color={value.includes(facility) ? 'blue' : 'default'} style={{ cursor: 'pointer', padding: '4px 12px' }} onClick={() => handleToggle(facility)}>
-              {value.includes(facility) && '✓ '}{facility}
+              {value.includes(facility) && t('hotelEdit.facility.selectedPrefix')}{facility}
             </Tag>
           ))}
         </div>
@@ -213,7 +217,7 @@ function FacilitySelector({ value = [], onChange, pendingRequests = [], approved
 
       {approvedRequests.length > 0 && (
         <div style={{ padding: '8px 12px', background: '#f6ffed', borderRadius: 8, border: '1px solid #b7eb8f' }}>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>已通过申请（点击添加/撤销）：</Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.facility.approvedTitle')}</Typography.Text>
           <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {approvedRequests.map((req, idx) => {
               const exists = value.includes(req.name)
@@ -224,7 +228,7 @@ function FacilitySelector({ value = [], onChange, pendingRequests = [], approved
                   style={{ cursor: 'pointer', margin: 0 }}
                   onClick={() => onReuseApproved?.(req, exists ? 'remove' : 'add')}
                 >
-                  {req.name}{exists ? '（点击撤销）' : ''}
+                  {req.name}{exists ? t('hotelEdit.facility.approvedRemoveHint') : ''}
                 </Tag>
               )
             })}
@@ -234,11 +238,11 @@ function FacilitySelector({ value = [], onChange, pendingRequests = [], approved
 
       {pendingRequests.length > 0 && (
         <div style={{ padding: '8px 12px', background: '#fffbe6', borderRadius: 8, border: '1px solid #ffe58f' }}>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>待审核设施：</Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.facility.pendingTitle')}</Typography.Text>
           <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {pendingRequests.map((req, idx) => (
               <Tag key={idx} color="orange" style={{ margin: 0 }}>
-                {req.name} - 审核中
+                {req.name} {t('hotelEdit.facility.pendingStatus')}
               </Tag>
             ))}
           </div>
@@ -247,12 +251,12 @@ function FacilitySelector({ value = [], onChange, pendingRequests = [], approved
 
       {showCustomInput ? (
         <Row gutter={8}>
-          <Col flex="auto"><Input placeholder="输入新设施名称..." value={customFacility} onChange={(e) => setCustomFacility(e.target.value)} onPressEnter={handleRequestNew} /></Col>
-          <Col><GlassButton type="primary" onClick={handleRequestNew}>提交申请</GlassButton></Col>
-          <Col><GlassButton onClick={() => setShowCustomInput(false)}>取消</GlassButton></Col>
+          <Col flex="auto"><Input placeholder={t('hotelEdit.facility.customPlaceholder')} value={customFacility} onChange={(e) => setCustomFacility(e.target.value)} onPressEnter={handleRequestNew} /></Col>
+          <Col><GlassButton type="primary" onClick={handleRequestNew}>{t('hotelEdit.facility.requestButton')}</GlassButton></Col>
+          <Col><GlassButton onClick={() => setShowCustomInput(false)}>{t('hotelEdit.facility.cancelButton')}</GlassButton></Col>
         </Row>
       ) : (
-        <GlassButton type="dashed" icon={<PlusOutlined />} onClick={() => setShowCustomInput(true)}>申请新增设施</GlassButton>
+        <GlassButton type="dashed" icon={<PlusOutlined />} onClick={() => setShowCustomInput(true)}>{t('hotelEdit.facility.requestNew')}</GlassButton>
       )}
     </div>
   )
@@ -260,6 +264,7 @@ function FacilitySelector({ value = [], onChange, pendingRequests = [], approved
 
 // ========== 房型管理组件 ==========
 function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedRequests = [], onRequestNew, onReuseApproved, presetRoomTypes = [] }) {
+  const { t } = useTranslation()
   const [showPresets, setShowPresets] = useState(false)
   const [customRoom, setCustomRoom] = useState({ name: '', price: 0, stock: 10, capacity: 2, bed_width: 180, area: 20, ceiling_height: 2.8, wifi: true, breakfast_included: false, images: [] })
   const [showCustomInput, setShowCustomInput] = useState(false)
@@ -282,7 +287,7 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
     const nextValue = [...safeValue, nextRoom]
     console.log('[RoomType][PresetAdd]', { preset, nextRoom, nextValue })
     onChange?.(nextValue)
-    message.success(`已添加${preset.name}`)
+    message.success(t('hotelEdit.roomType.presetAdded', { name: preset.name }))
   }
 
   const handleDeactivate = (index) => {
@@ -291,28 +296,28 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
     const used = Number(room.used_stock) || 0
     const active = room.is_active !== false
     const available = active ? Math.max(stock - used, 0) : 0
-    const roomName = room.name || `房型 ${index + 1}`
+    const roomName = room.name || t('hotelEdit.roomType.defaultName', { index: index + 1 })
     const hasOrders = room.has_orders === true
     const isPersisted = !!room.id
-    const actionText = isPersisted ? '下架' : '删除'
+    const actionText = isPersisted ? t('hotelEdit.roomType.actions.offline') : t('hotelEdit.roomType.actions.delete')
     Modal.confirm({
-      title: `确认${actionText} ${roomName}？`,
+      title: t('hotelEdit.roomType.deactivateTitle', { action: actionText, name: roomName }),
       content: (
         <div style={{ marginTop: 8 }}>
-          <Typography.Text type="secondary">操作仅在保存时生效。</Typography.Text>
+          <Typography.Text type="secondary">{t('hotelEdit.roomType.deactivateHint')}</Typography.Text>
           <div style={{ marginTop: 8 }}>
             <Typography.Text type="secondary">
-              {hasOrders ? '该房型已有订单，将标记为下架，库存总数不变。' : '将标记为下架，库存总数不变。'}
+              {hasOrders ? t('hotelEdit.roomType.deactivateHasOrders') : t('hotelEdit.roomType.deactivateNoOrders')}
             </Typography.Text>
           </div>
           <div style={{ marginTop: 8 }}>
-            <Typography.Text type="secondary">库存 {stock} · 已用 {used} · 可售 {available}</Typography.Text>
+            <Typography.Text type="secondary">{t('hotelEdit.roomType.stockInfo', { stock, used, available })}</Typography.Text>
           </div>
         </div>
       ),
       okText: actionText,
       okButtonProps: { danger: true },
-      cancelText: '取消',
+      cancelText: t('hotelEdit.roomType.cancel'),
       onOk() {
         if (isPersisted) {
           const nextValue = [...safeValue]
@@ -340,7 +345,7 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
   }
 
   const handleRequestNew = () => {
-    if (!customRoom.name.trim()) { message.error('请输入房型名称'); return }
+    if (!customRoom.name.trim()) { message.error(t('hotelEdit.roomType.nameRequired')); return }
     const nextRoom = {
       name: customRoom.name.trim(),
       price: Number(customRoom.price) || 0,
@@ -365,7 +370,7 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
     onRequestNew?.(nextRoom)
     setCustomRoom({ name: '', price: 0, stock: 10, capacity: 2, bed_width: 180, area: 20, ceiling_height: 2.8, wifi: true, breakfast_included: false, images: [] })
     setShowCustomInput(false)
-    message.success('已提交申请，等待管理员审核')
+    message.success(t('hotelEdit.roomType.requestSuccess'))
   }
 
   return (
@@ -376,69 +381,69 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
         const active = room.is_active !== false
         const available = active ? Math.max(stock - used, 0) : 0
         const summaryParts = [
-          (room.capacity ?? 2) ? `${room.capacity ?? 2}人` : null,
-          (room.bed_width ?? 180) ? `${room.bed_width ?? 180}cm` : null,
-          (room.area ?? 20) ? `${room.area ?? 20}㎡` : null,
-          (room.ceiling_height ?? 2.8) ? `${room.ceiling_height ?? 2.8}m` : null,
-          (room.wifi ?? true) ? 'WiFi' : '无WiFi',
-          (room.breakfast_included ?? false) ? '含早' : '无早'
+          (room.capacity ?? 2) ? t('hotelEdit.roomType.summary.capacity', { value: room.capacity ?? 2 }) : null,
+          (room.bed_width ?? 180) ? t('hotelEdit.roomType.summary.bedWidth', { value: room.bed_width ?? 180 }) : null,
+          (room.area ?? 20) ? t('hotelEdit.roomType.summary.area', { value: room.area ?? 20 }) : null,
+          (room.ceiling_height ?? 2.8) ? t('hotelEdit.roomType.summary.ceiling', { value: room.ceiling_height ?? 2.8 }) : null,
+          (room.wifi ?? true) ? t('hotelEdit.roomType.summary.wifi') : t('hotelEdit.roomType.summary.noWifi'),
+          (room.breakfast_included ?? false) ? t('hotelEdit.roomType.summary.breakfast') : t('hotelEdit.roomType.summary.noBreakfast')
         ].filter(Boolean)
         return (
           <Card key={index} size="small" styles={{ body: { padding: 12 } }} style={{ borderRadius: 12, border: '1px solid #f0f0f0', background: '#fafafa' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Tag color="purple" style={{ margin: 0 }}>房型 {index + 1}</Tag>
+                <Tag color="purple" style={{ margin: 0 }}>{t('hotelEdit.roomType.summary.roomTag', { index: index + 1 })}</Tag>
                 <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  {summaryParts.join(' · ')} · 库存 {stock} · 已用 {used} · 可售 {available}
+                  {summaryParts.join(' · ')} · {t('hotelEdit.roomType.stockInfo', { stock, used, available })}
                 </Typography.Text>
-                {!active && <Tag color="default">已下架</Tag>}
+                {!active && <Tag color="default">{t('hotelEdit.roomType.summary.statusOffline')}</Tag>}
               </div>
               <Space size={4}>
-                {!active && <GlassButton type="link" onClick={() => handleRestore(index)}>恢复上架</GlassButton>}
+                {!active && <GlassButton type="link" onClick={() => handleRestore(index)}>{t('hotelEdit.roomType.restore')}</GlassButton>}
                 <GlassButton type="link" danger icon={<DeleteOutlined />} onClick={() => handleDeactivate(index)}>
-                  {room.id ? '下架' : '删除'}
+                  {room.id ? t('hotelEdit.roomType.actions.offline') : t('hotelEdit.roomType.actions.delete')}
                 </GlassButton>
               </Space>
             </div>
             <Row gutter={[12, 12]}>
               <Col flex="220px">
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>房型名称</Typography.Text>
-                <Input value={room.name} onChange={(e) => handleChange(index, 'name', e.target.value)} placeholder="如：标准大床房" style={{ marginTop: 6 }} />
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.labelName')}</Typography.Text>
+                <Input value={room.name} onChange={(e) => handleChange(index, 'name', e.target.value)} placeholder={t('hotelEdit.roomType.placeholderName')} style={{ marginTop: 6 }} />
               </Col>
               <Col flex="180px">
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>价格</Typography.Text>
-                <InputNumber value={room.price} onChange={(val) => handleChange(index, 'price', val)} min={0} style={{ width: '100%', marginTop: 6 }} prefix="¥" placeholder="每晚价格" />
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.labelPrice')}</Typography.Text>
+                <InputNumber value={room.price} onChange={(val) => handleChange(index, 'price', val)} min={0} style={{ width: '100%', marginTop: 6 }} prefix="¥" placeholder={t('hotelEdit.roomType.placeholderPrice')} />
               </Col>
               <Col flex="140px">
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>库存</Typography.Text>
-                <InputNumber value={room.stock} onChange={(val) => handleChange(index, 'stock', val)} min={0} style={{ width: '100%', marginTop: 6 }} placeholder="可售数量" />
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.labelStock')}</Typography.Text>
+                <InputNumber value={room.stock} onChange={(val) => handleChange(index, 'stock', val)} min={0} style={{ width: '100%', marginTop: 6 }} placeholder={t('hotelEdit.roomType.placeholderStock')} />
               </Col>
               <Col flex="140px">
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>可住人数</Typography.Text>
-                <InputNumber value={room.capacity ?? 2} onChange={(val) => handleChange(index, 'capacity', val)} min={0} style={{ width: '100%', marginTop: 6 }} placeholder="如：2" />
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.labelCapacity')}</Typography.Text>
+                <InputNumber value={room.capacity ?? 2} onChange={(val) => handleChange(index, 'capacity', val)} min={0} style={{ width: '100%', marginTop: 6 }} placeholder={t('hotelEdit.roomType.placeholderCapacity')} />
               </Col>
               <Col flex="140px">
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>床宽(cm)</Typography.Text>
-                <InputNumber value={room.bed_width ?? 180} onChange={(val) => handleChange(index, 'bed_width', val)} min={0} style={{ width: '100%', marginTop: 6 }} placeholder="如：180" />
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.labelBedWidth')}</Typography.Text>
+                <InputNumber value={room.bed_width ?? 180} onChange={(val) => handleChange(index, 'bed_width', val)} min={0} style={{ width: '100%', marginTop: 6 }} placeholder={t('hotelEdit.roomType.placeholderBedWidth')} />
               </Col>
               <Col flex="140px">
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>面积(㎡)</Typography.Text>
-                <InputNumber value={room.area ?? 20} onChange={(val) => handleChange(index, 'area', val)} min={0} style={{ width: '100%', marginTop: 6 }} placeholder="如：20" />
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.labelArea')}</Typography.Text>
+                <InputNumber value={room.area ?? 20} onChange={(val) => handleChange(index, 'area', val)} min={0} style={{ width: '100%', marginTop: 6 }} placeholder={t('hotelEdit.roomType.placeholderArea')} />
               </Col>
               <Col flex="140px">
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>层高(m)</Typography.Text>
-                <InputNumber value={room.ceiling_height ?? 2.8} onChange={(val) => handleChange(index, 'ceiling_height', val)} min={0} style={{ width: '100%', marginTop: 6 }} placeholder="如：2.8" />
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.labelCeiling')}</Typography.Text>
+                <InputNumber value={room.ceiling_height ?? 2.8} onChange={(val) => handleChange(index, 'ceiling_height', val)} min={0} style={{ width: '100%', marginTop: 6 }} placeholder={t('hotelEdit.roomType.placeholderCeiling')} />
               </Col>
               <Col flex="140px">
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>WiFi</Typography.Text>
-                <div style={{ marginTop: 6 }}><Checkbox checked={(room.wifi ?? true) === true} onChange={(e) => handleChange(index, 'wifi', e.target.checked)}>提供WiFi</Checkbox></div>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.labelWifi')}</Typography.Text>
+                <div style={{ marginTop: 6 }}><Checkbox checked={(room.wifi ?? true) === true} onChange={(e) => handleChange(index, 'wifi', e.target.checked)}>{t('hotelEdit.roomType.wifiProvided')}</Checkbox></div>
               </Col>
               <Col flex="140px">
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>早餐</Typography.Text>
-                <div style={{ marginTop: 6 }}><Checkbox checked={(room.breakfast_included ?? false) === true} onChange={(e) => handleChange(index, 'breakfast_included', e.target.checked)}>含早餐</Checkbox></div>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.labelBreakfast')}</Typography.Text>
+                <div style={{ marginTop: 6 }}><Checkbox checked={(room.breakfast_included ?? false) === true} onChange={(e) => handleChange(index, 'breakfast_included', e.target.checked)}>{t('hotelEdit.roomType.breakfastIncluded')}</Checkbox></div>
               </Col>
               <Col flex="100%">
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>房型图片</Typography.Text>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.labelImages')}</Typography.Text>
                 <div style={{ marginTop: 6 }}>
                   <ImageUploader value={room.images || []} onChange={(val) => handleChange(index, 'images', val)} />
                 </div>
@@ -450,7 +455,7 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
 
       {approvedRequests.length > 0 && (
         <div style={{ padding: '8px 12px', background: '#f6ffed', borderRadius: 8, border: '1px solid #b7eb8f' }}>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>已通过申请（点击添加/撤销）：</Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.approvedTitle')}</Typography.Text>
           <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
             {approvedRequests.map((req, idx) => {
               const exists = safeValue.some((room) => room && room.name === req.name)
@@ -464,22 +469,22 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
               const breakfast = req.data?.breakfast_included
               const images = Array.isArray(req.data?.images) ? req.data?.images : []
               const detailParts = [
-                capacity ? `${capacity}人` : null,
-                bedWidth ? `${bedWidth}cm` : null,
-                area ? `${area}㎡` : null,
-                ceiling ? `${ceiling}m` : null,
-                wifi === true ? 'WiFi' : wifi === false ? '无WiFi' : null,
-                breakfast === true ? '含早' : breakfast === false ? '无早' : null,
-                images.length ? `图片${images.length}张` : null
+                capacity ? t('hotelEdit.roomType.summary.capacity', { value: capacity }) : null,
+                bedWidth ? t('hotelEdit.roomType.summary.bedWidth', { value: bedWidth }) : null,
+                area ? t('hotelEdit.roomType.summary.area', { value: area }) : null,
+                ceiling ? t('hotelEdit.roomType.summary.ceiling', { value: ceiling }) : null,
+                wifi === true ? t('hotelEdit.roomType.summary.wifi') : wifi === false ? t('hotelEdit.roomType.summary.noWifi') : null,
+                breakfast === true ? t('hotelEdit.roomType.summary.breakfast') : breakfast === false ? t('hotelEdit.roomType.summary.noBreakfast') : null,
+                images.length ? t('hotelEdit.roomType.approvedImageCount', { count: images.length }) : null
               ].filter(Boolean)
               return (
                 <div key={`${req.id || req.name}-${idx}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                   <div style={{ fontSize: 13 }}>
                     <Tag color={exists ? 'default' : 'green'} style={{ marginRight: 8 }}>{req.name}</Tag>
-                    <span style={{ color: '#999' }}>¥{price} / 库存 {stock}{detailParts.length ? ` / ${detailParts.join(' · ')}` : ''}</span>
+                    <span style={{ color: '#999' }}>{t('hotelEdit.roomType.approvedPriceStock', { price, stock })}{detailParts.length ? ` / ${detailParts.join(' · ')}` : ''}</span>
                   </div>
                     <GlassButton size="small" onClick={() => onReuseApproved?.(req, exists ? 'remove' : 'add')}>
-                    {exists ? '撤销' : '添加'}
+                    {exists ? t('hotelEdit.roomType.approvedRemove') : t('hotelEdit.roomType.approvedAdd')}
                   </GlassButton>
                 </div>
               )
@@ -490,18 +495,18 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
 
       {pendingRequests.length > 0 && (
         <div style={{ padding: '8px 12px', background: '#fffbe6', borderRadius: 8 }}>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>待审核房型：</Typography.Text>
-          {pendingRequests.map((req, idx) => (<Tag key={idx} color="orange" style={{ marginLeft: 8 }}>{req.name} - 审核中</Tag>))}
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.pendingTitle')}</Typography.Text>
+          {pendingRequests.map((req, idx) => (<Tag key={idx} color="orange" style={{ marginLeft: 8 }}>{req.name} {t('hotelEdit.roomType.pendingStatus')}</Tag>))}
         </div>
       )}
 
       {showPresets && (
         <Card size="small" style={{ background: '#fafafa' }}>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>点击添加预设房型：</Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.presetTitle')}</Typography.Text>
           <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {presetRoomTypes.map(preset => (
               <Tag key={preset.name} style={{ cursor: 'pointer', padding: '4px 12px' }} onClick={() => handleAddPreset(preset)}>
-                {preset.name} (¥{preset.default_price || preset.defaultPrice})
+                {preset.name} ({t('hotelEdit.roomType.presetPriceLabel', { price: preset.default_price || preset.defaultPrice })})
               </Tag>
             ))}
           </div>
@@ -511,56 +516,56 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
       {showCustomInput && (
         <Card size="small" style={{ borderRadius: 12, border: '1px solid #b7eb8f', background: '#f6ffed' }} styles={{ body: { padding: 12 } }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>申请新房型（需管理员审核）</Typography.Text>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>填写完整信息更易通过</Typography.Text>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.requestTitle')}</Typography.Text>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.requestHint')}</Typography.Text>
           </div>
           <Row gutter={[12, 12]}>
             <Col flex="220px">
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>房型名称</Typography.Text>
-              <Input placeholder="如：标准大床房" value={customRoom.name} onChange={(e) => setCustomRoom({ ...customRoom, name: e.target.value })} style={{ marginTop: 6 }} />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.labelName')}</Typography.Text>
+              <Input placeholder={t('hotelEdit.roomType.placeholderName')} value={customRoom.name} onChange={(e) => setCustomRoom({ ...customRoom, name: e.target.value })} style={{ marginTop: 6 }} />
             </Col>
             <Col flex="160px">
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>价格</Typography.Text>
-              <InputNumber placeholder="每晚价格" value={customRoom.price} onChange={(val) => setCustomRoom({ ...customRoom, price: val })} min={0} style={{ width: '100%', marginTop: 6 }} prefix="¥" />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.labelPrice')}</Typography.Text>
+              <InputNumber placeholder={t('hotelEdit.roomType.placeholderPrice')} value={customRoom.price} onChange={(val) => setCustomRoom({ ...customRoom, price: val })} min={0} style={{ width: '100%', marginTop: 6 }} prefix="¥" />
             </Col>
             <Col flex="140px">
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>库存</Typography.Text>
-              <InputNumber placeholder="可售数量" value={customRoom.stock} onChange={(val) => setCustomRoom({ ...customRoom, stock: val })} min={0} style={{ width: '100%', marginTop: 6 }} />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.labelStock')}</Typography.Text>
+              <InputNumber placeholder={t('hotelEdit.roomType.placeholderStock')} value={customRoom.stock} onChange={(val) => setCustomRoom({ ...customRoom, stock: val })} min={0} style={{ width: '100%', marginTop: 6 }} />
             </Col>
             <Col flex="140px">
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>可住人数</Typography.Text>
-              <InputNumber placeholder="如：2" value={customRoom.capacity} onChange={(val) => setCustomRoom({ ...customRoom, capacity: val })} min={0} style={{ width: '100%', marginTop: 6 }} />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.labelCapacity')}</Typography.Text>
+              <InputNumber placeholder={t('hotelEdit.roomType.placeholderCapacity')} value={customRoom.capacity} onChange={(val) => setCustomRoom({ ...customRoom, capacity: val })} min={0} style={{ width: '100%', marginTop: 6 }} />
             </Col>
             <Col flex="140px">
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>床宽(cm)</Typography.Text>
-              <InputNumber placeholder="如：180" value={customRoom.bed_width} onChange={(val) => setCustomRoom({ ...customRoom, bed_width: val })} min={0} style={{ width: '100%', marginTop: 6 }} />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.labelBedWidth')}</Typography.Text>
+              <InputNumber placeholder={t('hotelEdit.roomType.placeholderBedWidth')} value={customRoom.bed_width} onChange={(val) => setCustomRoom({ ...customRoom, bed_width: val })} min={0} style={{ width: '100%', marginTop: 6 }} />
             </Col>
             <Col flex="140px">
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>面积(㎡)</Typography.Text>
-              <InputNumber placeholder="如：20" value={customRoom.area} onChange={(val) => setCustomRoom({ ...customRoom, area: val })} min={0} style={{ width: '100%', marginTop: 6 }} />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.labelArea')}</Typography.Text>
+              <InputNumber placeholder={t('hotelEdit.roomType.placeholderArea')} value={customRoom.area} onChange={(val) => setCustomRoom({ ...customRoom, area: val })} min={0} style={{ width: '100%', marginTop: 6 }} />
             </Col>
             <Col flex="140px">
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>层高(m)</Typography.Text>
-              <InputNumber placeholder="如：2.8" value={customRoom.ceiling_height} onChange={(val) => setCustomRoom({ ...customRoom, ceiling_height: val })} min={0} style={{ width: '100%', marginTop: 6 }} />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.labelCeiling')}</Typography.Text>
+              <InputNumber placeholder={t('hotelEdit.roomType.placeholderCeiling')} value={customRoom.ceiling_height} onChange={(val) => setCustomRoom({ ...customRoom, ceiling_height: val })} min={0} style={{ width: '100%', marginTop: 6 }} />
             </Col>
             <Col flex="140px">
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>WiFi</Typography.Text>
-              <div style={{ marginTop: 6 }}><Checkbox checked={!!customRoom.wifi} onChange={(e) => setCustomRoom({ ...customRoom, wifi: e.target.checked })}>提供WiFi</Checkbox></div>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.labelWifi')}</Typography.Text>
+              <div style={{ marginTop: 6 }}><Checkbox checked={!!customRoom.wifi} onChange={(e) => setCustomRoom({ ...customRoom, wifi: e.target.checked })}>{t('hotelEdit.roomType.wifiProvided')}</Checkbox></div>
             </Col>
             <Col flex="140px">
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>早餐</Typography.Text>
-              <div style={{ marginTop: 6 }}><Checkbox checked={!!customRoom.breakfast_included} onChange={(e) => setCustomRoom({ ...customRoom, breakfast_included: e.target.checked })}>含早餐</Checkbox></div>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.labelBreakfast')}</Typography.Text>
+              <div style={{ marginTop: 6 }}><Checkbox checked={!!customRoom.breakfast_included} onChange={(e) => setCustomRoom({ ...customRoom, breakfast_included: e.target.checked })}>{t('hotelEdit.roomType.breakfastIncluded')}</Checkbox></div>
             </Col>
             <Col flex="100%">
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>房型图片</Typography.Text>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.roomType.labelImages')}</Typography.Text>
               <div style={{ marginTop: 6 }}>
                 <ImageUploader value={customRoom.images || []} onChange={(val) => setCustomRoom({ ...customRoom, images: val })} />
               </div>
             </Col>
             <Col flex="220px" style={{ display: 'flex', alignItems: 'flex-end' }}>
               <Space>
-                <GlassButton type="primary" onClick={handleRequestNew}>提交</GlassButton>
-                <GlassButton onClick={() => setShowCustomInput(false)}>取消</GlassButton>
+                <GlassButton type="primary" onClick={handleRequestNew}>{t('hotelEdit.roomType.submit')}</GlassButton>
+                <GlassButton onClick={() => setShowCustomInput(false)}>{t('hotelEdit.roomType.cancel')}</GlassButton>
               </Space>
             </Col>
           </Row>
@@ -568,8 +573,8 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
       )}
 
       <Row gutter={8}>
-        <Col><GlassButton type="dashed" icon={<PlusOutlined />} onClick={() => setShowPresets(!showPresets)}>{showPresets ? '收起预设' : '选择预设房型'}</GlassButton></Col>
-        <Col><GlassButton type="dashed" icon={<PlusOutlined />} onClick={() => setShowCustomInput(!showCustomInput)}>申请自定义房型</GlassButton></Col>
+        <Col><GlassButton type="dashed" icon={<PlusOutlined />} onClick={() => setShowPresets(!showPresets)}>{showPresets ? t('hotelEdit.roomType.togglePresetsHide') : t('hotelEdit.roomType.togglePresetsShow')}</GlassButton></Col>
+        <Col><GlassButton type="dashed" icon={<PlusOutlined />} onClick={() => setShowCustomInput(!showCustomInput)}>{t('hotelEdit.roomType.requestCustom')}</GlassButton></Col>
       </Row>
     </div>
   )
@@ -577,28 +582,29 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
 
 // ========== 优惠管理组件 ==========
 function PromotionManager({ value = [], onChange, pendingRequests = [], approvedRequests = [], onRequestNew, onReuseApproved, presetPromotionTypes = [] }) {
+  const { t } = useTranslation()
   const [showPresets, setShowPresets] = useState(false)
   const [customPromo, setCustomPromo] = useState({ type: '', title: '', value: 0 })
   const [showCustomInput, setShowCustomInput] = useState(false)
 
   const getUnitLabel = (promoValue) => {
     const val = Number(promoValue) || 0
-    if (val < 0) return '元'
-    if (val > 10) return '元'
-    return '折'
+    if (val < 0) return t('hotelEdit.promotion.unitAmount')
+    if (val > 10) return t('hotelEdit.promotion.unitAmount')
+    return t('hotelEdit.promotion.unitDiscount')
   }
 
   const getValueLabel = (promoValue) => {
     const val = Number(promoValue) || 0
-    if (val < 0) return `减免 ${Math.abs(val)} 元`
-    if (val > 10) return `减免 ${val} 元`
-    if (val > 0) return `${val} 折`
-    return '未设置'
+    if (val < 0) return t('hotelEdit.promotion.valueAmount', { value: Math.abs(val) })
+    if (val > 10) return t('hotelEdit.promotion.valueAmount', { value: val })
+    if (val > 0) return t('hotelEdit.promotion.valueDiscount', { value: val })
+    return t('hotelEdit.promotion.valueUnset')
   }
 
   const handleAddPreset = (preset) => {
     onChange?.([...value, { type: preset.type, title: preset.label, value: 9 }])
-    message.success(`已添加${preset.label}`)
+    message.success(t('hotelEdit.promotion.presetAdded', { name: preset.label }))
   }
 
   const handleRemove = (index) => onChange?.(value.filter((_, idx) => idx !== index))
@@ -610,11 +616,11 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
   }
 
   const handleRequestNew = () => {
-    if (!customPromo.title.trim()) { message.error('请输入优惠标题'); return }
+    if (!customPromo.title.trim()) { message.error(t('hotelEdit.promotion.titleRequired')); return }
     onRequestNew?.(customPromo)
     setCustomPromo({ type: '', title: '', value: 0 })
     setShowCustomInput(false)
-    message.success('已提交申请，等待管理员审核')
+    message.success(t('hotelEdit.promotion.requestSuccess'))
   }
 
   return (
@@ -628,28 +634,28 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Tag color="geekblue" style={{ margin: 0 }}>优惠 {index + 1}</Tag>
+              <Tag color="geekblue" style={{ margin: 0 }}>{t('hotelEdit.promotion.titleLabel', { index: index + 1 })}</Tag>
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>{getValueLabel(promo.value)}</Typography.Text>
             </div>
-            <GlassButton type="link" danger icon={<DeleteOutlined />} onClick={() => handleRemove(index)}>删除</GlassButton>
+            <GlassButton type="link" danger icon={<DeleteOutlined />} onClick={() => handleRemove(index)}>{t('hotelEdit.promotion.delete')}</GlassButton>
           </div>
           <Row gutter={[12, 12]}>
             <Col flex="140px">
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>类型</Typography.Text>
-              <Input value={promo.type} onChange={(e) => handleChange(index, 'type', e.target.value)} placeholder="如：连住优惠" style={{ marginTop: 6 }} />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.promotion.typeLabel')}</Typography.Text>
+              <Input value={promo.type} onChange={(e) => handleChange(index, 'type', e.target.value)} placeholder={t('hotelEdit.promotion.typePlaceholder')} style={{ marginTop: 6 }} />
             </Col>
             <Col flex="300px">
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>优惠标题</Typography.Text>
-              <Input value={promo.title} onChange={(e) => handleChange(index, 'title', e.target.value)} placeholder="如：连住2晚立减" style={{ marginTop: 6 }} />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.promotion.titleLabelText')}</Typography.Text>
+              <Input value={promo.title} onChange={(e) => handleChange(index, 'title', e.target.value)} placeholder={t('hotelEdit.promotion.titlePlaceholder')} style={{ marginTop: 6 }} />
             </Col>
             <Col flex="160px">
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>数值</Typography.Text>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.promotion.valueLabel')}</Typography.Text>
               <Space.Compact style={{ width: '100%', marginTop: 6 }}>
                 <InputNumber
                   value={promo.value}
                   onChange={(val) => handleChange(index, 'value', val)}
                   style={{ width: '100%' }}
-                  placeholder="折扣或减免"
+                  placeholder={t('hotelEdit.promotion.valuePlaceholder')}
                 />
                 <div style={{ padding: '0 10px', background: '#fafafa', border: '1px solid #d9d9d9', borderLeft: 0, borderRadius: '0 6px 6px 0', display: 'flex', alignItems: 'center', color: '#999' }}>
                   {getUnitLabel(promo.value)}
@@ -657,7 +663,7 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
               </Space.Compact>
             </Col>
             <Col flex="340px">
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>有效期</Typography.Text>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.promotion.periodLabel')}</Typography.Text>
               <DatePicker.RangePicker
                 showTime
                 style={{ width: '100%', marginTop: 6 }}
@@ -681,8 +687,8 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
       {approvedRequests.length > 0 && (
         <Card size="small" style={{ borderRadius: 12, border: '1px solid #b7eb8f', background: '#f6ffed' }} styles={{ body: { padding: 12 } }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>已通过申请</Typography.Text>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>点击添加或撤销</Typography.Text>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.promotion.approvedTitle')}</Typography.Text>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.promotion.approvedHint')}</Typography.Text>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {approvedRequests.map((req, idx) => {
@@ -695,11 +701,11 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
                     {type && <Tag color={exists ? 'default' : 'green'} style={{ marginRight: 8 }}>{type}</Tag>}
                     <span>{req.name}</span>
                     <span style={{ color: '#f5222d', marginLeft: 8 }}>
-                      {valueText < 0 ? `减免 ${Math.abs(valueText)} 元` : (valueText > 10 ? `减免 ${valueText} 元` : `${valueText} 折`)}
+                      {valueText < 0 ? t('hotelEdit.promotion.valueAmount', { value: Math.abs(valueText) }) : (valueText > 10 ? t('hotelEdit.promotion.valueAmount', { value: valueText }) : t('hotelEdit.promotion.valueDiscount', { value: valueText }))}
                     </span>
                   </div>
                   <GlassButton size="small" onClick={() => onReuseApproved?.(req, exists ? 'remove' : 'add')}>
-                    {exists ? '撤销' : '添加'}
+                    {exists ? t('hotelEdit.promotion.approvedRemove') : t('hotelEdit.promotion.approvedAdd')}
                   </GlassButton>
                 </div>
               )
@@ -710,10 +716,10 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
 
       {pendingRequests.length > 0 && (
         <Card size="small" style={{ borderRadius: 12, border: '1px solid #ffe58f', background: '#fffbe6' }} styles={{ body: { padding: 12 } }}>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>待审核优惠</Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.promotion.pendingTitle')}</Typography.Text>
           <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {pendingRequests.map((req, idx) => (
-              <Tag key={idx} color="orange" style={{ margin: 0 }}>{req.title} - 审核中</Tag>
+              <Tag key={idx} color="orange" style={{ margin: 0 }}>{req.title} {t('hotelEdit.promotion.pendingStatus')}</Tag>
             ))}
           </div>
         </Card>
@@ -721,7 +727,7 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
 
       {showPresets && (
         <Card size="small" style={{ borderRadius: 12, border: '1px solid #f0f0f0', background: '#fff' }} styles={{ body: { padding: 12 } }}>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>点击添加预设优惠</Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.promotion.presetTitle')}</Typography.Text>
           <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {presetPromotionTypes.map(preset => (
               <Tag key={preset.type} color="blue" style={{ cursor: 'pointer', padding: '4px 12px', margin: 0 }} onClick={() => handleAddPreset(preset)}>{preset.label}</Tag>
@@ -732,17 +738,17 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
 
       {showCustomInput && (
         <Card size="small" style={{ borderRadius: 12, border: '1px solid #b7eb8f', background: '#f6ffed' }} styles={{ body: { padding: 12 } }}>
-          <Typography.Text style={{ fontSize: 12 }}>申请新优惠（需管理员审核）</Typography.Text>
+          <Typography.Text style={{ fontSize: 12 }}>{t('hotelEdit.promotion.requestTitle')}</Typography.Text>
           <Row gutter={[12, 12]} style={{ marginTop: 10 }}>
             <Col flex="140px">
-              <Input placeholder="类型" value={customPromo.type} onChange={(e) => setCustomPromo({ ...customPromo, type: e.target.value })} />
+              <Input placeholder={t('hotelEdit.promotion.requestTypePlaceholder')} value={customPromo.type} onChange={(e) => setCustomPromo({ ...customPromo, type: e.target.value })} />
             </Col>
             <Col flex="auto">
-              <Input placeholder="优惠标题" value={customPromo.title} onChange={(e) => setCustomPromo({ ...customPromo, title: e.target.value })} />
+              <Input placeholder={t('hotelEdit.promotion.requestTitlePlaceholder')} value={customPromo.title} onChange={(e) => setCustomPromo({ ...customPromo, title: e.target.value })} />
             </Col>
             <Col flex="160px">
               <InputNumber
-                placeholder="数值"
+                placeholder={t('hotelEdit.promotion.requestValuePlaceholder')}
                 value={customPromo.value}
                 onChange={(val) => setCustomPromo({ ...customPromo, value: val })}
                 style={{ width: '100%' }}
@@ -750,8 +756,8 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
             </Col>
             <Col flex="200px">
               <Space>
-                <GlassButton type="primary" onClick={handleRequestNew}>提交</GlassButton>
-                <GlassButton onClick={() => setShowCustomInput(false)}>取消</GlassButton>
+                <GlassButton type="primary" onClick={handleRequestNew}>{t('hotelEdit.promotion.submit')}</GlassButton>
+                <GlassButton onClick={() => setShowCustomInput(false)}>{t('hotelEdit.promotion.cancel')}</GlassButton>
               </Space>
             </Col>
           </Row>
@@ -759,8 +765,8 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
       )}
 
       <Space wrap>
-        <GlassButton type="dashed" icon={<PlusOutlined />} onClick={() => setShowPresets(!showPresets)}>{showPresets ? '收起预设' : '选择预设优惠'}</GlassButton>
-        <GlassButton type="dashed" icon={<PlusOutlined />} onClick={() => setShowCustomInput(!showCustomInput)}>申请自定义优惠</GlassButton>
+        <GlassButton type="dashed" icon={<PlusOutlined />} onClick={() => setShowPresets(!showPresets)}>{showPresets ? t('hotelEdit.promotion.togglePresetsHide') : t('hotelEdit.promotion.togglePresetsShow')}</GlassButton>
+        <GlassButton type="dashed" icon={<PlusOutlined />} onClick={() => setShowCustomInput(!showCustomInput)}>{t('hotelEdit.promotion.requestCustom')}</GlassButton>
       </Space>
     </div>
   )
@@ -768,6 +774,7 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
 
 // ========== 周边信息组件 ==========
 function NearbyInfoEditor({ attractions = [], transport = [], malls = [], onChangeAttractions, onChangeTransport, onChangeMalls }) {
+  const { t } = useTranslation()
   const [searchText, setSearchText] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [searching, setSearching] = useState(false)
@@ -788,6 +795,7 @@ function NearbyInfoEditor({ attractions = [], transport = [], malls = [], onChan
       const result = await api.get(`/api/map/search?keywords=${encodeURIComponent(keywords)}`)
       
       if (result.success && result.data && result.data.length > 0) {
+        const unknownDistance = t('hotelEdit.nearby.unknownDistance')
         const results = result.data.map(poi => {
           // 根据POI类型判断分类
           let type = 'attraction'
@@ -801,51 +809,52 @@ function NearbyInfoEditor({ attractions = [], transport = [], malls = [], onChan
           return {
             name: poi.name,
             address: poi.address || '',
-            distance: (poi.distance && !isNaN(parseFloat(poi.distance))) ? `${poi.distance}米` : '未知',
+            distance: (poi.distance && !isNaN(parseFloat(poi.distance))) ? `${poi.distance}米` : unknownDistance,
             type: type
           }
         })
         setSearchResults(results)
       } else {
-        message.warning(result.message || '未找到相关地点')
+        message.warning(result.message || t('hotelEdit.nearby.noResult'))
         setSearchResults([])
       }
     } catch (err) {
       console.error('搜索失败:', err)
-      message.error('搜索失败，请重试')
+      message.error(t('hotelEdit.nearby.searchError'))
     } finally {
       setSearching(false)
     }
   }
 
   const handleAdd = (item) => {
-    const info = item.distance !== '未知' ? `${item.name}(${item.distance})` : item.name
-    if (item.type === 'attraction' && !attractions.includes(info)) { onChangeAttractions?.([...attractions, info]); message.success('已添加景点') }
-    else if (item.type === 'transport' && !transport.includes(info)) { onChangeTransport?.([...transport, info]); message.success('已添加交通信息') }
-    else if (item.type === 'mall' && !malls.includes(info)) { onChangeMalls?.([...malls, info]); message.success('已添加商场信息') }
+    const unknownDistance = t('hotelEdit.nearby.unknownDistance')
+    const info = item.distance !== unknownDistance ? `${item.name}(${item.distance})` : item.name
+    if (item.type === 'attraction' && !attractions.includes(info)) { onChangeAttractions?.([...attractions, info]); message.success(t('hotelEdit.nearby.addAttractionSuccess')) }
+    else if (item.type === 'transport' && !transport.includes(info)) { onChangeTransport?.([...transport, info]); message.success(t('hotelEdit.nearby.addTransportSuccess')) }
+    else if (item.type === 'mall' && !malls.includes(info)) { onChangeMalls?.([...malls, info]); message.success(t('hotelEdit.nearby.addMallSuccess')) }
   }
 
   const typeOptions = [
-    { value: 'all', label: '全部' },
-    { value: 'attraction', label: '景点' },
-    { value: 'transport', label: '交通' },
-    { value: 'mall', label: '商场' }
+    { value: 'all', label: t('hotelEdit.nearby.typeAll') },
+    { value: 'attraction', label: t('hotelEdit.nearby.typeAttraction') },
+    { value: 'transport', label: t('hotelEdit.nearby.typeTransport') },
+    { value: 'mall', label: t('hotelEdit.nearby.typeMall') }
   ]
 
   const getTypeTag = (type) => {
-    if (type === 'attraction') return <Tag color="green">景点</Tag>
-    if (type === 'transport') return <Tag color="blue">交通</Tag>
-    if (type === 'mall') return <Tag color="orange">商场</Tag>
-    return <Tag>其他</Tag>
+    if (type === 'attraction') return <Tag color="green">{t('hotelEdit.nearby.tagAttraction')}</Tag>
+    if (type === 'transport') return <Tag color="blue">{t('hotelEdit.nearby.tagTransport')}</Tag>
+    if (type === 'mall') return <Tag color="orange">{t('hotelEdit.nearby.tagMall')}</Tag>
+    return <Tag>{t('hotelEdit.nearby.tagOther')}</Tag>
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 16 }}>
-      <Card size="small" title="搜索周边信息（高德地图）">
+      <Card size="small" title={t('hotelEdit.nearby.searchTitle')}>
         <Row gutter={8}>
           <Col flex="auto">
             <Input 
-              placeholder="搜索周边景点、交通、商场..." 
+              placeholder={t('hotelEdit.nearby.searchPlaceholder')} 
               value={searchText} 
               onChange={(e) => setSearchText(e.target.value)} 
               onPressEnter={handleSearch} 
@@ -860,7 +869,7 @@ function NearbyInfoEditor({ attractions = [], transport = [], malls = [], onChan
               style={{ width: 90 }}
             />
           </Col>
-          <Col><GlassButton onClick={handleSearch} loading={searching}>搜索</GlassButton></Col>
+          <Col><GlassButton onClick={handleSearch} loading={searching}>{t('hotelEdit.nearby.searchButton')}</GlassButton></Col>
         </Row>
         {searchResults.length > 0 && (
           <div style={{ marginTop: 12, maxHeight: 250, overflow: 'auto' }}>
@@ -869,10 +878,10 @@ function NearbyInfoEditor({ attractions = [], transport = [], malls = [], onChan
                 <div style={{ flex: 1 }}>
                   <span>{item.name}</span>
                   {getTypeTag(item.type)}
-                  {item.distance !== '未知' && <Tag style={{ marginLeft: 4 }}>{item.distance}</Tag>}
+                  {item.distance !== t('hotelEdit.nearby.unknownDistance') && <Tag style={{ marginLeft: 4 }}>{item.distance}</Tag>}
                   {item.address && <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>{item.address}</div>}
                 </div>
-                <GlassButton type="link" size="small" onClick={() => handleAdd(item)}>添加</GlassButton>
+                <GlassButton type="link" size="small" onClick={() => handleAdd(item)}>{t('hotelEdit.nearby.addButton')}</GlassButton>
               </div>
             ))}
           </div>
@@ -881,18 +890,18 @@ function NearbyInfoEditor({ attractions = [], transport = [], malls = [], onChan
 
       <Row gutter={16}>
         <Col span={8}>
-          <Card size="small" title="附近景点">
-            <Select mode="tags" style={{ width: '100%' }} value={attractions} onChange={onChangeAttractions} placeholder="输入或搜索添加" tokenSeparators={[',']} />
+          <Card size="small" title={t('hotelEdit.nearby.cardAttractions')}>
+            <Select mode="tags" style={{ width: '100%' }} value={attractions} onChange={onChangeAttractions} placeholder={t('hotelEdit.nearby.tagsPlaceholder')} tokenSeparators={[',']} />
           </Card>
         </Col>
         <Col span={8}>
-          <Card size="small" title="交通信息">
-            <Select mode="tags" style={{ width: '100%' }} value={transport} onChange={onChangeTransport} placeholder="输入或搜索添加" tokenSeparators={[',']} />
+          <Card size="small" title={t('hotelEdit.nearby.cardTransport')}>
+            <Select mode="tags" style={{ width: '100%' }} value={transport} onChange={onChangeTransport} placeholder={t('hotelEdit.nearby.tagsPlaceholder')} tokenSeparators={[',']} />
           </Card>
         </Col>
         <Col span={8}>
-          <Card size="small" title="商场信息">
-            <Select mode="tags" style={{ width: '100%' }} value={malls} onChange={onChangeMalls} placeholder="输入或搜索添加" tokenSeparators={[',']} />
+          <Card size="small" title={t('hotelEdit.nearby.cardMalls')}>
+            <Select mode="tags" style={{ width: '100%' }} value={malls} onChange={onChangeMalls} placeholder={t('hotelEdit.nearby.tagsPlaceholder')} tokenSeparators={[',']} />
           </Card>
         </Col>
       </Row>
@@ -902,12 +911,13 @@ function NearbyInfoEditor({ attractions = [], transport = [], malls = [], onChan
 
 // ========== 预览组件 ==========
 function HotelPreview({ data }) {
+  const { t } = useTranslation()
   if (!data) return null
 
   const roomColumns = [
-    { title: '房型名称', dataIndex: 'name', key: 'name' },
+    { title: t('hotelEdit.preview.roomName'), dataIndex: 'name', key: 'name' },
     { 
-      title: '价格', 
+      title: t('hotelEdit.preview.roomPrice'), 
       key: 'price', 
       render: (_, record) => {
         const price = Number(record.price) || 0
@@ -935,10 +945,10 @@ function HotelPreview({ data }) {
         })
         if (discount > 0 && discount <= 10) {
           finalPrice = finalPrice * (discount / 10)
-          discountText = `${discount}折`
+          discountText = t('hotelEdit.preview.discountRate', { value: discount })
         } else if (discount < 0) {
           finalPrice = Math.max(0, finalPrice + discount)
-          discountText = `减¥${Math.abs(discount)}`
+          discountText = t('hotelEdit.preview.discountAmount', { value: Math.abs(discount) })
         }
         
         finalPrice = Math.round(finalPrice * 100) / 100
@@ -956,8 +966,16 @@ function HotelPreview({ data }) {
         )
       } 
     },
-    { title: '库存', dataIndex: 'stock', key: 'stock', render: (v) => v || 0 }
+    { title: t('hotelEdit.preview.roomStock'), dataIndex: 'stock', key: 'stock', render: (v) => v || 0 }
   ]
+
+  const getPromoValueLabel = (promoValue) => {
+    const val = Number(promoValue) || 0
+    if (val < 0) return t('hotelEdit.preview.promotionValueAmount', { value: Math.abs(val) })
+    if (val > 10) return t('hotelEdit.preview.promotionValueAmount', { value: val })
+    if (val > 0) return t('hotelEdit.preview.promotionValueDiscount', { value: val })
+    return ''
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 16 }}>
@@ -966,46 +984,46 @@ function HotelPreview({ data }) {
           <div style={{ position: 'relative' }}>
             <Image src={data.images[0]} alt={data.name} width="100%" height={200} style={{ objectFit: 'cover' }} fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88P/BfwYACP4D/pHOlKYAAAAASUVORK5CYII=" />
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', padding: '30px 16px 16px', color: '#fff' }}>
-              <Typography.Title level={4} style={{ color: '#fff', margin: 0 }}>{data.name || '酒店名称'}</Typography.Title>
+              <Typography.Title level={4} style={{ color: '#fff', margin: 0 }}>{data.name || t('hotelEdit.preview.fallbackHotelName')}</Typography.Title>
               {data.name_en && <Typography.Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12 }}>{data.name_en}</Typography.Text>}
             </div>
-            {data.images.length > 1 && <div style={{ position: 'absolute', bottom: 60, right: 16, background: 'rgba(0,0,0,0.5)', color: '#fff', padding: '2px 8px', borderRadius: 4, fontSize: 12 }}>共 {data.images.length} 张</div>}
+            {data.images.length > 1 && <div style={{ position: 'absolute', bottom: 60, right: 16, background: 'rgba(0,0,0,0.5)', color: '#fff', padding: '2px 8px', borderRadius: 4, fontSize: 12 }}>{t('hotelEdit.preview.imageCount', { count: data.images.length })}</div>}
           </div>
         ) : (
           <div style={{ height: 120, background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Typography.Text type="secondary">暂无图片</Typography.Text>
+            <Typography.Text type="secondary">{t('hotelEdit.preview.emptyImages')}</Typography.Text>
           </div>
         )}
       </Card>
 
-      <Card size="small" title="基本信息">
+      <Card size="small" title={t('hotelEdit.preview.baseInfo')}>
         <Descriptions column={2} size="small">
-          <Descriptions.Item label={<><EnvironmentOutlined /> 城市</>}>{data.city || '-'}</Descriptions.Item>
-          <Descriptions.Item label="地址">{data.address || '-'}</Descriptions.Item>
-          <Descriptions.Item label={<><StarFilled style={{ color: '#faad14' }} /> 星级</>}>{data.star_rating ? `${data.star_rating} 星级` : '未评级'}</Descriptions.Item>
-          <Descriptions.Item label={<><CalendarOutlined /> 开业时间</>}>{data.opening_time ? (typeof data.opening_time === 'object' ? data.opening_time.format?.('YYYY-MM-DD') : data.opening_time) : '未填写'}</Descriptions.Item>
+          <Descriptions.Item label={<><EnvironmentOutlined /> {t('hotelEdit.preview.city')}</>}>{data.city || '-'}</Descriptions.Item>
+          <Descriptions.Item label={t('hotelEdit.preview.address')}>{data.address || '-'}</Descriptions.Item>
+          <Descriptions.Item label={<><StarFilled style={{ color: '#faad14' }} /> {t('hotelEdit.preview.star')}</>}>{data.star_rating ? t('hotelEdit.preview.starValue', { value: data.star_rating }) : t('hotelEdit.preview.unrated')}</Descriptions.Item>
+          <Descriptions.Item label={<><CalendarOutlined /> {t('hotelEdit.preview.openingTime')}</>}>{data.opening_time ? (typeof data.opening_time === 'object' ? data.opening_time.format?.('YYYY-MM-DD') : data.opening_time) : t('hotelEdit.preview.openingNotSet')}</Descriptions.Item>
         </Descriptions>
         {data.description && <Typography.Paragraph style={{ marginTop: 12, marginBottom: 0 }} ellipsis={{ rows: 2 }}>{data.description}</Typography.Paragraph>}
       </Card>
 
       {data.facilities && data.facilities.length > 0 && (
-        <Card size="small" title="设施服务">
+        <Card size="small" title={t('hotelEdit.preview.facilities')}>
           <Space wrap size={[4, 4]}>{data.facilities.map((item, index) => (<Tag key={index} color="blue">{item}</Tag>))}</Space>
         </Card>
       )}
 
-      <Card size="small" title="房型信息">
-        <Table columns={roomColumns} dataSource={(data.roomTypes || []).filter(r => r && r.name)} rowKey={(_, index) => index} pagination={false} size="small" locale={{ emptyText: '暂无房型' }} />
+      <Card size="small" title={t('hotelEdit.preview.rooms')}>
+        <Table columns={roomColumns} dataSource={(data.roomTypes || []).filter(r => r && r.name)} rowKey={(_, index) => index} pagination={false} size="small" locale={{ emptyText: t('hotelEdit.preview.roomsEmpty') }} />
       </Card>
 
       {data.promotions && data.promotions.filter(p => p && p.title).length > 0 && (
-        <Card size="small" title="优惠活动">
+        <Card size="small" title={t('hotelEdit.preview.promotions')}>
           <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 4 }}>
             {data.promotions.filter(p => p && p.title).map((promo, index) => (
               <div key={index} style={{ padding: '6px 10px', background: '#fff7e6', borderRadius: 4, fontSize: 13 }}>
                 {promo.type && <Tag color="orange" style={{ marginRight: 8 }}>{promo.type}</Tag>}
                 <span>{promo.title}</span>
-                {promo.value && <span style={{ color: '#f5222d', marginLeft: 8 }}>{promo.value}折</span>}
+                {promo.value && <span style={{ color: '#f5222d', marginLeft: 8 }}>{getPromoValueLabel(promo.value)}</span>}
                 {Array.isArray(promo.periods) && promo.periods[0] && (
                   <span style={{ marginLeft: 8, color: '#999' }}>
                     {dayjs(promo.periods[0].start).format('YYYY-MM-DD HH:mm')} ~ {dayjs(promo.periods[0].end).format('YYYY-MM-DD HH:mm')}
@@ -1025,6 +1043,7 @@ export default function HotelEdit() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [form] = Form.useForm()
+  const { t } = useTranslation()
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState('edit')
@@ -1063,10 +1082,11 @@ export default function HotelEdit() {
         }
       } catch (err) {
         console.error('加载预设数据失败:', err)
+        message.error(t('hotelEdit.form.fetchPresetsError'))
       }
     }
     fetchPresets()
-  }, [])
+  }, [t])
 
   useEffect(() => {
     const fetchApprovedRequests = async () => {
@@ -1081,10 +1101,11 @@ export default function HotelEdit() {
         setApprovedPromotions(Array.isArray(promotions) ? promotions : [])
       } catch (error) {
         console.error('获取已通过申请失败:', error)
+        message.error(t('hotelEdit.form.fetchApprovedError'))
       }
     }
     fetchApprovedRequests()
-  }, [])
+  }, [t])
 
   useEffect(() => {
     if (id) {
@@ -1115,14 +1136,14 @@ export default function HotelEdit() {
           setPreviewData(data)
         } catch (error) { 
           console.error('获取酒店详情失败:', error)
-          message.error('获取酒店详情失败')
+          message.error(t('hotelEdit.form.fetchHotelError'))
           navigate('/hotels')
         }
         finally { setLoading(false) }
       }
       fetchHotel()
     }
-  }, [id, navigate, form])
+  }, [id, navigate, form, t])
 
   useEffect(() => {
     if (watchedValues) setPreviewData(watchedValues)
@@ -1140,10 +1161,10 @@ export default function HotelEdit() {
         data: { description: '' }
       })
       setPendingFacilities([...pendingFacilities, { name, status: 'pending' }])
-      message.success('设施申请已提交，等待管理员审核')
+      message.success(t('hotelEdit.request.facilitySuccess'))
     } catch (error) {
       console.error('提交设施申请失败:', error)
-      message.error('提交申请失败')
+      message.error(t('hotelEdit.request.submitError'))
     }
   }
   
@@ -1167,10 +1188,10 @@ export default function HotelEdit() {
         }
       })
       setPendingRoomTypes([...pendingRoomTypes, { ...room, status: 'pending' }])
-      message.success('房型申请已提交，等待管理员审核')
+      message.success(t('hotelEdit.request.roomTypeSuccess'))
     } catch (error) {
       console.error('提交房型申请失败:', error)
-      message.error('提交申请失败')
+      message.error(t('hotelEdit.request.submitError'))
     }
   }
   
@@ -1184,10 +1205,10 @@ export default function HotelEdit() {
         data: { type: promo.type, value: promo.value }
       })
       setPendingPromotions([...pendingPromotions, { ...promo, status: 'pending' }])
-      message.success('优惠申请已提交，等待管理员审核')
+      message.success(t('hotelEdit.request.promotionSuccess'))
     } catch (error) {
       console.error('提交优惠申请失败:', error)
-      message.error('提交申请失败')
+      message.error(t('hotelEdit.request.submitError'))
     }
   }
 
@@ -1284,56 +1305,63 @@ export default function HotelEdit() {
       } else {
         await api.post('/api/merchant/hotels', payload)
       }
-      message.success('保存成功')
+      message.success(t('hotelEdit.form.saveSuccess'))
       navigate('/hotels')
     } catch (err) {
-      if (err.errorFields) message.error('请填写必填项')
-      else message.error('保存失败')
+      if (err.errorFields) message.error(t('hotelEdit.form.validationError'))
+      else message.error(t('hotelEdit.form.saveError'))
     } finally { setSaving(false) }
   }
 
   const tabItems = [
     {
       key: 'edit',
-      label: <span><EditOutlined /> 编辑信息</span>,
+      label: <span><EditOutlined /> {t('hotelEdit.form.tabEdit')}</span>,
       children: (
         <Spin spinning={loading}>
           <Form layout="vertical" form={form} initialValues={{ star_rating: 0 }} onValuesChange={handleFormChange}>
-          <Typography.Title level={5}>地址信息</Typography.Title>
+          <Typography.Title level={5}>{t('hotelEdit.form.sectionAddress')}</Typography.Title>
           <MapPicker onAddressChange={({ city, address }) => { form.setFieldsValue({ city, address }); handleFormChange() }} hotCities={presets.cities} />
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="city" label="城市" rules={[{ required: true, message: '请选择或输入城市' }]}>
-                <Select showSearch placeholder="选择或输入城市" options={presets.cities.map(c => ({ value: c.name || c, label: c.name || c }))} filterOption={(input, option) => option.label.toLowerCase().includes(input.toLowerCase())} allowClear onChange={handleFormChange} />
+              <Form.Item name="city" label={t('hotelEdit.form.cityLabel')} rules={[{ required: true, message: t('hotelEdit.form.cityRequired') }]}>
+                <Select showSearch placeholder={t('hotelEdit.form.cityPlaceholder')} options={presets.cities.map(c => ({ value: c.name || c, label: c.name || c }))} filterOption={(input, option) => option.label.toLowerCase().includes(input.toLowerCase())} allowClear onChange={handleFormChange} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="address" label="详细地址" rules={[{ required: true, message: '请输入地址' }]}>
-                <Input placeholder="请输入详细地址" />
+              <Form.Item name="address" label={t('hotelEdit.form.addressLabel')} rules={[{ required: true, message: t('hotelEdit.form.addressRequired') }]}>
+                <Input placeholder={t('hotelEdit.form.addressPlaceholder')} />
               </Form.Item>
             </Col>
           </Row>
 
           <Divider />
-          <Typography.Title level={5}>基本信息</Typography.Title>
+          <Typography.Title level={5}>{t('hotelEdit.form.sectionBasic')}</Typography.Title>
           <Row gutter={16}>
-            <Col span={12}><Form.Item name="name" label="酒店名称（中文）" rules={[{ required: true, message: '请输入酒店中文名' }]}><Input placeholder="请输入酒店中文名" /></Form.Item></Col>
-            <Col span={12}><Form.Item name="name_en" label="酒店名称（英文）"><Input placeholder="请输入酒店英文名" /></Form.Item></Col>
+            <Col span={12}><Form.Item name="name" label={t('hotelEdit.form.nameLabel')} rules={[{ required: true, message: t('hotelEdit.form.nameRequired') }]}><Input placeholder={t('hotelEdit.form.namePlaceholder')} /></Form.Item></Col>
+            <Col span={12}><Form.Item name="name_en" label={t('hotelEdit.form.nameEnLabel')}><Input placeholder={t('hotelEdit.form.nameEnPlaceholder')} /></Form.Item></Col>
             <Col span={12}>
-              <Form.Item name="star_rating" label="星级">
-                <Select options={[{ value: 0, label: '未评级' }, { value: 1, label: '⭐ 一星' }, { value: 2, label: '⭐⭐ 二星' }, { value: 3, label: '⭐⭐⭐ 三星' }, { value: 4, label: '⭐⭐⭐⭐ 四星' }, { value: 5, label: '⭐⭐⭐⭐⭐ 五星' }]} />
+              <Form.Item name="star_rating" label={t('hotelEdit.form.starLabel')}>
+                <Select options={[
+                  { value: 0, label: t('hotelEdit.form.starUnrated') },
+                  { value: 1, label: t('hotelEdit.form.star1') },
+                  { value: 2, label: t('hotelEdit.form.star2') },
+                  { value: 3, label: t('hotelEdit.form.star3') },
+                  { value: 4, label: t('hotelEdit.form.star4') },
+                  { value: 5, label: t('hotelEdit.form.star5') }
+                ]} />
               </Form.Item>
             </Col>
-            <Col span={12}><Form.Item name="opening_time" label="开业时间"><DatePicker style={{ width: '100%' }} placeholder="选择开业日期" /></Form.Item></Col>
-            <Col span={24}><Form.Item name="description" label="酒店描述"><Input.TextArea rows={3} placeholder="请输入酒店描述" /></Form.Item></Col>
+            <Col span={12}><Form.Item name="opening_time" label={t('hotelEdit.form.openingTimeLabel')}><DatePicker style={{ width: '100%' }} placeholder={t('hotelEdit.form.openingTimePlaceholder')} /></Form.Item></Col>
+            <Col span={24}><Form.Item name="description" label={t('hotelEdit.form.descriptionLabel')}><Input.TextArea rows={3} placeholder={t('hotelEdit.form.descriptionPlaceholder')} /></Form.Item></Col>
           </Row>
 
           <Divider />
-          <Typography.Title level={5}>酒店图片</Typography.Title>
+          <Typography.Title level={5}>{t('hotelEdit.form.sectionImages')}</Typography.Title>
           <Form.Item name="images"><ImageUploader /></Form.Item>
 
           <Divider />
-          <Typography.Title level={5}>设施服务</Typography.Title>
+          <Typography.Title level={5}>{t('hotelEdit.form.sectionFacilities')}</Typography.Title>
           <Form.Item name="facilities">
             <FacilitySelector
               pendingRequests={pendingFacilities}
@@ -1345,7 +1373,7 @@ export default function HotelEdit() {
           </Form.Item>
 
           <Divider />
-          <Typography.Title level={5}>周边信息</Typography.Title>
+          <Typography.Title level={5}>{t('hotelEdit.form.sectionNearby')}</Typography.Title>
           <Form.Item name="nearby_attractions" hidden><Input /></Form.Item>
           <Form.Item name="nearby_transport" hidden><Input /></Form.Item>
           <Form.Item name="nearby_malls" hidden><Input /></Form.Item>
@@ -1359,7 +1387,7 @@ export default function HotelEdit() {
           />
 
           <Divider />
-          <Typography.Title level={5}>房型信息</Typography.Title>
+          <Typography.Title level={5}>{t('hotelEdit.form.sectionRoomTypes')}</Typography.Title>
           <Form.Item
             name="roomTypes"
             valuePropName="value"
@@ -1375,7 +1403,7 @@ export default function HotelEdit() {
           </Form.Item>
 
           <Divider />
-          <Typography.Title level={5}>优惠活动</Typography.Title>
+          <Typography.Title level={5}>{t('hotelEdit.form.sectionPromotions')}</Typography.Title>
           <Form.Item
             name="promotions"
             valuePropName="value"
@@ -1393,16 +1421,16 @@ export default function HotelEdit() {
         </Spin>
       )
     },
-    { key: 'preview', label: <span><EyeOutlined /> 预览效果</span>, children: <Spin spinning={loading}><HotelPreview data={previewData} /></Spin> }
+    { key: 'preview', label: <span><EyeOutlined /> {t('hotelEdit.form.tabPreview')}</span>, children: <Spin spinning={loading}><HotelPreview data={previewData} /></Spin> }
   ]
 
   return (
     <>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography.Title level={4} style={{ margin: 0 }}>{isEditing ? '编辑酒店' : '新增酒店'}</Typography.Title>
+        <Typography.Title level={4} style={{ margin: 0 }}>{isEditing ? t('hotelEdit.form.titleEdit') : t('hotelEdit.form.titleNew')}</Typography.Title>
         <Space>
-          <GlassButton onClick={() => navigate('/hotels')}>取消</GlassButton>
-          <GlassButton type="primary" loading={saving} onClick={handleSubmit}>{isEditing ? '保存修改' : '提交审核'}</GlassButton>
+          <GlassButton onClick={() => navigate('/hotels')}>{t('hotelEdit.form.cancel')}</GlassButton>
+          <GlassButton type="primary" loading={saving} onClick={handleSubmit}>{isEditing ? t('hotelEdit.form.submitEdit') : t('hotelEdit.form.submitNew')}</GlassButton>
         </Space>
       </div>
       <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} destroyOnHidden={false} />

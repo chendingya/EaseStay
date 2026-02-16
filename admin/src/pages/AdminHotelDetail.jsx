@@ -5,17 +5,12 @@ import { StarFilled, EnvironmentOutlined, CalendarOutlined, ExclamationCircleOut
 import { GlassButton, GanttTimeline, glassMessage as message } from '../components'
 import dayjs from 'dayjs'
 import { api } from '../services'
-
-const statusMap = {
-  pending: { color: 'orange', label: '待审核' },
-  approved: { color: 'green', label: '已上架' },
-  rejected: { color: 'red', label: '已驳回' },
-  offline: { color: 'default', label: '已下线' }
-}
+import { useTranslation } from 'react-i18next'
 
 export default function AdminHotelDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [hotel, setHotel] = useState(null)
   const [loading, setLoading] = useState(true)
   
@@ -79,41 +74,41 @@ export default function AdminHotelDetail() {
       fetchOverview(),
       fetchOrders()
     ])
-    message.success('已刷新')
+    message.success(t('adminHotelDetail.refreshSuccess'))
   }
 
   // 下架酒店
   const handleOffline = () => {
     let reason = ''
     Modal.confirm({
-      title: '确认下架该酒店？',
+      title: t('adminHotelDetail.offline.title'),
       icon: <ExclamationCircleOutlined />,
       content: (
         <div style={{ marginTop: 16 }}>
-          <Typography.Text>请输入下架原因：</Typography.Text>
+          <Typography.Text>{t('adminHotelDetail.offline.reasonLabel')}</Typography.Text>
           <Input.TextArea 
             rows={3} 
-            placeholder="请输入下架原因，商户将收到通知" 
+            placeholder={t('adminHotelDetail.offline.reasonPlaceholder')} 
             onChange={(e) => { reason = e.target.value }}
             style={{ marginTop: 8 }}
           />
         </div>
       ),
-      okText: '确认下架',
+      okText: t('adminHotelDetail.offline.confirm'),
       okButtonProps: { danger: true },
-      cancelText: '取消',
+      cancelText: t('common.cancel'),
       async onOk() {
         if (!reason.trim()) {
-          message.warning('请输入下架原因')
+          message.warning(t('adminHotelDetail.offline.reasonRequired'))
           return Promise.reject()
         }
         try {
           await api.put(`/api/admin/hotels/${id}/offline`, { reason })
-          message.success('酒店已下架')
+          message.success(t('adminHotelDetail.offline.success'))
           fetchHotel()
         } catch (error) {
           console.error('下架酒店失败:', error)
-          message.error('下架失败，请重试')
+          message.error(t('adminHotelDetail.offline.error'))
         }
       }
     })
@@ -122,19 +117,19 @@ export default function AdminHotelDetail() {
   // 恢复上架
   const handleRestore = async () => {
     Modal.confirm({
-      title: '确认恢复上架该酒店？',
+      title: t('adminHotelDetail.restore.title'),
       icon: <ExclamationCircleOutlined />,
-      content: '恢复上架后，酒店将重新在列表中展示',
-      okText: '确认恢复',
-      cancelText: '取消',
+      content: t('adminHotelDetail.restore.content'),
+      okText: t('adminHotelDetail.restore.confirm'),
+      cancelText: t('common.cancel'),
       async onOk() {
         try {
           await api.put(`/api/admin/hotels/${id}/restore`)
-          message.success('酒店已恢复上架')
+          message.success(t('adminHotelDetail.restore.success'))
           fetchHotel()
         } catch (error) {
           console.error('恢复上架失败:', error)
-          message.error('恢复上架失败，请重试')
+          message.error(t('adminHotelDetail.restore.error'))
         }
       }
     })
@@ -152,11 +147,17 @@ export default function AdminHotelDetail() {
     return null
   }
 
+  const statusMap = {
+    pending: { color: 'orange', label: t('status.pending') },
+    approved: { color: 'green', label: t('status.approved') },
+    rejected: { color: 'red', label: t('status.rejected') },
+    offline: { color: 'default', label: t('status.offline') }
+  }
   const statusInfo = statusMap[hotel.status] || { color: 'default', label: hotel.status }
   const promotionList = (hotel.promotions || []).filter((promo) => promo && (promo.title || promo.type))
   const formatPeriodLabel = (periods) => {
     const list = Array.isArray(periods) ? periods : []
-    if (!list.length) return '长期'
+    if (!list.length) return t('adminHotelDetail.promo.longTerm')
     return list.map((p) => `${dayjs(p.start).format('YYYY-MM-DD HH:mm')}~${dayjs(p.end).format('YYYY-MM-DD HH:mm')}`).join('，')
   }
   const isPeriodEffective = (periods) => {
@@ -167,22 +168,22 @@ export default function AdminHotelDetail() {
   }
   const getPromotionValueText = (value) => {
     const val = Number(value) || 0
-    if (val < 0) return `立减 ${Math.abs(val)} 元`
-    if (val > 10) return `立减 ${val} 元`
-    if (val > 0) return `${val} 折`
+    if (val < 0) return t('adminHotelDetail.promo.discountAmount', { value: Math.abs(val) })
+    if (val > 10) return t('adminHotelDetail.promo.discountAmount', { value: val })
+    if (val > 0) return t('adminHotelDetail.promo.discountRate', { value: val })
     return ''
   }
 
   // Columns definitions
   const roomColumns = [
-    { title: '房型名称', dataIndex: 'name', key: 'name' },
-    { title: '状态', dataIndex: 'is_active', key: 'is_active', width: 80, render: (active) => active === false ? <Tag color="default">已下架</Tag> : <Tag color="green">已上架</Tag> },
-    { title: '可住', dataIndex: 'capacity', key: 'capacity', width: 80, render: (v) => v ? `${v}人` : '-' },
-    { title: '床宽', dataIndex: 'bed_width', key: 'bed_width', width: 80, render: (v) => v ? `${v}cm` : '-' },
-    { title: '面积', dataIndex: 'area', key: 'area', width: 80, render: (v) => v ? `${v}㎡` : '-' },
-    { title: '层高', dataIndex: 'ceiling_height', key: 'ceiling_height', width: 80, render: (v) => v ? `${v}m` : '-' },
+    { title: t('adminHotelDetail.room.name'), dataIndex: 'name', key: 'name' },
+    { title: t('adminHotelDetail.room.status'), dataIndex: 'is_active', key: 'is_active', width: 80, render: (active) => active === false ? <Tag color="default">{t('adminHotelDetail.room.offline')}</Tag> : <Tag color="green">{t('adminHotelDetail.room.online')}</Tag> },
+    { title: t('adminHotelDetail.room.capacity'), dataIndex: 'capacity', key: 'capacity', width: 80, render: (v) => v ? t('adminHotelDetail.room.capacityValue', { value: v }) : '-' },
+    { title: t('adminHotelDetail.room.bedWidth'), dataIndex: 'bed_width', key: 'bed_width', width: 80, render: (v) => v ? t('adminHotelDetail.room.bedWidthValue', { value: v }) : '-' },
+    { title: t('adminHotelDetail.room.area'), dataIndex: 'area', key: 'area', width: 80, render: (v) => v ? t('adminHotelDetail.room.areaValue', { value: v }) : '-' },
+    { title: t('adminHotelDetail.room.ceiling'), dataIndex: 'ceiling_height', key: 'ceiling_height', width: 80, render: (v) => v ? t('adminHotelDetail.room.ceilingValue', { value: v }) : '-' },
     {
-      title: '价格',
+      title: t('adminHotelDetail.room.price'),
       dataIndex: 'price',
       key: 'price',
       render: (price, record) => {
@@ -215,14 +216,14 @@ export default function AdminHotelDetail() {
         discounted = Math.round(discounted * 100) / 100
         return (
           <div>
-            <div style={{ color: '#999' }}>基础价 ¥{basePrice}</div>
-            <div style={{ color: '#f5222d', fontWeight: 600 }}>当前售价 ¥{discounted}</div>
+            <div style={{ color: '#999' }}>{t('adminHotelDetail.room.basePrice', { value: basePrice })}</div>
+            <div style={{ color: '#f5222d', fontWeight: 600 }}>{t('adminHotelDetail.room.currentPrice', { value: discounted })}</div>
           </div>
         )
       }
     },
     {
-      title: '优惠',
+      title: t('adminHotelDetail.room.discount'),
       key: 'discount',
       render: (_, record) => {
         const tags = []
@@ -231,7 +232,9 @@ export default function AdminHotelDetail() {
         if (discountQuota > 0 && ((discountRate > 0 && discountRate <= 10) || discountRate < 0)) {
           tags.push(
             <Tag color="purple" key={`batch-${record.id || record.name}`}>
-              {discountRate > 0 ? `批量折扣 ${discountRate}折 余${discountQuota}` : `立减 ${Math.abs(discountRate)}元 余${discountQuota}`}
+              {discountRate > 0
+                ? t('adminHotelDetail.room.batchDiscountRate', { rate: discountRate, quota: discountQuota })
+                : t('adminHotelDetail.room.batchDiscountAmount', { value: Math.abs(discountRate), quota: discountQuota })}
             </Tag>
           )
         }
@@ -244,24 +247,24 @@ export default function AdminHotelDetail() {
         effectivePromos.forEach((promo, index) => {
           tags.push(
             <Tag color="blue" key={`promo-${record.id || record.name}-${index}`}>
-              {promo.title || promo.type || '优惠'}
+              {promo.title || promo.type || t('adminHotelDetail.room.promoFallback')}
             </Tag>
           )
         })
-        return tags.length ? <Space size={[4, 4]} wrap>{tags}</Space> : <Tag>无优惠</Tag>
+        return tags.length ? <Space size={[4, 4]} wrap>{tags}</Space> : <Tag>{t('adminHotelDetail.room.noDiscount')}</Tag>
       }
     },
-    { title: '库存', dataIndex: 'stock', key: 'stock' },
-    { title: 'WiFi', dataIndex: 'wifi', key: 'wifi', width: 70, render: (v) => v === true ? '有' : v === false ? '无' : '-' },
-    { title: '含早', dataIndex: 'breakfast_included', key: 'breakfast_included', width: 70, render: (v) => v === true ? '是' : v === false ? '否' : '-' },
+    { title: t('adminHotelDetail.room.stock'), dataIndex: 'stock', key: 'stock' },
+    { title: t('adminHotelDetail.room.wifi'), dataIndex: 'wifi', key: 'wifi', width: 70, render: (v) => v === true ? t('common.yes') : v === false ? t('common.no') : '-' },
+    { title: t('adminHotelDetail.room.breakfast'), dataIndex: 'breakfast_included', key: 'breakfast_included', width: 70, render: (v) => v === true ? t('common.yes') : v === false ? t('common.no') : '-' },
     {
-      title: '已用',
+      title: t('adminHotelDetail.room.used'),
       dataIndex: 'used_stock',
       key: 'used_stock',
       render: (value) => value || 0
     },
     {
-      title: '空闲',
+      title: t('adminHotelDetail.room.available'),
       key: 'available',
       render: (_, record) => {
         const stock = Number(record.stock) || 0
@@ -273,31 +276,31 @@ export default function AdminHotelDetail() {
   ]
 
   const orderColumns = [
-    { title: '订单号', dataIndex: 'id', key: 'id', width: 90 },
-    { title: '房型', dataIndex: 'room_type_name', key: 'room_type_name' },
-    { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 70 },
+    { title: t('adminHotelDetail.order.id'), dataIndex: 'id', key: 'id', width: 90 },
+    { title: t('adminHotelDetail.order.roomType'), dataIndex: 'room_type_name', key: 'room_type_name' },
+    { title: t('adminHotelDetail.order.quantity'), dataIndex: 'quantity', key: 'quantity', width: 70 },
     {
-      title: '单价',
+      title: t('adminHotelDetail.order.price'),
       dataIndex: 'price_per_night',
       key: 'price_per_night',
       render: (price) => <span style={{ color: '#f5222d' }}>¥{price}</span>
     },
-    { title: '间夜', dataIndex: 'nights', key: 'nights', width: 70 },
+    { title: t('adminHotelDetail.order.nights'), dataIndex: 'nights', key: 'nights', width: 70 },
     {
-      title: '总价',
+      title: t('adminHotelDetail.order.totalPrice'),
       dataIndex: 'total_price',
       key: 'total_price',
       render: (price) => <span style={{ color: '#f5222d', fontWeight: 600 }}>¥{price}</span>
     },
-    { title: '状态', dataIndex: 'status', key: 'status', width: 90 },
+    { title: t('adminHotelDetail.order.status'), dataIndex: 'status', key: 'status', width: 90 },
     {
-      title: '入住',
+      title: t('adminHotelDetail.order.checkIn'),
       dataIndex: 'check_in',
       key: 'check_in',
       render: (value) => value || '-'
     },
     {
-      title: '下单时间',
+      title: t('adminHotelDetail.order.createdAt'),
       dataIndex: 'created_at',
       key: 'created_at',
       render: (value) => value ? new Date(value).toLocaleString() : '-'
@@ -347,24 +350,24 @@ export default function AdminHotelDetail() {
         </div>
         <Space>
           <GlassButton onClick={handleRefresh}>
-            刷新
+            {t('common.refresh')}
           </GlassButton>
           <GlassButton onClick={() => navigate('/admin-hotels')}>
-            返回列表
+            {t('common.backToList')}
           </GlassButton>
           {hotel.status === 'pending' && (
             <GlassButton type="primary" onClick={() => navigate(`/audit/${hotel.id}`)}>
-              去审核
+              {t('adminHotelDetail.goAudit')}
             </GlassButton>
           )}
           {hotel.status === 'approved' && (
             <GlassButton danger onClick={handleOffline}>
-              下架酒店
+              {t('adminHotelDetail.offline.action')}
             </GlassButton>
           )}
           {hotel.status === 'offline' && (
             <GlassButton type="primary" onClick={handleRestore}>
-              恢复上架
+              {t('adminHotelDetail.restore.action')}
             </GlassButton>
           )}
         </Space>
@@ -387,15 +390,15 @@ export default function AdminHotelDetail() {
       <Row gutter={24}>
         <Col span={16}>
           {/* 基本信息 */}
-          <Card title="基本信息" style={{ marginBottom: 24 }}>
+          <Card title={t('adminHotelDetail.sections.basic')} style={{ marginBottom: 24 }}>
             <Descriptions column={2}>
-              <Descriptions.Item label={<><EnvironmentOutlined /> 城市</>}>{hotel.city}</Descriptions.Item>
-              <Descriptions.Item label="地址">{hotel.address}</Descriptions.Item>
-              <Descriptions.Item label={<><StarFilled style={{ color: '#faad14' }} /> 星级</>}>
-                {hotel.star_rating ? `${hotel.star_rating} 星级` : '未评级'}
+              <Descriptions.Item label={<><EnvironmentOutlined /> {t('adminHotelDetail.basic.city')}</>}>{hotel.city}</Descriptions.Item>
+              <Descriptions.Item label={t('adminHotelDetail.basic.address')}>{hotel.address}</Descriptions.Item>
+              <Descriptions.Item label={<><StarFilled style={{ color: '#faad14' }} /> {t('adminHotelDetail.basic.star')}</>}>
+                {hotel.star_rating ? t('adminHotelDetail.basic.starValue', { value: hotel.star_rating }) : t('adminHotelDetail.basic.unrated')}
               </Descriptions.Item>
-              <Descriptions.Item label={<><CalendarOutlined /> 开业时间</>}>
-                {hotel.opening_time || '未填写'}
+              <Descriptions.Item label={<><CalendarOutlined /> {t('adminHotelDetail.basic.openingTime')}</>}>
+                {hotel.opening_time || t('common.notFilled')}
               </Descriptions.Item>
             </Descriptions>
             {hotel.description && (
@@ -407,42 +410,42 @@ export default function AdminHotelDetail() {
             items={[
               {
                 key: 'overview',
-                label: '房间总览',
+                label: t('adminHotelDetail.tabs.overview'),
                 children: (
                   <Card style={{ marginBottom: 24 }}>
                     <Row gutter={16}>
                       <Col span={6}>
-                        <Statistic title="总房间" value={computedOverview.total} suffix="间" />
+                        <Statistic title={t('adminHotelDetail.overview.total')} value={computedOverview.total} suffix={t('adminHotelDetail.overview.suffixRoom')} />
                       </Col>
                       <Col span={6}>
-                        <Statistic title="已使用" value={computedOverview.used} styles={{ content: { color: '#faad14' } }} suffix="间" />
+                        <Statistic title={t('adminHotelDetail.overview.used')} value={computedOverview.used} styles={{ content: { color: '#faad14' } }} suffix={t('adminHotelDetail.overview.suffixRoom')} />
                       </Col>
                       <Col span={6}>
-                        <Statistic title="空闲" value={computedOverview.available} styles={{ content: { color: '#52c41a' } }} suffix="间" />
+                        <Statistic title={t('adminHotelDetail.overview.available')} value={computedOverview.available} styles={{ content: { color: '#52c41a' } }} suffix={t('adminHotelDetail.overview.suffixRoom')} />
                       </Col>
                       <Col span={6}>
-                        <Statistic title="已下架" value={computedOverview.offline} styles={{ content: { color: '#999' } }} suffix="间" />
+                        <Statistic title={t('adminHotelDetail.overview.offline')} value={computedOverview.offline} styles={{ content: { color: '#999' } }} suffix={t('adminHotelDetail.overview.suffixRoom')} />
                       </Col>
                     </Row>
                     <div style={{ marginTop: 16 }}>
                       <Progress
                         percent={activeTotal ? Math.round((computedOverview.used / activeTotal) * 100) : 0}
                         status="active"
-                        format={(p) => `入住率 ${p}%`}
+                        format={(p) => t('adminHotelDetail.overview.occupancyRate', { value: p })}
                       />
                     </div>
                     <Row gutter={16} style={{ marginTop: 16 }}>
                       <Col span={8} style={{ textAlign: 'center' }}>
                         <Progress type="circle" percent={usedPercent} strokeColor="#faad14" format={(p) => `${p}%`} />
-                        <div style={{ marginTop: 8 }}>已使用占比</div>
+                        <div style={{ marginTop: 8 }}>{t('adminHotelDetail.overview.usedRate')}</div>
                       </Col>
                       <Col span={8} style={{ textAlign: 'center' }}>
                         <Progress type="circle" percent={availablePercent} strokeColor="#52c41a" format={(p) => `${p}%`} />
-                        <div style={{ marginTop: 8 }}>空闲占比</div>
+                        <div style={{ marginTop: 8 }}>{t('adminHotelDetail.overview.availableRate')}</div>
                       </Col>
                       <Col span={8} style={{ textAlign: 'center' }}>
                         <Progress type="circle" percent={offlinePercent} strokeColor="#999" format={(p) => `${p}%`} />
-                        <div style={{ marginTop: 8 }}>下架占比</div>
+                        <div style={{ marginTop: 8 }}>{t('adminHotelDetail.overview.offlineRate')}</div>
                       </Col>
                     </Row>
                   </Card>
@@ -450,7 +453,7 @@ export default function AdminHotelDetail() {
               },
               {
                 key: 'rooms',
-                label: '房型列表',
+                label: t('adminHotelDetail.tabs.rooms'),
                 children: (
                   <Card style={{ marginBottom: 24 }}>
                     <Table
@@ -459,21 +462,21 @@ export default function AdminHotelDetail() {
                       rowKey="id"
                       pagination={false}
                       scroll={{ x: 'max-content' }}
-                      locale={{ emptyText: '暂无房型信息' }}
+                      locale={{ emptyText: t('adminHotelDetail.emptyRooms') }}
                     />
                   </Card>
                 )
               },
               {
                 key: 'orders',
-                label: '订单展示',
+                label: t('adminHotelDetail.tabs.orders'),
                 children: (
                   <Card
                     title={(
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>订单列表</span>
+                        <span>{t('adminHotelDetail.order.title')}</span>
                         <GlassButton type="primary" onClick={() => navigate(`/admin-hotels/${hotel.id}/stats`)}>
-                          订单统计
+                          {t('adminHotelDetail.order.stats')}
                         </GlassButton>
                       </div>
                     )}
@@ -491,7 +494,7 @@ export default function AdminHotelDetail() {
                         onChange: (page) => setOrdersPage(page)
                       }}
                       scroll={{ x: 'max-content' }}
-                      locale={{ emptyText: '暂无订单' }}
+                      locale={{ emptyText: t('adminHotelDetail.emptyOrders') }}
                     />
                   </Card>
                 )
@@ -503,16 +506,16 @@ export default function AdminHotelDetail() {
 
         <Col span={8}>
           {/* 商户信息 */}
-          <Card title="商户信息" style={{ marginBottom: 24 }}>
+          <Card title={t('adminHotelDetail.sections.merchant')} style={{ marginBottom: 24 }}>
             <Descriptions column={1}>
-              <Descriptions.Item label="商户ID">{hotel.merchant_id}</Descriptions.Item>
-              <Descriptions.Item label="联系电话">{hotel.phone || '未填写'}</Descriptions.Item>
+              <Descriptions.Item label={t('adminHotelDetail.merchant.id')}>{hotel.merchant_id}</Descriptions.Item>
+              <Descriptions.Item label={t('adminHotelDetail.merchant.phone')}>{hotel.phone || t('common.notFilled')}</Descriptions.Item>
             </Descriptions>
           </Card>
 
           {/* 设施标签 */}
           {hotel.facilities && hotel.facilities.length > 0 && (
-            <Card title="设施服务" size="small" style={{ marginBottom: 16 }}>
+            <Card title={t('adminHotelDetail.sections.facilities')} size="small" style={{ marginBottom: 16 }}>
               <Space wrap>
                 {hotel.facilities.map((item, index) => (
                   <Tag key={index} color="blue">{item}</Tag>
@@ -525,7 +528,7 @@ export default function AdminHotelDetail() {
           {hotel.promotions && hotel.promotions.length > 0 && (() => {
             const list = promotionList
             return (
-              <Card title="优惠活动" size="small" style={{ marginBottom: 16 }}>
+              <Card title={t('adminHotelDetail.sections.promotions')} size="small" style={{ marginBottom: 16 }}>
                 <Space style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
                   {list.map((promo, index) => {
                     const valueText = getPromotionValueText(promo.value)
@@ -533,9 +536,9 @@ export default function AdminHotelDetail() {
                       <div key={index} style={{ padding: '8px 12px', background: '#fff7e6', borderRadius: 4 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                           {promo.type && <Tag color="orange">{promo.type}</Tag>}
-                          <span>{promo.title || '优惠活动'}</span>
+                          <span>{promo.title || t('adminHotelDetail.promo.fallback')}</span>
                           {valueText && <span style={{ color: '#f5222d' }}>{valueText}</span>}
-                          <span style={{ color: '#999' }}>有效期 {formatPeriodLabel(promo.periods)}</span>
+                          <span style={{ color: '#999' }}>{t('adminHotelDetail.promo.period', { value: formatPeriodLabel(promo.periods) })}</span>
                         </div>
                       </div>
                     )
@@ -545,7 +548,7 @@ export default function AdminHotelDetail() {
                   <div style={{ marginTop: 12 }}>
                     <GanttTimeline
                       items={list}
-                      getTitle={(promo) => promo.title || promo.type || '优惠'}
+                      getTitle={(promo) => promo.title || promo.type || t('adminHotelDetail.promo.fallback')}
                       getPeriods={(promo) => promo.periods}
                       formatAxisLabel={(value) => dayjs(value).format('YYYY-MM-DD')}
                     />
@@ -556,10 +559,10 @@ export default function AdminHotelDetail() {
           })()}
 
           {/* 周边信息 */}
-          <Card title="周边信息" size="small">
+          <Card title={t('adminHotelDetail.sections.nearby')} size="small">
             {hotel.nearby_attractions && hotel.nearby_attractions.length > 0 && (
               <div style={{ marginBottom: 12 }}>
-                <Typography.Text type="secondary">热门景点</Typography.Text>
+                <Typography.Text type="secondary">{t('adminHotelDetail.nearby.attractions')}</Typography.Text>
                 <div style={{ marginTop: 4 }}>
                   {hotel.nearby_attractions.map((item, index) => (
                     <Tag key={index}>{item}</Tag>
@@ -569,7 +572,7 @@ export default function AdminHotelDetail() {
             )}
             {hotel.nearby_transport && hotel.nearby_transport.length > 0 && (
               <div style={{ marginBottom: 12 }}>
-                <Typography.Text type="secondary">交通出行</Typography.Text>
+                <Typography.Text type="secondary">{t('adminHotelDetail.nearby.transport')}</Typography.Text>
                 <div style={{ marginTop: 4 }}>
                   {hotel.nearby_transport.map((item, index) => (
                     <Tag key={index}>{item}</Tag>
@@ -579,7 +582,7 @@ export default function AdminHotelDetail() {
             )}
             {hotel.nearby_malls && hotel.nearby_malls.length > 0 && (
               <div>
-                <Typography.Text type="secondary">购物商场</Typography.Text>
+                <Typography.Text type="secondary">{t('adminHotelDetail.nearby.malls')}</Typography.Text>
                 <div style={{ marginTop: 4 }}>
                   {hotel.nearby_malls.map((item, index) => (
                     <Tag key={index}>{item}</Tag>
@@ -591,7 +594,7 @@ export default function AdminHotelDetail() {
           
           {/* 图片展示 */}
           {hotel.images && hotel.images.length > 1 && (
-            <Card title="酒店图片" style={{ marginTop: 16 }}>
+            <Card title={t('adminHotelDetail.sections.images')} style={{ marginTop: 16 }}>
               <Image.PreviewGroup>
                 <Space wrap>
                   {hotel.images.slice(1).map((url, index) => (

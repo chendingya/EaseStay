@@ -3,8 +3,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { UserOutlined, LockOutlined, CalendarOutlined } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
 import { api } from '../services'
+import { useTranslation } from 'react-i18next'
 
 export default function Account() {
+  const { t } = useTranslation()
   const [loading, setLoading] = useState(false)
   const [user, setUser] = useState(null)
   const [passwordModal, setPasswordModal] = useState(false)
@@ -18,11 +20,11 @@ export default function Account() {
       setUser(data)
     } catch (error) {
       console.error('获取用户信息失败:', error)
-      message.error('获取用户信息失败')
+      message.error(t('account.fetchError'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     fetchUser()
@@ -32,7 +34,7 @@ export default function Account() {
     try {
       const values = await form.validateFields()
       if (values.newPassword !== values.confirmPassword) {
-        message.error('两次输入的新密码不一致')
+        message.error(t('account.passwordMismatch'))
         return
       }
 
@@ -41,13 +43,13 @@ export default function Account() {
         oldPassword: values.oldPassword,
         newPassword: values.newPassword
       })
-      message.success('密码修改成功')
+      message.success(t('account.passwordSuccess'))
       setPasswordModal(false)
       form.resetFields()
     } catch (err) {
       if (err.errorFields) return
       console.error('修改密码失败:', err)
-      message.error('修改密码失败')
+      message.error(t('account.passwordError'))
     } finally {
       setSaving(false)
     }
@@ -55,38 +57,38 @@ export default function Account() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 24 }}>
-      <Typography.Title level={4} style={{ margin: 0 }}>账户管理</Typography.Title>
+      <Typography.Title level={4} style={{ margin: 0 }}>{t('account.title')}</Typography.Title>
 
-      <Card title="基本信息" loading={loading}>
+      <Card title={t('account.basicInfo')} loading={loading}>
         {user && (
           <Descriptions column={1} styles={{ label: { width: 120 } }}>
-            <Descriptions.Item label={<><UserOutlined /> 用户名</>}>
+            <Descriptions.Item label={<><UserOutlined /> {t('account.username')}</>}>
               {user.username}
             </Descriptions.Item>
-            <Descriptions.Item label="账户角色">
-              {user.role === 'admin' ? '管理员' : '商户'}
+            <Descriptions.Item label={t('account.role')}>
+              {user.role === 'admin' ? t('role.admin') : t('role.merchant')}
             </Descriptions.Item>
-            <Descriptions.Item label={<><CalendarOutlined /> 注册时间</>}>
-              {user.created_at ? new Date(user.created_at).toLocaleDateString('zh-CN') : '-'}
+            <Descriptions.Item label={<><CalendarOutlined /> {t('account.registeredAt')}</>}>
+              {user.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}
             </Descriptions.Item>
           </Descriptions>
         )}
       </Card>
 
-      <Card title="安全设置">
+      <Card title={t('account.security')}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <Typography.Text strong><LockOutlined /> 登录密码</Typography.Text>
+            <Typography.Text strong><LockOutlined /> {t('account.loginPassword')}</Typography.Text>
             <Typography.Paragraph type="secondary" style={{ marginBottom: 0, marginTop: 4 }}>
-              定期更换密码可以提高账户安全性
+              {t('account.passwordHint')}
             </Typography.Paragraph>
           </div>
-          <GlassButton onClick={() => setPasswordModal(true)}>修改密码</GlassButton>
+          <GlassButton onClick={() => setPasswordModal(true)}>{t('account.changePassword')}</GlassButton>
         </div>
       </Card>
 
       <Modal
-        title="修改密码"
+        title={t('account.changePassword')}
         open={passwordModal}
         onCancel={() => {
           setPasswordModal(false)
@@ -98,39 +100,39 @@ export default function Account() {
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item
             name="oldPassword"
-            label="原密码"
-            rules={[{ required: true, message: '请输入原密码' }]}
+            label={t('account.oldPassword')}
+            rules={[{ required: true, message: t('account.oldPasswordRequired') }]}
           >
-            <Input.Password placeholder="请输入原密码" />
+            <Input.Password placeholder={t('account.oldPasswordPlaceholder')} />
           </Form.Item>
 
           <Form.Item
             name="newPassword"
-            label="新密码"
+            label={t('account.newPassword')}
             rules={[
-              { required: true, message: '请输入新密码' },
-              { min: 6, message: '密码至少6位' }
+              { required: true, message: t('account.newPasswordRequired') },
+              { min: 6, message: t('account.passwordMin') }
             ]}
           >
-            <Input.Password placeholder="请输入新密码（至少6位）" />
+            <Input.Password placeholder={t('account.newPasswordPlaceholder')} />
           </Form.Item>
 
           <Form.Item
             name="confirmPassword"
-            label="确认新密码"
+            label={t('account.confirmPassword')}
             rules={[
-              { required: true, message: '请再次输入新密码' },
+              { required: true, message: t('account.confirmPasswordRequired') },
               ({ getFieldValue }) => ({
                 validator(_, value) {
                   if (!value || getFieldValue('newPassword') === value) {
                     return Promise.resolve()
                   }
-                  return Promise.reject(new Error('两次输入的密码不一致'))
+                  return Promise.reject(new Error(t('account.passwordMismatch')))
                 }
               })
             ]}
           >
-            <Input.Password placeholder="请再次输入新密码" />
+            <Input.Password placeholder={t('account.confirmPasswordPlaceholder')} />
           </Form.Item>
 
           <Form.Item style={{ marginBottom: 0 }}>
@@ -138,9 +140,9 @@ export default function Account() {
               <GlassButton onClick={() => {
                 setPasswordModal(false)
                 form.resetFields()
-              }}>取消</GlassButton>
+              }}>{t('common.cancel')}</GlassButton>
               <GlassButton type="primary" loading={saving} onClick={handleChangePassword}>
-                确认修改
+                {t('account.confirmChange')}
               </GlassButton>
             </Space>
           </Form.Item>

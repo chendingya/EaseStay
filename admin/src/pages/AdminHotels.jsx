@@ -4,16 +4,11 @@ import { useNavigate } from 'react-router-dom'
 import { SearchOutlined, ShopOutlined, StarFilled, EnvironmentOutlined } from '@ant-design/icons'
 import { GlassButton } from '../components'
 import { api } from '../services'
-
-const statusMap = {
-  pending: { color: 'orange', label: '待审核' },
-  approved: { color: 'green', label: '已上架' },
-  rejected: { color: 'red', label: '已驳回' },
-  offline: { color: 'default', label: '已下线' }
-}
+import { useTranslation } from 'react-i18next'
 
 export default function AdminHotels() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [hotels, setHotels] = useState([])
   const [loading, setLoading] = useState(false)
   
@@ -41,8 +36,8 @@ export default function AdminHotels() {
   // 获取城市列表
   const cityOptions = useMemo(() => {
     const cities = [...new Set(hotels.map(h => h.city).filter(Boolean))]
-    return [{ value: 'all', label: '全部城市' }, ...cities.map(c => ({ value: c, label: c }))]
-  }, [hotels])
+    return [{ value: 'all', label: t('adminHotels.filter.allCities') }, ...cities.map(c => ({ value: c, label: c }))]
+  }, [hotels, t])
 
   // 筛选后的数据
   const filteredHotels = useMemo(() => {
@@ -65,43 +60,50 @@ export default function AdminHotels() {
     offline: hotels.filter(h => h.status === 'offline').length
   }), [hotels])
 
+  const statusMap = {
+    pending: { color: 'orange', label: t('status.pending') },
+    approved: { color: 'green', label: t('status.approved') },
+    rejected: { color: 'red', label: t('status.rejected') },
+    offline: { color: 'default', label: t('status.offline') }
+  }
+
   const columns = [
     { 
-      title: '酒店名称', 
+      title: t('adminHotels.columns.name'), 
       dataIndex: 'name', 
       ellipsis: true,
       render: (text, record) => (
         <a onClick={() => navigate(`/admin-hotels/${record.id}`)}>{text}</a>
       )
     },
-    { title: '英文名', dataIndex: 'name_en', ellipsis: true },
+    { title: t('adminHotels.columns.nameEn'), dataIndex: 'name_en', ellipsis: true },
     { 
-      title: '城市', 
+      title: t('adminHotels.columns.city'), 
       dataIndex: 'city', 
       width: 100,
       render: (v) => v ? <><EnvironmentOutlined /> {v}</> : '-'
     },
     { 
-      title: '星级', 
+      title: t('adminHotels.columns.star'), 
       dataIndex: 'star_rating', 
       width: 80,
-      render: v => v ? <span><StarFilled style={{ color: '#faad14' }} /> {v}星</span> : '-'
+      render: v => v ? <span><StarFilled style={{ color: '#faad14' }} /> {t('adminHotels.starLabel', { value: v })}</span> : '-'
     },
     { 
-      title: '最低价', 
+      title: t('adminHotels.columns.lowestPrice'), 
       dataIndex: 'lowestPrice', 
       width: 100, 
       render: (v) => v ? <span style={{ color: '#f5222d', fontWeight: 600 }}>¥{v}</span> : '-'
     },
     { 
-      title: '房型数', 
+      title: t('adminHotels.columns.roomTypes'), 
       dataIndex: 'roomTypes',
       width: 80,
       render: (v) => Array.isArray(v) ? v.length : 0
     },
-    { title: '开业时间', dataIndex: 'opening_time', width: 100 },
+    { title: t('adminHotels.columns.openingTime'), dataIndex: 'opening_time', width: 100 },
     {
-      title: '状态',
+      title: t('adminHotels.columns.status'),
       dataIndex: 'status',
       width: 90,
       render: (value) => {
@@ -110,16 +112,16 @@ export default function AdminHotels() {
       }
     },
     {
-      title: '操作',
+      title: t('adminHotels.columns.action'),
       width: 150,
       render: (_, record) => (
         <Space size="small">
           <GlassButton type="link" size="small" onClick={() => navigate(`/admin-hotels/${record.id}`)}>
-            查看
+            {t('common.view')}
           </GlassButton>
           {record.status === 'pending' && (
             <GlassButton type="link" size="small" onClick={() => navigate(`/audit/${record.id}`)}>
-              审核
+              {t('common.audit')}
             </GlassButton>
           )}
         </Space>
@@ -130,29 +132,29 @@ export default function AdminHotels() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 24 }}>
       <Typography.Title level={4} style={{ margin: 0 }}>
-        <ShopOutlined /> 酒店管理
+        <ShopOutlined /> {t('adminHotels.title')}
       </Typography.Title>
 
       {/* 统计卡片 */}
       <Row gutter={16}>
         <Col span={6}>
           <Card>
-            <Statistic title="酒店总数" value={stats.total} suffix="家" />
+            <Statistic title={t('adminHotels.stats.total')} value={stats.total} suffix={t('adminHotels.stats.suffixHotel')} />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic title="已上架" value={stats.approved} valueStyle={{ color: '#52c41a' }} suffix="家" />
+            <Statistic title={t('adminHotels.stats.approved')} value={stats.approved} valueStyle={{ color: '#52c41a' }} suffix={t('adminHotels.stats.suffixHotel')} />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic title="待审核" value={stats.pending} valueStyle={{ color: '#faad14' }} suffix="家" />
+            <Statistic title={t('adminHotels.stats.pending')} value={stats.pending} valueStyle={{ color: '#faad14' }} suffix={t('adminHotels.stats.suffixHotel')} />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic title="已下线" value={stats.offline} valueStyle={{ color: '#999' }} suffix="家" />
+            <Statistic title={t('adminHotels.stats.offline')} value={stats.offline} valueStyle={{ color: '#999' }} suffix={t('adminHotels.stats.suffixHotel')} />
           </Card>
         </Col>
       </Row>
@@ -162,7 +164,7 @@ export default function AdminHotels() {
         <Row gutter={16} style={{ marginBottom: 16 }}>
           <Col span={8}>
             <Input
-              placeholder="搜索酒店名称、地址..."
+              placeholder={t('adminHotels.filter.searchPlaceholder')}
               prefix={<SearchOutlined style={{ color: '#bbb' }} />}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
@@ -175,11 +177,11 @@ export default function AdminHotels() {
               value={statusFilter}
               onChange={setStatusFilter}
               options={[
-                { value: 'all', label: '全部状态' },
-                { value: 'pending', label: '待审核' },
-                { value: 'approved', label: '已上架' },
-                { value: 'rejected', label: '已驳回' },
-                { value: 'offline', label: '已下线' }
+                { value: 'all', label: t('adminHotels.filter.allStatus') },
+                { value: 'pending', label: t('status.pending') },
+                { value: 'approved', label: t('status.approved') },
+                { value: 'rejected', label: t('status.rejected') },
+                { value: 'offline', label: t('status.offline') }
               ]}
             />
           </Col>
@@ -194,10 +196,10 @@ export default function AdminHotels() {
           <Col span={8} style={{ textAlign: 'right' }}>
             <Space>
               <GlassButton onClick={() => { setSearchText(''); setStatusFilter('all'); setCityFilter('all') }}>
-                重置筛选
+                {t('adminHotels.filter.reset')}
               </GlassButton>
               <GlassButton type="primary" onClick={fetchHotels} loading={loading}>
-                刷新
+                {t('common.refresh')}
               </GlassButton>
             </Space>
           </Col>
@@ -210,7 +212,7 @@ export default function AdminHotels() {
           loading={loading}
           pagination={{ 
             pageSize: 10,
-            showTotal: (total) => `共 ${total} 家酒店`,
+            showTotal: (total) => t('adminHotels.pagination.total', { total }),
             showSizeChanger: true,
             showQuickJumper: true
           }}

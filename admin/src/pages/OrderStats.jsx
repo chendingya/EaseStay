@@ -4,11 +4,13 @@ import { Card, Col, Empty, Row, Space, Spin, Statistic, Typography } from 'antd'
 import ReactECharts from 'echarts-for-react'
 import { GlassButton } from '../components'
 import { api } from '../services'
+import { useTranslation } from 'react-i18next'
 
 export default function OrderStats() {
   const { id } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const { t } = useTranslation()
   const isAdmin = location.pathname.startsWith('/admin-hotels')
   const [loading, setLoading] = useState(true)
   const [hotel, setHotel] = useState(null)
@@ -42,10 +44,10 @@ export default function OrderStats() {
 
   const statusData = useMemo(
     () => statusStats.map((item) => ({
-      name: String(item?.status ?? '未知'),
+      name: String(item?.status ?? t('orderStats.unknownStatus')),
       value: Number(item?.count) || 0
     })),
-    [statusStats]
+    [statusStats, t]
   )
 
   const monthlyLabels = useMemo(() => monthly.map((item) => item?.month || '-'), [monthly])
@@ -57,7 +59,7 @@ export default function OrderStats() {
     return list.slice(0, 8)
   }, [roomTypeSummary])
 
-  const roomTypeNames = useMemo(() => roomTypeTop.map((item) => item?.roomTypeName || '未知'), [roomTypeTop])
+  const roomTypeNames = useMemo(() => roomTypeTop.map((item) => item?.roomTypeName || t('orderStats.unknownRoomType')), [roomTypeTop, t])
   const roomTypeNights = useMemo(() => roomTypeTop.map((item) => Number(item?.nights) || 0), [roomTypeTop])
   const roomTypeRevenue = useMemo(() => roomTypeTop.map((item) => Number(item?.revenue) || 0), [roomTypeTop])
 
@@ -103,17 +105,17 @@ export default function OrderStats() {
   const roomTypeOption = useMemo(() => ({
     grid: { left: 40, right: 40, top: 40, bottom: 40 },
     tooltip: { trigger: 'axis' },
-    legend: { data: ['入住间夜', '收入'], top: 0 },
+    legend: { data: [t('orderStats.legend.nights'), t('orderStats.legend.revenue')], top: 0 },
     xAxis: { type: 'category', data: roomTypeNames, axisLabel: { rotate: 20 } },
     yAxis: [
-      { type: 'value', name: '入住间夜' },
-      { type: 'value', name: '收入' }
+      { type: 'value', name: t('orderStats.legend.nights') },
+      { type: 'value', name: t('orderStats.legend.revenue') }
     ],
     series: [
-      { name: '入住间夜', type: 'bar', data: roomTypeNights, barMaxWidth: 28 },
-      { name: '收入', type: 'line', yAxisIndex: 1, data: roomTypeRevenue }
+      { name: t('orderStats.legend.nights'), type: 'bar', data: roomTypeNights, barMaxWidth: 28 },
+      { name: t('orderStats.legend.revenue'), type: 'line', yAxisIndex: 1, data: roomTypeRevenue }
     ]
-  }), [roomTypeNames, roomTypeNights, roomTypeRevenue])
+  }), [roomTypeNames, roomTypeNights, roomTypeRevenue, t])
 
   const dailyOption = useMemo(() => ({
     grid: { left: 40, right: 20, top: 30, bottom: 40 },
@@ -141,47 +143,47 @@ export default function OrderStats() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <Typography.Title level={4} style={{ margin: 0 }}>订单统计</Typography.Title>
-          <Typography.Text type="secondary">{hotel?.name || `酒店 ${id}`}</Typography.Text>
+          <Typography.Title level={4} style={{ margin: 0 }}>{t('orderStats.title')}</Typography.Title>
+          <Typography.Text type="secondary">{hotel?.name || t('orderStats.fallbackHotelName', { id })}</Typography.Text>
         </div>
         <Space>
-          <GlassButton onClick={() => navigate(detailPath)}>返回详情</GlassButton>
+          <GlassButton onClick={() => navigate(detailPath)}>{t('orderStats.backDetail')}</GlassButton>
         </Space>
       </div>
 
       <Card>
         <Row gutter={16}>
           <Col span={6}>
-            <Statistic title="订单总量" value={totalOrders} />
+            <Statistic title={t('orderStats.summary.totalOrders')} value={totalOrders} />
           </Col>
           <Col span={6}>
-            <Statistic title="订单收入" value={revenue} prefix="¥" />
+            <Statistic title={t('orderStats.summary.revenue')} value={revenue} prefix="¥" />
           </Col>
           <Col span={6}>
-            <Statistic title="状态种类" value={statusKinds} />
+            <Statistic title={t('orderStats.summary.statusKinds')} value={statusKinds} />
           </Col>
           <Col span={6}>
-            <Statistic title="房型数" value={roomTypeCount} />
+            <Statistic title={t('orderStats.summary.roomTypeCount')} value={roomTypeCount} />
           </Col>
         </Row>
       </Card>
 
       <Row gutter={24}>
         <Col span={12}>
-          <Card title="订单状态分布">
+          <Card title={t('orderStats.cards.status')}>
             {statusData.length ? (
               <ReactECharts option={statusOption} style={{ height: 300 }} />
             ) : (
-              <Empty description="暂无状态统计" />
+              <Empty description={t('orderStats.empty.status')} />
             )}
           </Card>
         </Col>
         <Col span={12}>
-          <Card title="月度收入">
+          <Card title={t('orderStats.cards.monthly')}>
             {monthlyRevenue.length ? (
               <ReactECharts option={monthlyOption} style={{ height: 300 }} />
             ) : (
-              <Empty description="暂无月度统计" />
+              <Empty description={t('orderStats.empty.monthly')} />
             )}
           </Card>
         </Col>
@@ -189,20 +191,20 @@ export default function OrderStats() {
 
       <Row gutter={24}>
         <Col span={12}>
-          <Card title="房型表现（入住间夜/收入）">
+          <Card title={t('orderStats.cards.roomType')}>
             {roomTypeNames.length ? (
               <ReactECharts option={roomTypeOption} style={{ height: 300 }} />
             ) : (
-              <Empty description="暂无房型统计" />
+              <Empty description={t('orderStats.empty.roomType')} />
             )}
           </Card>
         </Col>
         <Col span={12}>
-          <Card title="日度收入趋势">
+          <Card title={t('orderStats.cards.daily')}>
             {dailyDates.length ? (
               <ReactECharts option={dailyOption} style={{ height: 300 }} />
             ) : (
-              <Empty description="暂无日度统计" />
+              <Empty description={t('orderStats.empty.daily')} />
             )}
           </Card>
         </Col>

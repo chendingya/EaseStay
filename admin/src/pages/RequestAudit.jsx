@@ -7,23 +7,12 @@ import {
 } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
 import { api } from '../services'
-
-const typeMap = {
-  facility: { label: '设施申请', icon: <AppstoreOutlined />, color: 'blue' },
-  room_type: { label: '房型申请', icon: <HomeOutlined />, color: 'purple' },
-  promotion: { label: '优惠申请', icon: <GiftOutlined />, color: 'orange' },
-  hotel_delete: { label: '删除酒店申请', icon: <DeleteOutlined />, color: 'red' }
-}
-
-const statusMap = {
-  pending: { color: 'orange', label: '待审核' },
-  approved: { color: 'green', label: '已通过' },
-  rejected: { color: 'red', label: '已拒绝' }
-}
+import { useTranslation } from 'react-i18next'
 
 export default function RequestAudit() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const hotelIdFilter = searchParams.get('hotelId')
   
   const [loading, setLoading] = useState(false)
@@ -57,14 +46,14 @@ export default function RequestAudit() {
     setLoading(true)
     try {
       await api.put(`/api/admin/requests/${id}/review`, { action, rejectReason })
-      message.success(action === 'approve' ? '已通过申请并通知商户' : '已拒绝申请并通知商户')
+      message.success(action === 'approve' ? t('requestAudit.successApprove') : t('requestAudit.successReject'))
       window.dispatchEvent(new Event('admin-pending-update'))
       setRejecting(null)
       rejectForm.resetFields()
       fetchRequests(activeTab)
     } catch (error) {
       console.error('审核申请失败:', error)
-      message.error('审核失败，请重试')
+      message.error(t('requestAudit.errorReview'))
     } finally {
       setLoading(false)
     }
@@ -83,8 +72,8 @@ export default function RequestAudit() {
     if (type === 'facility') {
       return (
         <Descriptions column={1} bordered size="small">
-          <Descriptions.Item label="设施名称">{name}</Descriptions.Item>
-          <Descriptions.Item label="申请说明">{data?.description || '无'}</Descriptions.Item>
+          <Descriptions.Item label={t('requestAudit.detail.facilityName')}>{name}</Descriptions.Item>
+          <Descriptions.Item label={t('requestAudit.detail.description')}>{data?.description || t('common.none')}</Descriptions.Item>
         </Descriptions>
       )
     }
@@ -92,9 +81,9 @@ export default function RequestAudit() {
     if (type === 'room_type') {
       return (
         <Descriptions column={1} bordered size="small">
-          <Descriptions.Item label="房型名称">{name}</Descriptions.Item>
-          <Descriptions.Item label="价格">¥{data?.price || 0}/晚</Descriptions.Item>
-          <Descriptions.Item label="库存">{data?.stock || 0} 间</Descriptions.Item>
+          <Descriptions.Item label={t('requestAudit.detail.roomName')}>{name}</Descriptions.Item>
+          <Descriptions.Item label={t('requestAudit.detail.price')}>{t('requestAudit.detail.priceValue', { value: data?.price || 0 })}</Descriptions.Item>
+          <Descriptions.Item label={t('requestAudit.detail.stock')}>{t('requestAudit.detail.stockValue', { value: data?.stock || 0 })}</Descriptions.Item>
         </Descriptions>
       )
     }
@@ -102,17 +91,17 @@ export default function RequestAudit() {
     if (type === 'promotion') {
       return (
         <Descriptions column={1} bordered size="small">
-          <Descriptions.Item label="优惠标题">{name}</Descriptions.Item>
-          <Descriptions.Item label="优惠类型">{data?.type || '通用'}</Descriptions.Item>
-          <Descriptions.Item label="折扣">{data?.value ? `${data.value}折` : '无'}</Descriptions.Item>
+          <Descriptions.Item label={t('requestAudit.detail.promoTitle')}>{name}</Descriptions.Item>
+          <Descriptions.Item label={t('requestAudit.detail.promoType')}>{data?.type || t('requestAudit.detail.promoDefault')}</Descriptions.Item>
+          <Descriptions.Item label={t('requestAudit.detail.discount')}>{data?.value ? t('requestAudit.detail.discountRate', { value: data.value }) : t('common.none')}</Descriptions.Item>
         </Descriptions>
       )
     }
     if (type === 'hotel_delete') {
       return (
         <Descriptions column={1} bordered size="small">
-          <Descriptions.Item label="酒店名称">{name || data?.hotelName || '-'}</Descriptions.Item>
-          <Descriptions.Item label="处理说明">审核通过后将永久删除酒店及相关数据</Descriptions.Item>
+          <Descriptions.Item label={t('requestAudit.detail.hotelName')}>{name || data?.hotelName || '-'}</Descriptions.Item>
+          <Descriptions.Item label={t('requestAudit.detail.noteLabel')}>{t('requestAudit.detail.deleteNote')}</Descriptions.Item>
         </Descriptions>
       )
     }
@@ -120,9 +109,22 @@ export default function RequestAudit() {
     return null
   }
 
+  const typeMap = {
+    facility: { label: t('requestAudit.type.facility'), icon: <AppstoreOutlined />, color: 'blue' },
+    room_type: { label: t('requestAudit.type.roomType'), icon: <HomeOutlined />, color: 'purple' },
+    promotion: { label: t('requestAudit.type.promotion'), icon: <GiftOutlined />, color: 'orange' },
+    hotel_delete: { label: t('requestAudit.type.hotelDelete'), icon: <DeleteOutlined />, color: 'red' }
+  }
+
+  const statusMap = {
+    pending: { color: 'orange', label: t('status.pending') },
+    approved: { color: 'green', label: t('requestAudit.status.approved') },
+    rejected: { color: 'red', label: t('requestAudit.status.rejected') }
+  }
+
   const columns = [
     {
-      title: '类型',
+      title: t('requestAudit.columns.type'),
       dataIndex: 'type',
       width: 120,
       render: (type) => {
@@ -131,30 +133,30 @@ export default function RequestAudit() {
       }
     },
     { 
-      title: '申请名称', 
+      title: t('requestAudit.columns.name'), 
       dataIndex: 'name',
       render: (text, record) => (
         <a onClick={() => setDetailModal(record)}>{text}</a>
       )
     },
     { 
-      title: '关联酒店', 
+      title: t('requestAudit.columns.hotel'), 
       dataIndex: 'hotels',
       render: (hotel) => hotel?.name || '-'
     },
     { 
-      title: '商户', 
+      title: t('requestAudit.columns.merchant'), 
       dataIndex: 'users',
       render: (user) => user?.username || '-'
     },
     { 
-      title: '申请时间', 
+      title: t('requestAudit.columns.createdAt'), 
       dataIndex: 'created_at', 
       width: 120,
       render: v => v ? v.split('T')[0] : '-' 
     },
     {
-      title: '状态',
+      title: t('requestAudit.columns.status'),
       dataIndex: 'status',
       width: 100,
       render: (value) => {
@@ -163,7 +165,7 @@ export default function RequestAudit() {
       }
     },
     {
-      title: '操作',
+      title: t('requestAudit.columns.action'),
       width: 200,
       render: (_, record) => (
         <div style={{ display: 'flex', gap: 8 }}>
@@ -175,7 +177,7 @@ export default function RequestAudit() {
                 icon={<CheckCircleOutlined />}
                 onClick={() => handleReview(record.id, 'approve')}
               >
-                通过
+                {t('common.approve')}
               </GlassButton>
               <GlassButton 
                 danger 
@@ -183,12 +185,12 @@ export default function RequestAudit() {
                 icon={<CloseCircleOutlined />}
                 onClick={() => setRejecting(record)}
               >
-                拒绝
+                {t('common.reject')}
               </GlassButton>
             </>
           )}
           <GlassButton type="link" size="small" onClick={() => setDetailModal(record)}>
-            详情
+            {t('common.detail')}
           </GlassButton>
         </div>
       )
@@ -196,11 +198,11 @@ export default function RequestAudit() {
   ]
 
   const tabItems = [
-    { key: 'all', label: '全部申请' },
-    { key: 'facility', label: '设施申请' },
-    { key: 'room_type', label: '房型申请' },
-    { key: 'promotion', label: '优惠申请' },
-    { key: 'hotel_delete', label: '删除酒店申请' }
+    { key: 'all', label: t('requestAudit.tabs.all') },
+    { key: 'facility', label: t('requestAudit.tabs.facility') },
+    { key: 'room_type', label: t('requestAudit.tabs.roomType') },
+    { key: 'promotion', label: t('requestAudit.tabs.promotion') },
+    { key: 'hotel_delete', label: t('requestAudit.tabs.hotelDelete') }
   ]
 
   return (
@@ -208,11 +210,11 @@ export default function RequestAudit() {
       <Space>
         {hotelIdFilter && (
           <GlassButton icon={<ArrowLeftOutlined />} onClick={() => navigate(`/audit/${hotelIdFilter}`)}>
-            返回酒店审核
+            {t('requestAudit.backToHotelAudit')}
           </GlassButton>
         )}
         <Typography.Title level={4} style={{ margin: 0 }}>
-          <ShopOutlined /> 申请审核
+          <ShopOutlined /> {t('requestAudit.title')}
         </Typography.Title>
       </Space>
 
@@ -222,9 +224,9 @@ export default function RequestAudit() {
           showIcon
           title={
             <Space>
-              <span>当前仅显示该酒店的待审核申请</span>
+              <span>{t('requestAudit.hotelFilterTip')}</span>
               <GlassButton size="small" onClick={() => setSearchParams({})}>
-                查看全部申请
+                {t('requestAudit.viewAll')}
               </GlassButton>
             </Space>
           }
@@ -244,27 +246,27 @@ export default function RequestAudit() {
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 10 }}
-          locale={{ emptyText: <Empty description="暂无待审核的申请" /> }}
+          locale={{ emptyText: <Empty description={t('requestAudit.empty')} /> }}
         />
       </Card>
 
       {/* 拒绝原因弹窗 */}
       <Modal
-        title="拒绝申请"
+        title={t('requestAudit.rejectModal.title')}
         open={!!rejecting}
         onOk={handleReject}
         onCancel={() => { setRejecting(null); rejectForm.resetFields() }}
-        okText="确认拒绝"
+        okText={t('requestAudit.rejectModal.confirm')}
         okButtonProps={{ danger: true }}
       >
-        <p>确定要拒绝「{rejecting?.name}」的申请吗？</p>
+        <p>{t('requestAudit.rejectModal.content', { name: rejecting?.name })}</p>
         <Form form={rejectForm} layout="vertical">
           <Form.Item
             name="reason"
-            label="拒绝原因"
-            rules={[{ required: true, message: '请输入拒绝原因' }]}
+            label={t('requestAudit.rejectModal.reason')}
+            rules={[{ required: true, message: t('requestAudit.rejectModal.reasonRequired') }]}
           >
-            <Input.TextArea rows={3} placeholder="请输入拒绝原因，将发送给商户" />
+            <Input.TextArea rows={3} placeholder={t('requestAudit.rejectModal.reasonPlaceholder')} />
           </Form.Item>
         </Form>
       </Modal>
@@ -273,7 +275,7 @@ export default function RequestAudit() {
       <Modal
         title={
           <span>
-            {typeMap[detailModal?.type]?.icon} {typeMap[detailModal?.type]?.label || '申请'} - {detailModal?.name}
+            {typeMap[detailModal?.type]?.icon} {typeMap[detailModal?.type]?.label || t('requestAudit.type.default')} - {detailModal?.name}
           </span>
         }
         open={!!detailModal}
@@ -282,14 +284,14 @@ export default function RequestAudit() {
           detailModal?.status === 'pending' ? (
             <Space>
               <GlassButton danger onClick={() => { setDetailModal(null); setRejecting(detailModal) }}>
-                拒绝
+                {t('common.reject')}
               </GlassButton>
               <GlassButton type="primary" onClick={() => { handleReview(detailModal.id, 'approve'); setDetailModal(null) }}>
-                通过
+                {t('common.approve')}
               </GlassButton>
             </Space>
           ) : (
-            <GlassButton onClick={() => setDetailModal(null)}>关闭</GlassButton>
+            <GlassButton onClick={() => setDetailModal(null)}>{t('common.close')}</GlassButton>
           )
         }
         width={500}
@@ -297,24 +299,24 @@ export default function RequestAudit() {
         {detailModal && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <Descriptions column={1} size="small">
-              <Descriptions.Item label="商户">{detailModal.users?.username || '-'}</Descriptions.Item>
-              <Descriptions.Item label="关联酒店">{detailModal.hotels?.name || '-'}</Descriptions.Item>
-              <Descriptions.Item label="申请时间">
+              <Descriptions.Item label={t('requestAudit.detail.merchant')}>{detailModal.users?.username || '-'}</Descriptions.Item>
+              <Descriptions.Item label={t('requestAudit.detail.hotel')}>{detailModal.hotels?.name || '-'}</Descriptions.Item>
+              <Descriptions.Item label={t('requestAudit.detail.createdAt')}>
                 {detailModal.created_at ? new Date(detailModal.created_at).toLocaleString() : '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="状态">
+              <Descriptions.Item label={t('requestAudit.detail.status')}>
                 <Tag color={statusMap[detailModal.status]?.color}>
                   {statusMap[detailModal.status]?.label}
                 </Tag>
               </Descriptions.Item>
               {detailModal.status === 'rejected' && detailModal.reject_reason && (
-                <Descriptions.Item label="拒绝原因">
+                <Descriptions.Item label={t('requestAudit.rejectModal.reason')}>
                   <span style={{ color: '#f5222d' }}>{detailModal.reject_reason}</span>
                 </Descriptions.Item>
               )}
             </Descriptions>
 
-            <Card size="small" title="申请内容">
+            <Card size="small" title={t('requestAudit.detail.content')}>
               {renderDataDetail(detailModal)}
             </Card>
 
@@ -326,7 +328,7 @@ export default function RequestAudit() {
                 border: '1px solid #ffe58f' 
               }}>
                 <Typography.Text type="warning">
-                  提示：审核通过后，该内容将自动添加到对应酒店；审核拒绝后，将通知商户并说明拒绝原因。
+                  {t('requestAudit.pendingTip')}
                 </Typography.Text>
               </div>
             )}

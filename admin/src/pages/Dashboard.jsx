@@ -4,9 +4,11 @@ import { useNavigate } from 'react-router-dom'
 import { PercentageOutlined, EditOutlined, ShopOutlined } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
 import { api } from '../services'
+import { useTranslation } from 'react-i18next'
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [stats, setStats] = useState({ pending: 0, approved: 0, offline: 0, total: 0 })
   const [loading, setLoading] = useState(false)
   const [hotels, setHotels] = useState([])
@@ -103,7 +105,7 @@ export default function Dashboard() {
         : hotels.filter(h => selectedHotels.includes(h.id))
       
       if (targetHotels.length === 0) {
-        message.warning('没有可操作的酒店')
+        message.warning(t('dashboard.batchDiscount.noTargetWarning'))
         return
       }
 
@@ -124,7 +126,7 @@ export default function Dashboard() {
         discount: finalDiscount,
         periods
       })
-      message.success(`已为 ${data.successCount || 0} 个房型${isCancel ? '取消折扣' : '设置折扣'}`)
+      message.success(t('dashboard.batchDiscount.success', { count: data.successCount || 0, action: isCancel ? t('dashboard.batchDiscount.successActionCancel') : t('dashboard.batchDiscount.successActionSet') }))
       setDiscountModal(false)
       discountForm.resetFields()
       setSelectedHotels([])
@@ -132,7 +134,7 @@ export default function Dashboard() {
       fetchRoomTypeStats(targetHotels.map(h => h.id))
     } catch (error) {
       console.error('批量设置折扣失败:', error)
-      message.error('批量设置折扣失败，请重试')
+      message.error(t('dashboard.batchDiscount.error'))
     } finally {
       setBatchLoading(false)
     }
@@ -147,7 +149,7 @@ export default function Dashboard() {
       const targetHotels = hotels.filter(h => selectedHotels.includes(h.id))
       
       if (targetHotels.length === 0) {
-        message.warning('请先选择酒店')
+        message.warning(t('dashboard.batchRoom.noTargetWarning'))
         return
       }
 
@@ -159,7 +161,7 @@ export default function Dashboard() {
         stock: values.stock
       }
       const data = await api.post(`${base}/batch-room`, payload)
-      message.success(`已处理 ${data.successCount || 0} 个房型`)
+      message.success(t('dashboard.batchRoom.success', { count: data.successCount || 0 }))
       
       setRoomModal(false)
       roomForm.resetFields()
@@ -168,7 +170,7 @@ export default function Dashboard() {
       fetchRoomTypeStats(hotels.map(h => h.id)) // 简单起见，刷新所有
     } catch (error) {
       console.error('批量房型操作失败:', error)
-      message.error('批量房型操作失败，请重试')
+      message.error(t('dashboard.batchRoom.error'))
     } finally {
       setBatchLoading(false)
     }
@@ -176,9 +178,9 @@ export default function Dashboard() {
 
   // 酒店选择表格列
   const hotelColumns = [
-    { title: '酒店名称', dataIndex: 'name', key: 'name' },
-    { title: '城市', dataIndex: 'city', key: 'city' },
-    { title: '状态', dataIndex: 'status', key: 'status', render: (s) => s === 'approved' ? '已上架' : s === 'pending' ? '待审核' : '已下架' }
+    { title: t('dashboard.hotelTable.name'), dataIndex: 'name', key: 'name' },
+    { title: t('dashboard.hotelTable.city'), dataIndex: 'city', key: 'city' },
+    { title: t('dashboard.hotelTable.status'), dataIndex: 'status', key: 'status', render: (s) => s === 'approved' ? t('status.approved') : s === 'pending' ? t('status.pending') : t('status.offline') }
   ]
 
   const rowSelection = {
@@ -186,7 +188,7 @@ export default function Dashboard() {
     onChange: (keys) => setSelectedHotels(keys)
   }
 
-  const currentMonthLabel = `${new Date().getMonth() + 1}月收入`
+  const currentMonthLabel = t('dashboard.overview.monthlyRevenue', { month: new Date().getMonth() + 1 })
   const overviewStats = overview || {}
   const overviewHotelStats = overviewStats.hotelStats || []
   const overviewTotalRooms = overviewStats.totalRooms || 0
@@ -198,19 +200,19 @@ export default function Dashboard() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 24 }}>
       {role === 'merchant' && (
-        <Card title="商户经营总览">
+        <Card title={t('dashboard.overview.title')}>
           <Row gutter={16}>
             <Col span={6}>
-              <Statistic title="总房间数" value={overviewTotalRooms} suffix="间" loading={overviewLoading} />
+              <Statistic title={t('dashboard.overview.totalRoomsTitle')} value={overviewTotalRooms} suffix={t('dashboard.overview.totalRoomsSuffix')} loading={overviewLoading} />
             </Col>
             <Col span={6}>
-              <Statistic title="房型数" value={overviewRoomTypes} suffix="种" loading={overviewLoading} />
+              <Statistic title={t('dashboard.overview.roomTypesTitle')} value={overviewRoomTypes} suffix={t('dashboard.overview.roomTypesSuffix')} loading={overviewLoading} />
             </Col>
             <Col span={6}>
               <Statistic title={currentMonthLabel} value={overviewStats.monthlyRevenue || 0} prefix="¥" loading={overviewLoading} />
             </Col>
             <Col span={6}>
-              <Statistic title="酒店数量" value={overviewStats.totalHotels || 0} suffix="家" loading={overviewLoading} />
+              <Statistic title={t('dashboard.overview.hotelCountTitle')} value={overviewStats.totalHotels || 0} suffix={t('dashboard.overview.hotelCountSuffix')} loading={overviewLoading} />
             </Col>
           </Row>
           <Row gutter={16} style={{ marginTop: 16 }}>
@@ -218,8 +220,8 @@ export default function Dashboard() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 12, borderRadius: 8, background: '#fafafa' }}>
                 <Progress type="dashboard" percent={overviewStats.occupancyRate || 0} strokeColor="#faad14" size={84} />
                 <div>
-                  <Statistic title="入住率" value={overviewStats.occupancyRate || 0} suffix="%" loading={overviewLoading} />
-                  <Typography.Text type="secondary">已使用 {overviewUsedRooms} 间</Typography.Text>
+                  <Statistic title={t('dashboard.overview.occupancyRateTitle')} value={overviewStats.occupancyRate || 0} suffix="%" loading={overviewLoading} />
+                  <Typography.Text type="secondary">{t('dashboard.overview.usedRoomsText', { count: overviewUsedRooms })}</Typography.Text>
                 </div>
               </div>
             </Col>
@@ -227,8 +229,8 @@ export default function Dashboard() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 12, borderRadius: 8, background: '#fafafa' }}>
                 <Progress type="dashboard" percent={overviewStats.availableRate || 0} strokeColor="#52c41a" size={84} />
                 <div>
-                  <Statistic title="空闲率" value={overviewStats.availableRate || 0} suffix="%" loading={overviewLoading} />
-                  <Typography.Text type="secondary">空闲 {overviewAvailableRooms} 间</Typography.Text>
+                  <Statistic title={t('dashboard.overview.availableRateTitle')} value={overviewStats.availableRate || 0} suffix="%" loading={overviewLoading} />
+                  <Typography.Text type="secondary">{t('dashboard.overview.availableRoomsText', { count: overviewAvailableRooms })}</Typography.Text>
                 </div>
               </div>
             </Col>
@@ -236,21 +238,21 @@ export default function Dashboard() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 12, borderRadius: 8, background: '#fafafa' }}>
                 <Progress type="dashboard" percent={overviewStats.offlineRate || 0} strokeColor="#999" size={84} />
                 <div>
-                  <Statistic title="下架率" value={overviewStats.offlineRate || 0} suffix="%" loading={overviewLoading} />
-                  <Typography.Text type="secondary">已下架 {overviewOfflineRooms} 间</Typography.Text>
+                  <Statistic title={t('dashboard.overview.offlineRateTitle')} value={overviewStats.offlineRate || 0} suffix="%" loading={overviewLoading} />
+                  <Typography.Text type="secondary">{t('dashboard.overview.offlineRoomsText', { count: overviewOfflineRooms })}</Typography.Text>
                 </div>
               </div>
             </Col>
           </Row>
           <Row gutter={16} style={{ marginTop: 16 }}>
             <Col span={6}>
-              <Statistic title="待审核酒店" value={stats.pending} loading={loading} styles={{ content: { color: '#faad14' } }} suffix="家" />
+              <Statistic title={t('dashboard.stats.pending')} value={stats.pending} loading={loading} styles={{ content: { color: '#faad14' } }} suffix={t('dashboard.overview.hotelCountSuffix')} />
             </Col>
             <Col span={6}>
-              <Statistic title="已上架酒店" value={stats.approved} loading={loading} styles={{ content: { color: '#52c41a' } }} suffix="家" />
+              <Statistic title={t('dashboard.stats.approved')} value={stats.approved} loading={loading} styles={{ content: { color: '#52c41a' } }} suffix={t('dashboard.overview.hotelCountSuffix')} />
             </Col>
             <Col span={6}>
-              <Statistic title="已下架酒店" value={stats.offline} loading={loading} styles={{ content: { color: '#999' } }} suffix="家" />
+              <Statistic title={t('dashboard.stats.offline')} value={stats.offline} loading={loading} styles={{ content: { color: '#999' } }} suffix={t('dashboard.overview.hotelCountSuffix')} />
             </Col>
           </Row>
         </Card>
@@ -259,33 +261,33 @@ export default function Dashboard() {
       {role !== 'merchant' && (
         <Row gutter={16}>
           <Col span={6}>
-            <Card><Statistic title="待审核酒店" value={stats.pending} loading={loading} styles={{ content: { color: '#faad14' } }} /></Card>
+            <Card><Statistic title={t('dashboard.stats.pending')} value={stats.pending} loading={loading} styles={{ content: { color: '#faad14' } }} /></Card>
           </Col>
           <Col span={6}>
-            <Card><Statistic title="已上架酒店" value={stats.approved} loading={loading} styles={{ content: { color: '#52c41a' } }} /></Card>
+            <Card><Statistic title={t('dashboard.stats.approved')} value={stats.approved} loading={loading} styles={{ content: { color: '#52c41a' } }} /></Card>
           </Col>
           <Col span={6}>
-            <Card><Statistic title="已下架酒店" value={stats.offline} loading={loading} styles={{ content: { color: '#999' } }} /></Card>
+            <Card><Statistic title={t('dashboard.stats.offline')} value={stats.offline} loading={loading} styles={{ content: { color: '#999' } }} /></Card>
           </Col>
           {role === 'admin' && (
             <Col span={6}>
-              <Card><Statistic title="酒店总数" value={stats.total} loading={loading} /></Card>
+              <Card><Statistic title={t('dashboard.stats.total')} value={stats.total} loading={loading} /></Card>
             </Col>
           )}
         </Row>
       )}
 
       {role === 'merchant' && (
-        <Card title="酒店入住率分布" loading={overviewLoading}>
+        <Card title={t('dashboard.distribution.title')} loading={overviewLoading}>
           <Table
             columns={[
-              { title: '酒店', dataIndex: 'name', key: 'name' },
-              { title: '房型数', dataIndex: 'roomTypeCount', key: 'roomTypeCount', width: 90 },
-              { title: '总房间', dataIndex: 'totalRooms', key: 'totalRooms', width: 90 },
-              { title: '已用', dataIndex: 'usedRooms', key: 'usedRooms', width: 80 },
-              { title: '空闲', dataIndex: 'availableRooms', key: 'availableRooms', width: 80 },
+              { title: t('dashboard.distribution.columns.hotel'), dataIndex: 'name', key: 'name' },
+              { title: t('dashboard.distribution.columns.roomTypes'), dataIndex: 'roomTypeCount', key: 'roomTypeCount', width: 90 },
+              { title: t('dashboard.distribution.columns.totalRooms'), dataIndex: 'totalRooms', key: 'totalRooms', width: 90 },
+              { title: t('dashboard.distribution.columns.usedRooms'), dataIndex: 'usedRooms', key: 'usedRooms', width: 80 },
+              { title: t('dashboard.distribution.columns.availableRooms'), dataIndex: 'availableRooms', key: 'availableRooms', width: 80 },
               {
-                title: '入住率',
+                title: t('dashboard.distribution.columns.occupancy'),
                 dataIndex: 'occupancyRate',
                 key: 'occupancyRate',
                 width: 160,
@@ -301,53 +303,53 @@ export default function Dashboard() {
       )}
 
       {/* 快捷操作 */}
-      <Card title="快捷操作">
+      <Card title={t('dashboard.quickActions.title')}>
         <Space wrap size={12}>
           {role === 'merchant' && (
             <GlassButton type="primary" icon={<ShopOutlined />} onClick={() => navigate('/hotels/new')}>
-              新增酒店
+              {t('dashboard.quickActions.newHotel')}
             </GlassButton>
           )}
           {role === 'admin' && (
             <GlassButton type="primary" onClick={() => navigate('/audit')}>
-              查看待审核
+              {t('dashboard.quickActions.pendingAudit')}
             </GlassButton>
           )}
           <GlassButton icon={<PercentageOutlined />} onClick={() => setDiscountModal(true)}>
-            批量设置折扣
+            {t('dashboard.quickActions.batchDiscount')}
           </GlassButton>
           <GlassButton icon={<EditOutlined />} onClick={() => setRoomModal(true)}>
-            批量房型操作
+            {t('dashboard.quickActions.batchRoom')}
           </GlassButton>
         </Space>
       </Card>
 
       {/* 批量折扣弹窗 */}
       <Modal
-        title="批量设置折扣"
+        title={t('dashboard.batchDiscount.title')}
         open={discountModal}
         onCancel={() => setDiscountModal(false)}
         footer={null}
         width={700}
       >
         <Form form={discountForm} layout="vertical" initialValues={{ scope: 'all', discount: 9, action: 'set', discountType: 'rate', amount: 50 }}>
-          <Form.Item name="scope" label="应用范围">
+          <Form.Item name="scope" label={t('dashboard.batchDiscount.scopeLabel')}>
             <Select options={[
-              { value: 'all', label: '所有已上架酒店' },
-              { value: 'selected', label: '选择特定酒店' }
+              { value: 'all', label: t('dashboard.batchDiscount.scopeAll') },
+              { value: 'selected', label: t('dashboard.batchDiscount.scopeSelected') }
             ]} />
           </Form.Item>
 
-          <Form.Item name="action" label="折扣操作" rules={[{ required: true, message: '请选择操作' }]}>
+          <Form.Item name="action" label={t('dashboard.batchDiscount.actionLabel')} rules={[{ required: true, message: t('dashboard.batchDiscount.actionRequired') }]}>
             <Select options={[
-              { value: 'set', label: '设置折扣' },
-              { value: 'cancel', label: '取消折扣' }
+              { value: 'set', label: t('dashboard.batchDiscount.actionSet') },
+              { value: 'cancel', label: t('dashboard.batchDiscount.actionCancel') }
             ]} />
           </Form.Item>
           
           <Form.Item noStyle shouldUpdate={(prev, cur) => prev.scope !== cur.scope}>
             {({ getFieldValue }) => getFieldValue('scope') === 'selected' && (
-              <Form.Item label="选择酒店">
+              <Form.Item label={t('dashboard.batchDiscount.hotelSelectLabel')}>
                 <Table
                   rowSelection={rowSelection}
                   columns={hotelColumns}
@@ -360,9 +362,9 @@ export default function Dashboard() {
             )}
           </Form.Item>
 
-          <Form.Item name="roomTypeName" label="房型" rules={[{ required: true, message: '请选择房型' }]}>
+          <Form.Item name="roomTypeName" label={t('dashboard.batchDiscount.roomTypeLabel')} rules={[{ required: true, message: t('dashboard.batchDiscount.roomTypeRequired') }]}>
             <Select
-              placeholder={statsLoading ? '加载中...' : '选择房型'}
+              placeholder={statsLoading ? t('dashboard.batchDiscount.roomTypePlaceholderLoading') : t('dashboard.batchDiscount.roomTypePlaceholderSelect')}
               options={roomTypeStats.map((item) => ({ value: item.name, label: item.name }))}
               loading={statsLoading}
               disabled={!roomTypeStats.length}
@@ -375,7 +377,7 @@ export default function Dashboard() {
               if (!stats) return null
               return (
                 <Typography.Text type="secondary">
-                  已用 {stats.used} 间，空闲 {stats.available} 间
+                  {t('dashboard.batchDiscount.statsText', { used: stats.used, available: stats.available })}
                 </Typography.Text>
               )
             }}
@@ -384,44 +386,44 @@ export default function Dashboard() {
           <Form.Item noStyle shouldUpdate={(prev, cur) => prev.action !== cur.action || prev.discountType !== cur.discountType}>
             {({ getFieldValue }) => getFieldValue('action') !== 'cancel' && (
               <>
-                <Form.Item name="quantity" label="折扣数量" rules={[{ required: true }]}>
+                <Form.Item name="quantity" label={t('dashboard.batchDiscount.quantityLabel')} rules={[{ required: true }]}>
                   <InputNumber
                     min={1}
                     style={{ width: 150 }}
-                    formatter={(value) => `${value} 间`}
+                    formatter={(value) => value === undefined || value === null || value === '' ? '' : t('dashboard.batchDiscount.roomUnit', { value })}
                     parser={(value) => value?.replace(/[^\d]/g, '')}
                   />
                 </Form.Item>
 
-                <Form.Item name="discountType" label="折扣类型" rules={[{ required: true }]}>
+                <Form.Item name="discountType" label={t('dashboard.batchDiscount.discountTypeLabel')} rules={[{ required: true }]}>
                   <Radio.Group>
-                    <Radio value="rate">折扣率</Radio>
-                    <Radio value="amount">固定减免</Radio>
+                    <Radio value="rate">{t('dashboard.batchDiscount.discountTypeRate')}</Radio>
+                    <Radio value="amount">{t('dashboard.batchDiscount.discountTypeAmount')}</Radio>
                   </Radio.Group>
                 </Form.Item>
 
                 {getFieldValue('discountType') === 'rate' ? (
-                  <Form.Item name="discount" label="折扣力度" rules={[{ required: true }]}>
+                  <Form.Item name="discount" label={t('dashboard.batchDiscount.rateLabel')} rules={[{ required: true }]}>
                     <InputNumber
                       min={0.1}
                       max={10}
                       step={0.5}
                       style={{ width: 150 }}
-                      formatter={(value) => `${value} 折`}
+                      formatter={(value) => value === undefined || value === null || value === '' ? '' : t('dashboard.batchDiscount.rateUnit', { value })}
                       parser={(value) => value?.replace(/[^\d.]/g, '')}
                     />
                   </Form.Item>
                 ) : (
-                  <Form.Item name="amount" label="减免金额" rules={[{ required: true }]}>
+                  <Form.Item name="amount" label={t('dashboard.batchDiscount.amountLabel')} rules={[{ required: true }]}>
                     <InputNumber
                       min={1}
                       style={{ width: 150 }}
-                      formatter={(value) => `¥ ${value}`}
+                      formatter={(value) => value === undefined || value === null || value === '' ? '' : t('dashboard.batchDiscount.amountUnit', { value })}
                       parser={(value) => value?.replace(/[^\d]/g, '')}
                     />
                   </Form.Item>
                 )}
-                <Form.Item name="periods" label="生效时间">
+                <Form.Item name="periods" label={t('dashboard.batchDiscount.periodsLabel')}>
                   <DatePicker.RangePicker showTime style={{ width: 360 }} />
                 </Form.Item>
               </>
@@ -431,9 +433,9 @@ export default function Dashboard() {
           <Form.Item>
             <Space>
               <GlassButton type="primary" loading={batchLoading} onClick={handleBatchDiscount}>
-                确认设置
+                {t('dashboard.batchDiscount.confirm')}
               </GlassButton>
-              <GlassButton onClick={() => setDiscountModal(false)}>取消</GlassButton>
+              <GlassButton onClick={() => setDiscountModal(false)}>{t('dashboard.batchDiscount.cancel')}</GlassButton>
             </Space>
           </Form.Item>
         </Form>
@@ -441,14 +443,14 @@ export default function Dashboard() {
 
       {/* 批量房型操作弹窗 */}
       <Modal
-        title="批量房型操作"
+        title={t('dashboard.batchRoom.title')}
         open={roomModal}
         onCancel={() => setRoomModal(false)}
         footer={null}
         width={700}
       >
         <Form form={roomForm} layout="vertical" initialValues={{ action: 'offline' }}>
-          <Form.Item label="选择酒店" required>
+          <Form.Item label={t('dashboard.batchRoom.hotelSelectLabel')} required>
             <Table
               rowSelection={rowSelection}
               columns={hotelColumns}
@@ -458,20 +460,20 @@ export default function Dashboard() {
               pagination={{ pageSize: 5 }}
             />
             {selectedHotels.length > 0 && (
-              <Typography.Text type="secondary">已选择 {selectedHotels.length} 家酒店</Typography.Text>
+              <Typography.Text type="secondary">{t('dashboard.batchRoom.selectedHotelsText', { count: selectedHotels.length })}</Typography.Text>
             )}
           </Form.Item>
 
-          <Form.Item name="action" label="操作类型">
+          <Form.Item name="action" label={t('dashboard.batchRoom.actionLabel')}>
             <Select options={[
-              { value: 'offline', label: '下架房型' },
-              { value: 'adjust_stock', label: '调整库存' }
+              { value: 'offline', label: t('dashboard.batchRoom.actionOffline') },
+              { value: 'adjust_stock', label: t('dashboard.batchRoom.actionAdjustStock') }
             ]} />
           </Form.Item>
 
-          <Form.Item name="roomTypeName" label="房型" rules={[{ required: true, message: '请选择房型' }]}>
+          <Form.Item name="roomTypeName" label={t('dashboard.batchRoom.roomTypeLabel')} rules={[{ required: true, message: t('dashboard.batchRoom.roomTypeRequired') }]}>
             <Select 
-              placeholder="选择要操作的房型"
+              placeholder={t('dashboard.batchRoom.roomTypePlaceholder')}
               options={roomTypeStats.map((item) => ({ value: item.name, label: item.name }))}
               loading={statsLoading}
               disabled={!roomTypeStats.length}
@@ -484,7 +486,7 @@ export default function Dashboard() {
               if (!stats) return null
               return (
                 <Typography.Text type="secondary">
-                  已用 {stats.used} 间，空闲 {stats.available} 间
+                  {t('dashboard.batchRoom.statsText', { used: stats.used, available: stats.available })}
                 </Typography.Text>
               )
             }}
@@ -492,11 +494,11 @@ export default function Dashboard() {
 
           <Form.Item noStyle shouldUpdate={(prev, cur) => prev.action !== cur.action}>
             {({ getFieldValue }) => getFieldValue('action') === 'adjust_stock' && (
-              <Form.Item name="stock" label="库存数量" rules={[{ required: true }]}>
+              <Form.Item name="stock" label={t('dashboard.batchRoom.stockLabel')} rules={[{ required: true }]}>
                 <InputNumber
                   min={0}
                   style={{ width: 150 }}
-                  formatter={(value) => `${value} 间`}
+                  formatter={(value) => value === undefined || value === null || value === '' ? '' : t('dashboard.batchRoom.roomUnit', { value })}
                   parser={(value) => value?.replace(/[^\d]/g, '')}
                 />
               </Form.Item>
@@ -506,9 +508,9 @@ export default function Dashboard() {
           <Form.Item>
             <Space>
               <GlassButton type="primary" loading={batchLoading} onClick={handleBatchRoom}>
-                确认操作
+                {t('dashboard.batchRoom.confirm')}
               </GlassButton>
-              <GlassButton onClick={() => setRoomModal(false)}>取消</GlassButton>
+              <GlassButton onClick={() => setRoomModal(false)}>{t('dashboard.batchRoom.cancel')}</GlassButton>
             </Space>
           </Form.Item>
         </Form>

@@ -6,6 +6,7 @@ import {
 } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
 import { getNotifications, markAsRead as markNotificationAsRead, formatNotificationTime } from '../services'
+import { useTranslation } from 'react-i18next'
 
 const typeConfig = {
   success: { icon: <CheckCircleOutlined />, color: 'green', bg: '#f6ffed' },
@@ -15,6 +16,7 @@ const typeConfig = {
 }
 
 export default function Messages() {
+  const { t } = useTranslation()
   const [loading, setLoading] = useState(false)
   const [notifications, setNotifications] = useState([])
   const [activeTab, setActiveTab] = useState('all')
@@ -52,11 +54,11 @@ export default function Messages() {
       if (success) {
         setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
         setUnreadCount(0)
-        message.success('已全部标记为已读')
+        message.success(t('messages.markAllSuccess'))
       }
     } catch (error) {
       console.error('全部标记已读失败:', error)
-      message.error('操作失败')
+      message.error(t('messages.markAllError'))
     } finally {
       setLoading(false)
     }
@@ -69,13 +71,13 @@ export default function Messages() {
   const tabItems = [
     { 
       key: 'all', 
-      label: '全部消息' 
+      label: t('messages.tabs.all') 
     },
     { 
       key: 'unread', 
       label: (
         <span>
-          未读消息
+          {t('messages.tabs.unread')}
           {unreadCount > 0 && <Badge count={unreadCount} size="small" style={{ marginLeft: 8 }} />}
         </span>
       )
@@ -86,14 +88,14 @@ export default function Messages() {
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 24 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography.Title level={4} style={{ margin: 0 }}>
-          <BellOutlined /> 消息中心
+          <BellOutlined /> {t('messages.title')}
           {unreadCount > 0 && (
             <Badge count={unreadCount} style={{ marginLeft: 12 }} />
           )}
         </Typography.Title>
         {unreadCount > 0 && (
           <GlassButton onClick={handleMarkAllAsRead} loading={loading}>
-            全部标记已读
+            {t('messages.markAll')}
           </GlassButton>
         )}
       </div>
@@ -111,7 +113,7 @@ export default function Messages() {
             <Spin />
           </div>
         ) : displayList.length === 0 ? (
-          <Empty description="暂无消息" />
+          <Empty description={t('messages.empty')} />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {displayList.map((item) => {
@@ -155,7 +157,7 @@ export default function Messages() {
                         {item.title}
                       </span>
                       {!item.is_read && (
-                        <Tag color="blue">未读</Tag>
+                        <Tag color="blue">{t('messages.unreadTag')}</Tag>
                       )}
                     </div>
                     <div style={{ color: '#666', marginBottom: 4 }}>{item.content}</div>

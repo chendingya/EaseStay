@@ -1,1 +1,2 @@
 [2026-02-01] 初始化AI辅助开发框架：progress.txt、task.json、skills、脚本入口
+[2026-02-16] 完成 admin HotelDetail 页面国际化与中英文翻译补齐

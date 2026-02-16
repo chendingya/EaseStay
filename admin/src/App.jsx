@@ -1,8 +1,11 @@
 import './App.css'
-import { Layout, Menu, Space, Typography, Tag, Button, Breadcrumb, Badge, Tooltip, Result } from 'antd'
-import { HomeOutlined, SettingOutlined, UserOutlined, TeamOutlined, BellOutlined, FileSearchOutlined, ShopOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
+import { Layout, Menu, Space, Typography, Tag, Button, Breadcrumb, Badge, Tooltip, Result, Select, ConfigProvider } from 'antd'
+import { HomeOutlined, SettingOutlined, UserOutlined, TeamOutlined, BellOutlined, FileSearchOutlined, ShopOutlined, MenuFoldOutlined, MenuUnfoldOutlined, GlobalOutlined } from '@ant-design/icons'
 import { Routes, Route, useLocation, useNavigate, Navigate, Outlet } from 'react-router-dom'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import zhCN from 'antd/locale/zh_CN'
+import enUS from 'antd/locale/en_US'
 import { getUnreadCount, onUnreadCountChange, api } from './services'
 import Login from './pages/Login.jsx'
 import Hotels from './pages/Hotels.jsx'
@@ -27,6 +30,7 @@ const appPerfStart = import.meta.env.DEV ? performance.now() : 0
 function AppBreadcrumb() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   
   const breadcrumbItems = useMemo(() => {
     const path = location.pathname
@@ -61,7 +65,7 @@ function AppBreadcrumb() {
     
     // 始终添加首页
     items.push({
-      title: <a onClick={() => navigate('/')} style={{ color: '#666' }}><HomeOutlined /> 首页</a>
+      title: <a onClick={() => navigate('/')} style={{ color: '#666' }}><HomeOutlined /> {t('route.dashboard')}</a>
     })
     
     // 添加父级
@@ -72,16 +76,16 @@ function AppBreadcrumb() {
           ? matchedRoute.parent.replace(':id', currentId)
           : matchedRoute.parent
         items.push({
-          title: <a onClick={() => navigate(parentPath)} style={{ color: '#666' }}>{parentRoute.title}</a>
+          title: <a onClick={() => navigate(parentPath)} style={{ color: '#666' }}>{t(parentRoute.titleKey)}</a>
         })
       }
     }
     
     // 添加当前页
-    items.push({ title: <span style={{ color: '#1890ff', fontWeight: 500 }}>{matchedRoute.title}</span> })
+    items.push({ title: <span style={{ color: '#1890ff', fontWeight: 500 }}>{t(matchedRoute.titleKey)}</span> })
     
     return items
-  }, [location.pathname, navigate])
+  }, [location.pathname, navigate, t])
   
   // 只有首页时不显示面包屑
   if (breadcrumbItems.length <= 1) return null
@@ -113,24 +117,49 @@ function RequireRole({ role, allow }) {
 
 function Unauthorized({ homePath }) {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   return (
     <Result
       status="403"
-      title="无权访问"
-      subTitle="当前账号无权限访问该页面"
-      extra={<Button type="primary" onClick={() => navigate(homePath)}>返回首页</Button>}
+      title={t('error.unauthorized')}
+      subTitle={t('error.unauthorizedDesc')}
+      extra={<Button type="primary" onClick={() => navigate(homePath)}>{t('common.back')}</Button>}
     />
   )
 }
 
 function NotFound({ homePath }) {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   return (
     <Result
       status="404"
-      title="页面不存在"
-      subTitle="访问的页面不存在或已被移动"
-      extra={<Button type="primary" onClick={() => navigate(homePath)}>返回首页</Button>}
+      title={t('error.notFound')}
+      subTitle={t('error.notFoundDesc')}
+      extra={<Button type="primary" onClick={() => navigate(homePath)}>{t('common.back')}</Button>}
+    />
+  )
+}
+
+function LanguageSwitcher() {
+  const { i18n } = useTranslation()
+  
+  const handleChange = (lng) => {
+    i18n.changeLanguage(lng)
+  }
+  
+  return (
+    <Select
+      value={i18n.language}
+      onChange={handleChange}
+      variant="borderless"
+      size="small"
+      style={{ width: 100 }}
+      suffixIcon={<GlobalOutlined />}
+      options={[
+        { value: 'zh-CN', label: '中文' },
+        { value: 'en-US', label: 'English' }
+      ]}
     />
   )
 }
@@ -138,10 +167,11 @@ function NotFound({ homePath }) {
 function AppLayout({ auth, menuItems, selectedKey, pendingTotal, adminTooltipTitle, unreadCount, onLogout, onAdminNotificationClick }) {
   const navigate = useNavigate()
   const [collapsed, setCollapsed] = useState(false)
+  const { t } = useTranslation()
   return (
     <Layout className="app">
       <Layout.Sider width={220} collapsedWidth={72} collapsible collapsed={collapsed} trigger={null} className="sider">
-        <div className="logo">{collapsed ? '易宿' : '易宿管理端'}</div>
+        <div className="logo">{collapsed ? t('brand.name') : t('brand.adminName')}</div>
         <Menu
           theme="dark"
           mode="inline"
@@ -170,11 +200,12 @@ function AppLayout({ auth, menuItems, selectedKey, pendingTotal, adminTooltipTit
               style={{ height: 32, width: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             />
             <Typography.Title level={4} className="header-title" style={{ margin: 0, lineHeight: 1 }}>
-              酒店管理后台
+              {t('header.title')}
             </Typography.Title>
           </Space>
           <Space className="header-actions">
-            <Tooltip title={auth.role === 'admin' ? adminTooltipTitle : '消息中心'}>
+            <LanguageSwitcher />
+            <Tooltip title={auth.role === 'admin' ? adminTooltipTitle : t('header.messageCenter')}>
               {auth.role === 'admin' ? (
                 <Badge dot={pendingTotal > 0} offset={[-2, 2]}>
                   <Button 
@@ -197,8 +228,8 @@ function AppLayout({ auth, menuItems, selectedKey, pendingTotal, adminTooltipTit
                 </Badge>
               )}
             </Tooltip>
-            {auth.role ? <Tag color="blue">{auth.role === 'admin' ? '管理员' : '商户'}</Tag> : null}
-            <Button size="small" onClick={onLogout}>退出登录</Button>
+            {auth.role ? <Tag color="blue">{auth.role === 'admin' ? t('role.admin') : t('role.merchant')}</Tag> : null}
+            <Button size="small" onClick={onLogout}>{t('auth.logout')}</Button>
           </Space>
         </Layout.Header>
         <Layout.Content className="content">
@@ -213,6 +244,7 @@ function AppLayout({ auth, menuItems, selectedKey, pendingTotal, adminTooltipTit
 function App() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { i18n, t } = useTranslation()
   const [auth, setAuth] = useState(() => ({
     token: localStorage.getItem('token'),
     role: localStorage.getItem('role'),
@@ -220,6 +252,8 @@ function App() {
   }))
   const [unreadCount, setUnreadCount] = useState(0)
   const [adminPending, setAdminPending] = useState({ pendingHotels: 0, pendingRequests: 0 })
+  
+  const antdLocale = i18n.language === 'en-US' ? enUS : zhCN
 
   useEffect(() => {
     if (import.meta.env.DEV && appPerfStart) {
@@ -281,8 +315,8 @@ function App() {
   const pendingTotal = adminPending.pendingHotels + adminPending.pendingRequests
   const adminTooltipTitle = (
     <div>
-      <div>待审核酒店：{adminPending.pendingHotels} 条</div>
-      <div>待审核申请：{adminPending.pendingRequests} 条</div>
+      <div>{t('header.pendingHotels')}：{adminPending.pendingHotels} {t('header.items')}</div>
+      <div>{t('header.pendingRequests')}：{adminPending.pendingRequests} {t('header.items')}</div>
     </div>
   )
   const handleAdminNotificationClick = () => {
@@ -298,21 +332,21 @@ function App() {
   }
 
   const menuItems = useMemo(() => {
-    const items = [{ key: 'dashboard', icon: <HomeOutlined />, label: '工作台' }]
+    const items = [{ key: 'dashboard', icon: <HomeOutlined />, label: t('menu.dashboard') }]
     if (auth.role === 'merchant') {
-      items.push({ key: 'hotels', icon: <SettingOutlined />, label: '我的酒店' })
-      items.push({ key: 'messages', icon: <BellOutlined />, label: '消息中心' })
-      items.push({ key: 'account', icon: <UserOutlined />, label: '账户管理' })
+      items.push({ key: 'hotels', icon: <SettingOutlined />, label: t('menu.myHotels') })
+      items.push({ key: 'messages', icon: <BellOutlined />, label: t('menu.messages') })
+      items.push({ key: 'account', icon: <UserOutlined />, label: t('menu.account') })
     }
     if (auth.role === 'admin') {
-      items.push({ key: 'admin-hotels', icon: <ShopOutlined />, label: '酒店管理' })
-      items.push({ key: 'audit', icon: <SettingOutlined />, label: '酒店审核' })
-      items.push({ key: 'requests', icon: <FileSearchOutlined />, label: '申请审核' })
-      items.push({ key: 'merchants', icon: <TeamOutlined />, label: '商户管理' })
-      items.push({ key: 'account', icon: <UserOutlined />, label: '账户管理' })
+      items.push({ key: 'admin-hotels', icon: <ShopOutlined />, label: t('menu.hotels') })
+      items.push({ key: 'audit', icon: <SettingOutlined />, label: t('menu.hotelAudit') })
+      items.push({ key: 'requests', icon: <FileSearchOutlined />, label: t('menu.requestAudit') })
+      items.push({ key: 'merchants', icon: <TeamOutlined />, label: t('menu.merchants') })
+      items.push({ key: 'account', icon: <UserOutlined />, label: t('menu.account') })
     }
     return items
-  }, [auth.role])
+  }, [auth.role, t])
 
   const selectedKey = location.pathname.startsWith('/admin-hotels')
     ? 'admin-hotels'
@@ -348,48 +382,50 @@ function App() {
   const homePath = auth.role === 'admin' ? '/audit' : auth.role === 'merchant' ? '/hotels' : '/'
 
   return (
-    <Routes>
-      <Route path="/login" element={auth.token ? <Navigate to={homePath} replace /> : <Login onLoggedIn={handleLoggedIn} />} />
-      <Route element={<RequireAuth token={auth.token} />}>
-        <Route
-          element={
-            <AppLayout
-              auth={auth}
-              menuItems={menuItems}
-              selectedKey={selectedKey}
-              pendingTotal={pendingTotal}
-              adminTooltipTitle={adminTooltipTitle}
-              unreadCount={unreadCount}
-              onLogout={handleLogout}
-              onAdminNotificationClick={handleAdminNotificationClick}
-            />
-          }
-        >
-          <Route path="/" element={<Dashboard />} />
-          <Route element={<RequireRole role={auth.role} allow="merchant" />}>
-            <Route path="/hotels" element={<Hotels />} />
-            <Route path="/hotels/new" element={<HotelEdit />} />
-            <Route path="/hotels/edit/:id" element={<HotelEdit />} />
-            <Route path="/hotels/:id" element={<HotelDetail />} />
-            <Route path="/hotels/:id/stats" element={<OrderStats />} />
+    <ConfigProvider locale={antdLocale}>
+      <Routes>
+        <Route path="/login" element={auth.token ? <Navigate to={homePath} replace /> : <Login onLoggedIn={handleLoggedIn} />} />
+        <Route element={<RequireAuth token={auth.token} />}>
+          <Route
+            element={
+              <AppLayout
+                auth={auth}
+                menuItems={menuItems}
+                selectedKey={selectedKey}
+                pendingTotal={pendingTotal}
+                adminTooltipTitle={adminTooltipTitle}
+                unreadCount={unreadCount}
+                onLogout={handleLogout}
+                onAdminNotificationClick={handleAdminNotificationClick}
+              />
+            }
+          >
+            <Route path="/" element={<Dashboard />} />
+            <Route element={<RequireRole role={auth.role} allow="merchant" />}>
+              <Route path="/hotels" element={<Hotels />} />
+              <Route path="/hotels/new" element={<HotelEdit />} />
+              <Route path="/hotels/edit/:id" element={<HotelEdit />} />
+              <Route path="/hotels/:id" element={<HotelDetail />} />
+              <Route path="/hotels/:id/stats" element={<OrderStats />} />
+            </Route>
+            <Route element={<RequireRole role={auth.role} allow="admin" />}>
+              <Route path="/admin-hotels" element={<AdminHotels />} />
+              <Route path="/admin-hotels/:id" element={<AdminHotelDetail />} />
+              <Route path="/admin-hotels/:id/stats" element={<OrderStats />} />
+              <Route path="/audit" element={<Audit />} />
+              <Route path="/audit/:id" element={<AuditDetail />} />
+              <Route path="/requests" element={<RequestAudit />} />
+              <Route path="/merchants" element={<Merchants />} />
+              <Route path="/merchants/:id" element={<MerchantDetail />} />
+            </Route>
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/account" element={<Account />} />
+            <Route path="/unauthorized" element={<Unauthorized homePath={homePath} />} />
+            <Route path="*" element={<NotFound homePath={homePath} />} />
           </Route>
-          <Route element={<RequireRole role={auth.role} allow="admin" />}>
-            <Route path="/admin-hotels" element={<AdminHotels />} />
-            <Route path="/admin-hotels/:id" element={<AdminHotelDetail />} />
-            <Route path="/admin-hotels/:id/stats" element={<OrderStats />} />
-            <Route path="/audit" element={<Audit />} />
-            <Route path="/audit/:id" element={<AuditDetail />} />
-            <Route path="/requests" element={<RequestAudit />} />
-            <Route path="/merchants" element={<Merchants />} />
-            <Route path="/merchants/:id" element={<MerchantDetail />} />
-          </Route>
-          <Route path="/messages" element={<Messages />} />
-          <Route path="/account" element={<Account />} />
-          <Route path="/unauthorized" element={<Unauthorized homePath={homePath} />} />
-          <Route path="*" element={<NotFound homePath={homePath} />} />
         </Route>
-      </Route>
-    </Routes>
+      </Routes>
+    </ConfigProvider>
   )
 }
 

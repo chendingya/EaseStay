@@ -1,8 +1,15 @@
 {
   "meta": {
     "project": "xiecheng",
-    "updatedAt": "2026-02-01T00:00:00.000Z",
-    "nextId": 1
+    "updatedAt": "2026-02-16T00:00:00.000Z",
+    "nextId": 2
   },
-  "tasks": []
+  "tasks": [
+    {
+      "id": 1,
+      "title": "admin 酒店详情页国际化补全",
+      "status": "done",
+      "updatedAt": "2026-02-16T00:00:00.000Z"
+    }
+  ]
 }

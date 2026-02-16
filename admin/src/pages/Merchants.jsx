@@ -4,9 +4,11 @@ import { useNavigate } from 'react-router-dom'
 import { UserOutlined, ShopOutlined, EyeOutlined, KeyOutlined } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
 import { api } from '../services'
+import { useTranslation } from 'react-i18next'
 
 export default function Merchants() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [loading, setLoading] = useState(false)
   const [merchants, setMerchants] = useState([])
   const [resetModal, setResetModal] = useState(null)
@@ -20,29 +22,29 @@ export default function Merchants() {
       setMerchants(data)
     } catch (error) {
       console.error('获取商户列表失败:', error)
-      message.error('获取商户列表失败')
+      message.error(t('merchants.fetchError'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   const handleResetPassword = async () => {
     try {
       const values = await form.validateFields()
       if (values.newPassword !== values.confirmPassword) {
-        message.error('两次输入的密码不一致')
+        message.error(t('merchants.resetPassword.mismatch'))
         return
       }
 
       setResetting(true)
       await api.post(`/api/user/merchants/${resetModal.id}/reset-password`, { newPassword: values.newPassword })
-      message.success('密码重置成功')
+      message.success(t('merchants.resetPassword.success'))
       setResetModal(null)
       form.resetFields()
     } catch (err) {
       if (err.errorFields) return
       console.error('重置密码失败:', err)
-      message.error('重置密码失败')
+      message.error(t('merchants.resetPassword.error'))
     } finally {
       setResetting(false)
     }
@@ -54,7 +56,7 @@ export default function Merchants() {
 
   const columns = [
     {
-      title: '商户账号',
+      title: t('merchants.columns.username'),
       dataIndex: 'username',
       render: (text) => (
         <Space>
@@ -64,25 +66,25 @@ export default function Merchants() {
       )
     },
     {
-      title: '酒店数量',
+      title: t('merchants.columns.hotelCount'),
       dataIndex: 'hotelCount',
       render: (count, record) => (
         <Space>
           <ShopOutlined />
-          <span>{count} 家</span>
+          <span>{t('merchants.hotelCountValue', { count })}</span>
           {record.approvedCount > 0 && (
-            <Tag color="green">{record.approvedCount} 家上架</Tag>
+            <Tag color="green">{t('merchants.approvedCountValue', { count: record.approvedCount })}</Tag>
           )}
         </Space>
       )
     },
     {
-      title: '注册时间',
+      title: t('merchants.columns.createdAt'),
       dataIndex: 'created_at',
       render: (v) => v ? new Date(v).toLocaleDateString('zh-CN') : '-'
     },
     {
-      title: '操作',
+      title: t('merchants.columns.action'),
       render: (_, record) => (
         <Space>
           <GlassButton
@@ -90,7 +92,7 @@ export default function Merchants() {
             icon={<EyeOutlined />}
             onClick={() => navigate(`/merchants/${record.id}`)}
           >
-            查看
+            {t('common.view')}
           </GlassButton>
           <GlassButton
             type="link"
@@ -100,7 +102,7 @@ export default function Merchants() {
               form.resetFields()
             }}
           >
-            重置密码
+            {t('merchants.actions.resetPassword')}
           </GlassButton>
         </Space>
       )
@@ -110,8 +112,8 @@ export default function Merchants() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 24 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography.Title level={4} style={{ margin: 0 }}>商户管理</Typography.Title>
-        <Typography.Text type="secondary">共 {merchants.length} 个商户</Typography.Text>
+        <Typography.Title level={4} style={{ margin: 0 }}>{t('merchants.title')}</Typography.Title>
+        <Typography.Text type="secondary">{t('merchants.total', { count: merchants.length })}</Typography.Text>
       </div>
 
       <Card>
@@ -126,7 +128,7 @@ export default function Merchants() {
 
       {/* 重置密码弹窗 */}
       <Modal
-        title={`重置密码 - ${resetModal?.username}`}
+        title={t('merchants.resetPassword.title', { username: resetModal?.username })}
         open={!!resetModal}
         onCancel={() => {
           setResetModal(null)
@@ -138,31 +140,31 @@ export default function Merchants() {
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item
             name="newPassword"
-            label="新密码"
+            label={t('merchants.resetPassword.new')}
             rules={[
-              { required: true, message: '请输入新密码' },
-              { min: 6, message: '密码至少6位' }
+              { required: true, message: t('merchants.resetPassword.newRequired') },
+              { min: 6, message: t('merchants.resetPassword.minLength') }
             ]}
           >
-            <Input.Password placeholder="请输入新密码（至少6位）" />
+            <Input.Password placeholder={t('merchants.resetPassword.newPlaceholder')} />
           </Form.Item>
 
           <Form.Item
             name="confirmPassword"
-            label="确认密码"
+            label={t('merchants.resetPassword.confirm')}
             rules={[
-              { required: true, message: '请再次输入密码' },
+              { required: true, message: t('merchants.resetPassword.confirmRequired') },
               ({ getFieldValue }) => ({
                 validator(_, value) {
                   if (!value || getFieldValue('newPassword') === value) {
                     return Promise.resolve()
                   }
-                  return Promise.reject(new Error('两次输入的密码不一致'))
+                  return Promise.reject(new Error(t('merchants.resetPassword.mismatch')))
                 }
               })
             ]}
           >
-            <Input.Password placeholder="请再次输入密码" />
+            <Input.Password placeholder={t('merchants.resetPassword.confirmPlaceholder')} />
           </Form.Item>
 
           <Form.Item style={{ marginBottom: 0 }}>
@@ -170,9 +172,9 @@ export default function Merchants() {
               <GlassButton onClick={() => {
                 setResetModal(null)
                 form.resetFields()
-              }}>取消</GlassButton>
+              }}>{t('common.cancel')}</GlassButton>
               <GlassButton type="primary" loading={resetting} onClick={handleResetPassword}>
-                确认重置
+                {t('merchants.resetPassword.confirmAction')}
               </GlassButton>
             </Space>
           </Form.Item>

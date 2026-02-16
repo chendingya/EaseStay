@@ -4,17 +4,12 @@ import { Card, Descriptions, Tag, Space, Typography, Table, Spin, Row, Col, Stat
 import { UserOutlined, ShopOutlined, CalendarOutlined, KeyOutlined, StarFilled, EnvironmentOutlined } from '@ant-design/icons'
 import { GlassButton, glassMessage as message } from '../components'
 import { api } from '../services'
-
-const statusMap = {
-  pending: { color: 'orange', label: '待审核' },
-  approved: { color: 'green', label: '已上架' },
-  rejected: { color: 'red', label: '已驳回' },
-  offline: { color: 'default', label: '已下线' }
-}
+import { useTranslation } from 'react-i18next'
 
 export default function MerchantDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [merchant, setMerchant] = useState(null)
   const [loading, setLoading] = useState(true)
   const [resetModal, setResetModal] = useState(false)
@@ -43,13 +38,13 @@ export default function MerchantDetail() {
     try {
       const values = await form.validateFields()
       if (values.newPassword !== values.confirmPassword) {
-        message.error('两次输入的密码不一致')
+        message.error(t('merchants.resetPassword.mismatch'))
         return
       }
 
       setResetting(true)
       await api.post(`/api/user/merchants/${id}/reset-password`, { newPassword: values.newPassword })
-      message.success('密码重置成功')
+      message.success(t('merchants.resetPassword.success'))
       setResetModal(false)
       form.resetFields()
     } catch (err) {
@@ -80,9 +75,16 @@ export default function MerchantDetail() {
     offline: hotels.filter(h => h.status === 'offline').length
   }
 
+  const statusMap = {
+    pending: { color: 'orange', label: t('status.pending') },
+    approved: { color: 'green', label: t('status.approved') },
+    rejected: { color: 'red', label: t('status.rejected') },
+    offline: { color: 'default', label: t('status.offline') }
+  }
+
   const hotelColumns = [
     { 
-      title: '酒店名称', 
+      title: t('merchantDetail.columns.hotelName'), 
       dataIndex: 'name', 
       ellipsis: true,
       render: (text, record) => (
@@ -90,19 +92,19 @@ export default function MerchantDetail() {
       )
     },
     { 
-      title: '城市', 
+      title: t('merchantDetail.columns.city'), 
       dataIndex: 'city', 
       width: 100,
       render: (v) => v ? <><EnvironmentOutlined /> {v}</> : '-'
     },
     { 
-      title: '星级', 
+      title: t('merchantDetail.columns.star'), 
       dataIndex: 'star_rating', 
       width: 80,
-      render: v => v ? <span><StarFilled style={{ color: '#faad14' }} /> {v}星</span> : '-'
+      render: v => v ? <span><StarFilled style={{ color: '#faad14' }} /> {t('merchantDetail.starValue', { value: v })}</span> : '-'
     },
     {
-      title: '状态',
+      title: t('merchantDetail.columns.status'),
       dataIndex: 'status',
       width: 90,
       render: (value) => {
@@ -111,11 +113,11 @@ export default function MerchantDetail() {
       }
     },
     {
-      title: '操作',
+      title: t('merchantDetail.columns.action'),
       width: 100,
       render: (_, record) => (
         <GlassButton type="link" size="small" onClick={() => navigate(`/admin-hotels/${record.id}`)}>
-          查看详情
+          {t('common.viewDetail')}
         </GlassButton>
       )
     }
@@ -129,12 +131,12 @@ export default function MerchantDetail() {
           <Typography.Title level={4} style={{ margin: 0 }}>
             <UserOutlined /> {merchant.username}
           </Typography.Title>
-          <Typography.Text type="secondary">商户详情</Typography.Text>
+          <Typography.Text type="secondary">{t('merchantDetail.subtitle')}</Typography.Text>
         </div>
         <Space>
-          <GlassButton onClick={() => navigate('/merchants')}>返回列表</GlassButton>
+          <GlassButton onClick={() => navigate('/merchants')}>{t('common.backToList')}</GlassButton>
           <GlassButton icon={<KeyOutlined />} onClick={() => setResetModal(true)}>
-            重置密码
+            {t('merchants.actions.resetPassword')}
           </GlassButton>
         </Space>
       </div>
@@ -143,22 +145,22 @@ export default function MerchantDetail() {
       <Row gutter={16}>
         <Col span={6}>
           <Card>
-            <Statistic title="酒店总数" value={stats.total} prefix={<ShopOutlined />} suffix="家" />
+            <Statistic title={t('merchantDetail.stats.total')} value={stats.total} prefix={<ShopOutlined />} suffix={t('merchantDetail.stats.suffix')} />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic title="已上架" value={stats.approved} valueStyle={{ color: '#52c41a' }} suffix="家" />
+            <Statistic title={t('merchantDetail.stats.approved')} value={stats.approved} valueStyle={{ color: '#52c41a' }} suffix={t('merchantDetail.stats.suffix')} />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic title="待审核" value={stats.pending} valueStyle={{ color: '#faad14' }} suffix="家" />
+            <Statistic title={t('merchantDetail.stats.pending')} value={stats.pending} valueStyle={{ color: '#faad14' }} suffix={t('merchantDetail.stats.suffix')} />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic title="已下线" value={stats.offline} valueStyle={{ color: '#999' }} suffix="家" />
+            <Statistic title={t('merchantDetail.stats.offline')} value={stats.offline} valueStyle={{ color: '#999' }} suffix={t('merchantDetail.stats.suffix')} />
           </Card>
         </Col>
       </Row>
@@ -166,15 +168,15 @@ export default function MerchantDetail() {
       <Row gutter={24}>
         <Col span={8}>
           {/* 基本信息 */}
-          <Card title="基本信息">
+          <Card title={t('merchantDetail.sections.basic')}>
             <Descriptions column={1}>
-              <Descriptions.Item label={<><UserOutlined /> 商户账号</>}>
+              <Descriptions.Item label={<><UserOutlined /> {t('merchantDetail.basic.username')}</>}>
                 {merchant.username}
               </Descriptions.Item>
-              <Descriptions.Item label={<><CalendarOutlined /> 注册时间</>}>
+              <Descriptions.Item label={<><CalendarOutlined /> {t('merchantDetail.basic.createdAt')}</>}>
                 {merchant.created_at ? new Date(merchant.created_at).toLocaleDateString('zh-CN') : '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="商户ID">
+              <Descriptions.Item label={t('merchantDetail.basic.id')}>
                 {merchant.id}
               </Descriptions.Item>
             </Descriptions>
@@ -183,13 +185,13 @@ export default function MerchantDetail() {
 
         <Col span={16}>
           {/* 酒店列表 */}
-          <Card title={`酒店列表 (${hotels.length})`}>
+          <Card title={t('merchantDetail.sections.hotels', { count: hotels.length })}>
             <Table
               columns={hotelColumns}
               dataSource={hotels}
               rowKey="id"
               pagination={{ pageSize: 5, showSizeChanger: false }}
-              locale={{ emptyText: '该商户暂无酒店' }}
+              locale={{ emptyText: t('merchantDetail.emptyHotels') }}
             />
           </Card>
         </Col>
@@ -197,7 +199,7 @@ export default function MerchantDetail() {
 
       {/* 重置密码弹窗 */}
       <Modal
-        title={`重置密码 - ${merchant.username}`}
+        title={t('merchants.resetPassword.title', { username: merchant.username })}
         open={resetModal}
         onCancel={() => {
           setResetModal(false)
@@ -209,31 +211,31 @@ export default function MerchantDetail() {
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item
             name="newPassword"
-            label="新密码"
+            label={t('merchants.resetPassword.new')}
             rules={[
-              { required: true, message: '请输入新密码' },
-              { min: 6, message: '密码至少6位' }
+              { required: true, message: t('merchants.resetPassword.newRequired') },
+              { min: 6, message: t('merchants.resetPassword.minLength') }
             ]}
           >
-            <Input.Password placeholder="请输入新密码（至少6位）" />
+            <Input.Password placeholder={t('merchants.resetPassword.newPlaceholder')} />
           </Form.Item>
 
           <Form.Item
             name="confirmPassword"
-            label="确认密码"
+            label={t('merchants.resetPassword.confirm')}
             rules={[
-              { required: true, message: '请再次输入密码' },
+              { required: true, message: t('merchants.resetPassword.confirmRequired') },
               ({ getFieldValue }) => ({
                 validator(_, value) {
                   if (!value || getFieldValue('newPassword') === value) {
                     return Promise.resolve()
                   }
-                  return Promise.reject(new Error('两次输入的密码不一致'))
+                  return Promise.reject(new Error(t('merchants.resetPassword.mismatch')))
                 }
               })
             ]}
           >
-            <Input.Password placeholder="请再次输入密码" />
+            <Input.Password placeholder={t('merchants.resetPassword.confirmPlaceholder')} />
           </Form.Item>
 
           <Form.Item style={{ marginBottom: 0 }}>
@@ -241,9 +243,9 @@ export default function MerchantDetail() {
               <GlassButton onClick={() => {
                 setResetModal(false)
                 form.resetFields()
-              }}>取消</GlassButton>
+              }}>{t('common.cancel')}</GlassButton>
               <GlassButton type="primary" loading={resetting} onClick={handleResetPassword}>
-                确认重置
+                {t('merchants.resetPassword.confirmAction')}
               </GlassButton>
             </Space>
           </Form.Item>

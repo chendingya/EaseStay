@@ -1,12 +1,14 @@
 import { ConfigProvider, Form, Input, Select, Tabs, Typography, theme } from 'antd'
 import { LockOutlined, MobileOutlined, UserOutlined } from '@ant-design/icons'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { GlassButton, glassMessage as message } from '../components'
 import { api } from '../services'
 import './Login.css'
 
 export default function Login({ onLoggedIn }) {
   const { token } = theme.useToken()
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState('login')
   const [sending, setSending] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -17,7 +19,7 @@ export default function Login({ onLoggedIn }) {
     try {
       const data = await api.post('/api/auth/login', { username: values.username, password: values.password })
       onLoggedIn({ token: data.token, role: data.userRole, username: values.username })
-      message.success('登录成功')
+      message.success(t('login.success'))
       return true
     } catch (error) {
       console.error('登录失败:', error)
@@ -34,7 +36,7 @@ export default function Login({ onLoggedIn }) {
         code: values.code
       })
       const loginOk = await handleLogin({ username: values.username, password: values.password })
-      if (loginOk) message.success('注册成功')
+      if (loginOk) message.success(t('login.registerSuccess'))
       return loginOk
     } catch (error) {
       console.error('注册失败:', error)
@@ -45,14 +47,14 @@ export default function Login({ onLoggedIn }) {
   const handleSendCode = async () => {
     const username = form.getFieldValue('username')
     if (!username) {
-      message.warning('请先填写账号')
+      message.warning(t('login.fillUsernameFirst'))
       return
     }
     setSending(true)
     try {
       const data = await api.post('/api/auth/sms/send', { username })
       form.setFieldsValue({ code: data.code })
-      message.success(`验证码已发送：${data.code}`)
+      message.success(t('login.codeSent', { code: data.code }))
       setSeconds(60)
     } finally {
       setSending(false)
@@ -93,8 +95,8 @@ export default function Login({ onLoggedIn }) {
               </svg>
             </div>
             <div>
-              <Typography.Title level={4} style={{ marginBottom: 0, color: '#0f172a' }}>易宿酒店平台</Typography.Title>
-              <Typography.Text style={{ color: '#475569' }}>一站式酒店管理与预订协同平台</Typography.Text>
+              <Typography.Title level={4} style={{ marginBottom: 0, color: '#0f172a' }}>{t('login.title')}</Typography.Title>
+              <Typography.Text style={{ color: '#475569' }}>{t('login.subtitle')}</Typography.Text>
             </div>
           </div>
 
@@ -116,26 +118,26 @@ export default function Login({ onLoggedIn }) {
               activeKey={activeTab}
               onChange={setActiveTab}
               items={[
-                { key: 'login', label: '登录' },
-                { key: 'register', label: '注册' }
+                { key: 'login', label: t('login.tabs.login') },
+                { key: 'register', label: t('login.tabs.register') }
               ]}
             />
 
             {activeTab === 'login' && (
               <>
-                <Form.Item name="username" rules={[{ required: true, message: '请输入账号!' }]}>
+                <Form.Item name="username" rules={[{ required: true, message: t('login.rules.usernameRequired') }]}>
                   <Input
                     size="large"
                     prefix={<UserOutlined style={{ color: token.colorText }} />}
-                    placeholder="请输入账号"
+                    placeholder={t('login.placeholders.username')}
                   />
                 </Form.Item>
 
-                <Form.Item name="password" rules={[{ required: true, message: '请输入密码！' }]}>
+                <Form.Item name="password" rules={[{ required: true, message: t('login.rules.passwordRequired') }]}>
                   <Input.Password
                     size="large"
                     prefix={<LockOutlined style={{ color: token.colorText }} />}
-                    placeholder="请输入密码"
+                    placeholder={t('login.placeholders.password')}
                   />
                 </Form.Item>
               </>
@@ -145,35 +147,35 @@ export default function Login({ onLoggedIn }) {
               <>
                 <Form.Item
                   name="username"
-                  rules={[{ required: true, message: '请输入账号!' }]}
+                  rules={[{ required: true, message: t('login.rules.usernameRequired') }]}
                 >
                   <Input
                     size="large"
                     prefix={<UserOutlined style={{ color: token.colorText }} />}
-                    placeholder="请输入账号"
+                    placeholder={t('login.placeholders.username')}
                   />
                 </Form.Item>
                 <Form.Item
                   name="password"
-                  rules={[{ required: true, message: '请输入密码！' }]}
+                  rules={[{ required: true, message: t('login.rules.passwordRequired') }]}
                 >
                   <Input.Password
                     size="large"
                     prefix={<LockOutlined style={{ color: token.colorText }} />}
-                    placeholder="请输入密码"
+                    placeholder={t('login.placeholders.password')}
                   />
                 </Form.Item>
                 <Form.Item
                   name="code"
                   rules={[
-                    { required: true, message: '请输入验证码！' },
-                    { pattern: /^\d{6}$/, message: '验证码为 6 位数字' }
+                    { required: true, message: t('login.rules.codeRequired') },
+                    { pattern: /^\d{6}$/, message: t('login.rules.codePattern') }
                   ]}
                 >
                   <Input
                     size="large"
                     prefix={<MobileOutlined style={{ color: token.colorText }} />}
-                    placeholder="请输入验证码"
+                    placeholder={t('login.placeholders.code')}
                     addonAfter={(
                       <GlassButton
                         type="link"
@@ -181,27 +183,27 @@ export default function Login({ onLoggedIn }) {
                         disabled={seconds > 0}
                         loading={sending}
                       >
-                        {seconds > 0 ? `${seconds}s` : '获取验证码'}
+                        {seconds > 0 ? t('login.codeCountdown', { seconds }) : t('login.getCode')}
                       </GlassButton>
                     )}
                   />
                 </Form.Item>
-                <Form.Item name="role" rules={[{ required: true, message: '请选择角色' }]} initialValue="merchant">
+                <Form.Item name="role" rules={[{ required: true, message: t('login.rules.roleRequired') }]} initialValue="merchant">
                   <Select
                     size="large"
                     options={[
-                      { value: 'merchant', label: '商户' },
-                      { value: 'admin', label: '管理员' }
+                      { value: 'merchant', label: t('login.roles.merchant') },
+                      { value: 'admin', label: t('login.roles.admin') }
                     ]}
-                    placeholder="选择角色"
+                    placeholder={t('login.placeholders.role')}
                   />
                 </Form.Item>
-                <div className="pro-login-hint">验证码由后端模拟短信生成并返回前端。</div>
+                <div className="pro-login-hint">{t('login.codeHint')}</div>
               </>
             )}
 
             <GlassButton type="primary" htmlType="submit" size="large" block loading={submitting} disabled={submitting}>
-              {activeTab === 'register' ? '注册并登录' : '登录'}
+              {activeTab === 'register' ? t('login.actions.registerAndLogin') : t('login.actions.login')}
             </GlassButton>
             </Form>
 
@@ -211,8 +213,8 @@ export default function Login({ onLoggedIn }) {
           {/* 活动提示条 - 位于登录卡片底部 */}
           <div className="pro-login-activity-bar">
             <span className="pro-login-activity-icon">🎉</span>
-            <span className="pro-login-activity-text">易宿 · 经营增长季：专属补贴 + 智能推荐，提升转化与入住率</span>
-            <GlassButton type="link" size="small" className="pro-login-activity-link">了解详情 →</GlassButton>
+            <span className="pro-login-activity-text">{t('login.activity.text')}</span>
+            <GlassButton type="link" size="small" className="pro-login-activity-link">{t('login.activity.cta')}</GlassButton>
           </div>
         </div>
       </div>
