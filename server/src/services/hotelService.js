@@ -1408,6 +1408,11 @@ const listPublicHotels = async ({ query }) => {
       .map((item) => item.trim())
       .filter(Boolean)
     if (tagList.length > 0) {
+      // Supabase contains operator for array column needs array format
+      // facilities is jsonb array or text array
+      // If facilities is jsonb: .contains('facilities', JSON.stringify(tagList))
+      // If facilities is text[]: .contains('facilities', tagList)
+      // Assuming it's JSONB array of strings based on usage
       dbQuery = dbQuery.contains('facilities', tagList)
     }
   }
@@ -1419,10 +1424,11 @@ const listPublicHotels = async ({ query }) => {
     
     // 如果没有 filterCity，我们尝试基于 keyword 模糊匹配先缩小范围
     if (!filterCity) {
-       let orString = `name.ilike.%${keyword}%,name_en.ilike.%${keyword}%,address.ilike.%${keyword}%,facilities.cs.["${keyword}"]`
+       // facilities.cs.["${keyword}"] is not valid in ilike/or syntax
+       // Using simpler OR logic without facilities for initial filter
+       let orString = `name.ilike.%${keyword}%,name_en.ilike.%${keyword}%,address.ilike.%${keyword}%`
        dbQuery = dbQuery.or(orString).limit(200)
     } else {
-       // 如果有 filterCity，我们取回该城市下的酒店进行排序
        dbQuery = dbQuery.limit(500)
     }
 

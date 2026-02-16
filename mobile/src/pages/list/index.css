@@ -109,9 +109,21 @@
   min-height: 30px;
 }
 
+.active-filter-label {
+  color: #0086F6;
+  font-weight: bold;
+}
+
+.square-checkbox .adm-checkbox-icon {
+  border-radius: 4px; /* Make checkbox square with slight rounding */
+}
+
 .dropdown-content {
   padding: 16px;
   background-color: #fff;
+  max-height: 60vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .filter-section-title {

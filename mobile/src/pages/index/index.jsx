@@ -1,7 +1,7 @@
 import { View, Image, Text, Map } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useEffect, useState } from 'react'
-import { Swiper, Button, Card, SearchBar, Tag, Space, Toast, CalendarPicker, Picker, Popup, Cascader } from 'antd-mobile'
+import { Swiper, Button, Card, SearchBar, Tag, Space, Toast, CalendarPicker, Picker, Popup, Cascader, Slider } from 'antd-mobile'
 import { SearchOutline, CalendarOutline, EnvironmentOutline } from 'antd-mobile-icons'
 import { api } from '../../services/request'
 import HotelCard from '../../components/HotelCard'
@@ -51,7 +51,8 @@ export default function Index() {
   const [calendarVisible, setCalendarVisible] = useState(false)
   const [filterVisible, setFilterVisible] = useState(false)
   const [selectedStar, setSelectedStar] = useState(() => storedParams.selectedStar ?? null)
-  const [selectedPrice, setSelectedPrice] = useState(() => storedParams.selectedPrice ?? null) // null, '0-150', '150-300', '300-450', '450-600', '600-1000', '1000+'
+  const [selectedPrice, setSelectedPrice] = useState(() => storedParams.selectedPrice ?? null) // null, '0-150', '150-300', ...
+  const [priceRange, setPriceRange] = useState([0, 2100]) // For slider state
   const [hotHotels, setHotHotels] = useState([])
   const [latitude, setLatitude] = useState(() => Number(storedParams.userLat) || 31.2304) // Default Shanghai
   const [longitude, setLongitude] = useState(() => Number(storedParams.userLng) || 121.4737)
@@ -81,6 +82,36 @@ export default function Index() {
       userLng: longitude
     })
   }, [city, keyword, checkIn, checkOut, selectedStar, selectedPrice, latitude, longitude])
+
+  useEffect(() => {
+    if (filterVisible === 'price') {
+      if (selectedPrice) {
+        if (selectedPrice.endsWith('+')) {
+          const min = parseInt(selectedPrice)
+          setPriceRange([min, 2100])
+        } else if (selectedPrice.includes('-')) {
+          const [min, max] = selectedPrice.split('-').map(Number)
+          setPriceRange([min, max])
+        } else {
+          setPriceRange([0, 2100])
+        }
+      } else {
+        setPriceRange([0, 2100])
+      }
+    }
+  }, [filterVisible])
+
+  const handlePriceConfirm = () => {
+    const [min, max] = priceRange
+    if (min === 0 && max === 2100) {
+      setSelectedPrice(null)
+    } else if (max === 2100) {
+      setSelectedPrice(`${min}+`)
+    } else {
+      setSelectedPrice(`${min}-${max}`)
+    }
+    setFilterVisible(false)
+  }
 
   const fetchQuickTags = async () => {
     try {
@@ -311,12 +342,9 @@ export default function Index() {
       url += `&stars=${selectedStar}`
     }
     if (selectedPrice) {
-      // Pass price range as a query param. Backend needs to support range or specific logic.
-      // Assuming list page can handle it or pass through.
-      // Usually price range is minPrice=0&maxPrice=150
-      // Let's decode simple range string here
-      if (selectedPrice === '1000+') {
-         url += `&minPrice=1000`
+      if (selectedPrice.endsWith('+')) {
+         const min = selectedPrice.replace('+', '')
+         url += `&minPrice=${min}`
       } else {
          const [min, max] = selectedPrice.split('-')
          if (min) url += `&minPrice=${min}`
@@ -332,8 +360,9 @@ export default function Index() {
       url += `&stars=${selectedStar}`
     }
     if (selectedPrice) {
-      if (selectedPrice === '1000+') {
-         url += `&minPrice=1000`
+      if (selectedPrice.endsWith('+')) {
+         const min = selectedPrice.replace('+', '')
+         url += `&minPrice=${min}`
       } else {
          const [min, max] = selectedPrice.split('-')
          if (min) url += `&minPrice=${min}`
@@ -586,23 +615,86 @@ export default function Index() {
       />
 
       {/* 价格筛选弹窗 */}
-      <Picker
-        columns={[[
-          { label: '不限', value: null },
-          { label: '¥150以下', value: '0-150' },
-          { label: '¥150-300', value: '150-300' },
-          { label: '¥300-450', value: '300-450' },
-          { label: '¥450-600', value: '450-600' },
-          { label: '¥600-1000', value: '600-1000' },
-          { label: '¥1000以上', value: '1000+' },
-        ]]}
+      <Popup
         visible={filterVisible === 'price'}
-        onClose={() => setFilterVisible(false)}
-        value={[selectedPrice]}
-        onConfirm={v => {
-          setSelectedPrice(v[0])
-        }}
-      />
+        onMaskClick={() => setFilterVisible(false)}
+        bodyStyle={{ borderTopLeftRadius: '12px', borderTopRightRadius: '12px', background: '#fff', minHeight: '40vh' }}
+      >
+        <View style={{ padding: '16px' }}>
+          <View style={{ textAlign: 'center', fontSize: 16, fontWeight: 'bold', marginBottom: 24 }}>价格筛选</View>
+          
+          <View style={{ marginBottom: 32, padding: '0 12px' }}>
+             <View style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, color: '#333', fontSize: 14 }}>
+               <Text>¥{priceRange[0]}</Text>
+               <Text>¥{priceRange[1] === 2100 ? '2100+' : priceRange[1]}</Text>
+             </View>
+             <Slider
+               range
+               min={0}
+               max={2100}
+               step={50}
+               value={priceRange}
+               onChange={val => setPriceRange(val)}
+               style={{ '--fill-color': '#0086F6' }}
+             />
+          </View>
+
+          <View style={{ marginBottom: 24 }}>
+             <View style={{ fontSize: 14, color: '#999', marginBottom: 12 }}>价格区间</View>
+             <Space wrap style={{ '--gap': '12px' }}>
+               {[
+                 { label: '不限', value: null },
+                 { label: '¥150以下', value: '0-150' },
+                 { label: '¥150-300', value: '150-300' },
+                 { label: '¥300-450', value: '300-450' },
+                 { label: '¥450-600', value: '450-600' },
+                 { label: '¥600-1000', value: '600-1000' },
+                 { label: '¥1000以上', value: '1000+' },
+               ].map(item => {
+                 let isActive = false
+                 if (item.value === null) isActive = priceRange[0] === 0 && priceRange[1] === 2100
+                 else if (item.value.endsWith('+')) isActive = priceRange[0] === parseInt(item.value) && priceRange[1] === 2100
+                 else {
+                    const [min, max] = item.value.split('-').map(Number)
+                    isActive = priceRange[0] === min && priceRange[1] === max
+                 }
+                 
+                 return (
+                   <Tag
+                     key={item.label}
+                     fill={isActive ? 'solid' : 'outline'}
+                     color='primary'
+                     style={{ 
+                       padding: '6px 16px', 
+                       borderRadius: 4, 
+                       minWidth: 80, 
+                       textAlign: 'center',
+                       backgroundColor: isActive ? '#0086F6' : '#f5f5f5',
+                       color: isActive ? '#fff' : '#333',
+                       border: 'none'
+                     }}
+                     onClick={() => {
+                        if (item.value === null) setPriceRange([0, 2100])
+                        else if (item.value.endsWith('+')) setPriceRange([parseInt(item.value), 2100])
+                        else {
+                          const [min, max] = item.value.split('-').map(Number)
+                          setPriceRange([min, max])
+                        }
+                     }}
+                   >
+                     {item.label}
+                   </Tag>
+                 )
+               })}
+             </Space>
+          </View>
+
+          <View style={{ display: 'flex', gap: 12 }}>
+             <Button block shape='rounded' onClick={() => setPriceRange([0, 2100])} style={{ flex: 1, background: '#f5f5f5', border: 'none', color: '#666' }}>重置</Button>
+             <Button block shape='rounded' color='primary' onClick={handlePriceConfirm} style={{ flex: 1 }}>查看酒店</Button>
+          </View>
+        </View>
+      </Popup>
 
       {/* 地图找房弹窗 */}
       <Popup
