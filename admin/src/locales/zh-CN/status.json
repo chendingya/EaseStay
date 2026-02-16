@@ -1,0 +1,8 @@
+{
+  "status": {
+    "pending": "待审核",
+    "approved": "已上架",
+    "rejected": "已驳回",
+    "offline": "已下线"
+  }
+}

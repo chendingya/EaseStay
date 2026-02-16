@@ -1,0 +1,9 @@
+{
+  "header": {
+    "title": "酒店管理后台",
+    "pendingHotels": "待审核酒店",
+    "pendingRequests": "待审核申请",
+    "items": "条",
+    "messageCenter": "消息中心"
+  }
+}

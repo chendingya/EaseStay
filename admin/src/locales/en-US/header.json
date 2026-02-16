@@ -1,0 +1,9 @@
+{
+  "header": {
+    "title": "Hotel Management",
+    "pendingHotels": "Pending Hotels",
+    "pendingRequests": "Pending Requests",
+    "items": "items",
+    "messageCenter": "Message Center"
+  }
+}

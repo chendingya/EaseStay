@@ -19,7 +19,7 @@ export default function Account() {
       const data = await api.get('/api/user/me')
       setUser(data)
     } catch (error) {
-      console.error('获取用户信息失败:', error)
+      console.error(error)
       message.error(t('account.fetchError'))
     } finally {
       setLoading(false)
@@ -48,7 +48,7 @@ export default function Account() {
       form.resetFields()
     } catch (err) {
       if (err.errorFields) return
-      console.error('修改密码失败:', err)
+      console.error(err)
       message.error(t('account.passwordError'))
     } finally {
       setSaving(false)

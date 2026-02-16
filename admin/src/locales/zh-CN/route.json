@@ -1,0 +1,18 @@
+{
+  "route": {
+    "dashboard": "工作台",
+    "myHotels": "我的酒店",
+    "newHotel": "新增酒店",
+    "editHotel": "编辑酒店",
+    "hotelDetail": "酒店详情",
+    "orderStats": "订单统计",
+    "hotels": "酒店管理",
+    "hotelAudit": "酒店审核",
+    "auditDetail": "审核详情",
+    "requestAudit": "申请审核",
+    "messages": "消息中心",
+    "account": "账户管理",
+    "merchants": "商户管理",
+    "merchantDetail": "商户详情"
+  }
+}

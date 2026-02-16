@@ -2,53 +2,86 @@
 
 ## 1. 架构风格
 - B/S 架构，前后端分离
-- 前端：移动端（Taro/React 或 React Native），PC 管理端（React + Ant Design）
+- 前端：移动端（Taro + React），PC 管理端（React + Vite + Ant Design）
 - 后端：Node.js（Express），RESTful API
 - 数据库：Supabase（PostgreSQL）
-- 文件服务：图片上传（Banner、实景图），后期可接对象存储
 
-## 2. 逻辑分层
-- 前端应用层：MobileApp、PCAdmin
-- 服务端路由层：APIGateway
-- 业务服务：AuthService、HotelService、SearchService
-- 数据存储层：DB、FileStore
+## 2. 分层与职责
+### 2.1 前端应用层
+- `mobile`：用户端搜索、详情、订单、收藏
+- `admin`：商户/管理员后台、审核流、消息中心
 
-## 3. Mermaid 架构示意
+### 2.2 网关与业务层
+- 路由聚合层：认证、酒店、申请、订单、通知、地图
+- 业务服务层：状态流转、库存计算、审核规则、通知触发
+
+### 2.3 数据层
+- PostgreSQL：业务主数据（用户、酒店、房型、订单、申请、通知）
+- 外部地图服务：POI 检索与地址解析
+
+## 3. Admin 国际化子架构（2026-02 落地）
+### 3.1 词典组织
+- 从单文件翻译演进为 namespace 分层：`common/auth/dashboard/hotels/...`
+- 目录规范：`admin/src/locales/{lng}/{namespace}.json`
+
+### 3.2 资源加载策略
+- 语言维度懒加载：仅在首次使用语言时加载对应资源
+- namespace 维度懒加载：按路由声明的业务域按需加载
+- 基础 namespace（公共 UI 文案）在初始化阶段预加载
+
+### 3.3 路由联动
+- 路由元数据声明 `namespaces`
+- 路由切换时先加载目标 namespace，再渲染页面组件
+- 页面组件使用 `React.lazy` 做代码分割
+
+### 3.4 质量门禁
+- `i18n:check`：校验双语 key 一致性
+- `i18n:check:strict`：在一致性基础上，阻断新增硬编码中文
+
+## 4. Mermaid 架构示意
 ```mermaid
 graph TD
-    User[C端用户] -->|访问| MobileApp[移动端 (Taro/React)]
-    Merchant[B端商户] -->|访问| PCAdmin[PC管理后台 (React)]
+    User[C端用户] -->|访问| MobileApp[移动端]
+    Merchant[B端商户] -->|访问| PCAdmin[Admin 管理端]
     Admin[平台管理员] -->|访问| PCAdmin
 
-    subgraph "前端应用层"
+    subgraph Frontend
         MobileApp
         PCAdmin
+        I18N[i18n Loader\n语言+namespace懒加载]
     end
 
-    subgraph "Node.js 服务端"
-        APIGateway[API 路由层]
-        AuthService[认证服务]
-        HotelService[酒店信息服务]
-        SearchService[搜索与筛选服务]
+    subgraph Backend
+        APIGateway[Express API]
+        AuthService[认证鉴权]
+        HotelService[酒店与房型]
+        RequestService[申请审核]
+        OrderService[订单]
+        NotifyService[通知]
     end
 
-    subgraph "数据存储层"
-        DB[(数据库 MySQL/ Mongo)]
-        FileStore[图片存储]
+    subgraph Data
+        DB[(PostgreSQL)]
+        MapAPI[地图服务]
     end
 
+    PCAdmin --> I18N
     MobileApp -->|HTTP/REST| APIGateway
     PCAdmin -->|HTTP/REST| APIGateway
     APIGateway --> AuthService
     APIGateway --> HotelService
-    APIGateway --> SearchService
+    APIGateway --> RequestService
+    APIGateway --> OrderService
+    APIGateway --> NotifyService
     HotelService --> DB
-    SearchService --> DB
-    HotelService --> FileStore
+    RequestService --> DB
+    OrderService --> DB
+    NotifyService --> DB
+    HotelService --> MapAPI
 ```
 
-## 4. 非功能性要求
-- 安全：JWT 认证、角色鉴权、密码加密存储
-- 性能：分页查询、长列表优化、静态资源缓存
-- 可观测：健康检查、结构化日志（后续接入）
-- 可扩展：服务分层清晰，便于拆分与横向扩展
+## 5. 非功能性要求
+- 安全：JWT 认证、角色鉴权、敏感操作校验
+- 性能：路由级代码分割、词典按需加载、分页与增量渲染
+- 可维护：业务域分层（路由、服务、词典、检查脚本）
+- 可扩展：新增语言只需补 `{lng}/{namespace}.json` 并接入 loader

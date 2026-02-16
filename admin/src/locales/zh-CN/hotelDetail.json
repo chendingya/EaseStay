@@ -1,0 +1,124 @@
+{
+  "hotelDetail": {
+    "actions": {
+      "edit": "编辑酒店"
+    },
+    "sections": {
+      "basic": "基本信息",
+      "images": "酒店图片",
+      "facilities": "设施服务",
+      "promotions": "优惠活动",
+      "nearby": "周边信息"
+    },
+    "basic": {
+      "city": "城市",
+      "address": "地址",
+      "star": "星级",
+      "starValue": "{{value}} 星级",
+      "unrated": "未评级",
+      "openingTime": "开业时间"
+    },
+    "tabs": {
+      "overview": "房间总览",
+      "rooms": "房型列表",
+      "orders": "订单展示"
+    },
+    "overview": {
+      "total": "总房间",
+      "used": "已使用",
+      "available": "空闲",
+      "offline": "已下架",
+      "suffixRoom": "间",
+      "occupancyRate": "入住率 {{value}}%",
+      "usedRate": "已使用占比",
+      "availableRate": "空闲占比",
+      "offlineRate": "下架占比"
+    },
+    "room": {
+      "name": "房型名称",
+      "capacity": "可住",
+      "capacityValue": "{{value}}人",
+      "bedWidth": "床宽",
+      "bedWidthValue": "{{value}}cm",
+      "area": "面积",
+      "areaValue": "{{value}}㎡",
+      "ceiling": "层高",
+      "ceilingValue": "{{value}}m",
+      "price": "价格",
+      "basePrice": "基础价 ¥{{value}}",
+      "currentPrice": "当前售价 ¥{{value}}",
+      "discount": "优惠",
+      "noDiscount": "无优惠",
+      "batchDiscountRate": "批量折扣 {{rate}}折 余{{quota}}",
+      "batchDiscountAmount": "立减 {{value}}元 余{{quota}}",
+      "stock": "库存",
+      "wifi": "WiFi",
+      "wifiYes": "有",
+      "wifiNo": "无",
+      "breakfast": "含早",
+      "breakfastYes": "是",
+      "breakfastNo": "否",
+      "used": "已用",
+      "available": "空闲",
+      "action": "操作",
+      "setDiscount": "设置折扣",
+      "cancelDiscount": "取消折扣"
+    },
+    "order": {
+      "id": "订单号",
+      "roomType": "房型",
+      "quantity": "数量",
+      "price": "单价",
+      "nights": "间夜",
+      "totalPrice": "总价",
+      "status": "状态",
+      "checkIn": "入住",
+      "createdAt": "下单时间",
+      "title": "订单列表",
+      "stats": "订单统计"
+    },
+    "promo": {
+      "longTerm": "长期",
+      "discountAmount": "立减 {{value}} 元",
+      "discountRate": "{{value}} 折",
+      "fallback": "优惠活动",
+      "period": "有效期 {{value}}"
+    },
+    "nearby": {
+      "attractions": "热门景点",
+      "transport": "交通出行",
+      "malls": "购物商场"
+    },
+    "discount": {
+      "title": "设置折扣",
+      "titleWithRoom": "设置折扣 - {{name}}",
+      "quantity": "折扣数量",
+      "quantityValue": "{{value}} 间",
+      "type": "折扣类型",
+      "typeRate": "折扣率",
+      "typeAmount": "固定减免",
+      "rate": "折扣力度",
+      "rateValue": "{{value}} 折",
+      "amount": "减免金额",
+      "amountValue": "¥ {{value}}",
+      "amountTooHigh": "减免金额不能超过房型原价",
+      "periods": "生效时间",
+      "notEffective": "设置折扣未生效，请检查是否超出限制",
+      "success": "折扣已设置",
+      "failed": "设置折扣失败",
+      "failedRetry": "设置折扣失败，请重试",
+      "cancelTitle": "确认取消该房型折扣？",
+      "cancelContent": "房型：{{name}}",
+      "cancelConfirm": "确认取消",
+      "cancelSuccess": "折扣已取消",
+      "cancelFailed": "取消折扣失败",
+      "cancelFailedRetry": "取消折扣失败，请重试"
+    },
+    "errors": {
+      "overviewFailed": "获取酒店概览失败",
+      "ordersFailed": "获取订单列表失败"
+    },
+    "emptyRooms": "暂无房型信息",
+    "emptyOrders": "暂无订单"
+  }
+}

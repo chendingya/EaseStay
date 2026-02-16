@@ -45,7 +45,7 @@ export default function AuditDetail() {
       const data = await api.get(`/api/admin/hotels/${id}`)
       setHotel(data)
     } catch (error) {
-      console.error('获取酒店详情失败:', error)
+      console.error(error)
       message.error(t('auditDetail.fetchHotelError'))
     } finally {
       setLoading(false)
@@ -59,7 +59,7 @@ export default function AuditDetail() {
         setPendingRequests(data)
       }
     } catch (error) {
-      console.error('获取待审核申请失败:', error)
+      console.error(error)
     }
   }, [id])
 
@@ -85,7 +85,7 @@ export default function AuditDetail() {
       offlineForm.resetFields()
       fetchHotel()
     } catch (error) {
-      console.error('更新酒店状态失败:', error)
+      console.error(error)
       message.error(t('common.errorRetry'))
     } finally {
       setActionLoading(false)

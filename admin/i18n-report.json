@@ -1,0 +1,16 @@
+{
+  "generatedAt": "2026-02-16T07:33:57.566Z",
+  "locales": {
+    "zhKeys": 624,
+    "enKeys": 624,
+    "zhOnlyCount": 0,
+    "enOnlyCount": 0,
+    "zhOnlySample": [],
+    "enOnlySample": []
+  },
+  "hardcoded": {
+    "fileCount": 25,
+    "lineCount": 0,
+    "sample": []
+  }
+}

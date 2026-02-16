@@ -58,7 +58,7 @@ export function GlassButton({
 
 export function GanttTimeline({
   items = [],
-  getTitle = (item) => item?.title || item?.type || '优惠',
+  getTitle = (item) => item?.title || item?.type || 'Promotion',
   getPeriods = (item) => item?.periods,
   formatAxisLabel = (value) => dayjs(value).format('YYYY-MM-DD'),
   minBarWidth = 0,

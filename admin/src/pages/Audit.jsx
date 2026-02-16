@@ -27,7 +27,7 @@ export default function Audit() {
       const data = await api.get(`/api/admin/hotels${query}`)
       setHotels(data)
     } catch (error) {
-      console.error('获取审核列表失败:', error)
+      console.error(error)
     } finally {
       setLoading(false)
     }

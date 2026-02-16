@@ -1,0 +1,14 @@
+{
+  "messages": {
+    "title": "消息中心",
+    "markAll": "全部标记已读",
+    "markAllSuccess": "已全部标记为已读",
+    "markAllError": "标记已读失败",
+    "tabs": {
+      "all": "全部",
+      "unread": "未读"
+    },
+    "empty": "暂无消息",
+    "unreadTag": "未读"
+  }
+}

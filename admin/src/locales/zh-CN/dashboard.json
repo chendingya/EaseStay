@@ -1,0 +1,101 @@
+{
+  "dashboard": {
+    "overview": {
+      "title": "经营概览",
+      "totalRoomsTitle": "总房间数",
+      "totalRoomsSuffix": "间",
+      "roomTypesTitle": "房型数",
+      "roomTypesSuffix": "种",
+      "monthlyRevenue": "本月收入（{{month}}月）",
+      "hotelCountTitle": "酒店数量",
+      "hotelCountSuffix": "家",
+      "occupancyRateTitle": "入住率",
+      "usedRoomsText": "已用 {{count}} 间",
+      "availableRateTitle": "空闲率",
+      "availableRoomsText": "空闲 {{count}} 间",
+      "offlineRateTitle": "下架占比",
+      "offlineRoomsText": "下架 {{count}} 间"
+    },
+    "stats": {
+      "pending": "待审核",
+      "approved": "已上架",
+      "offline": "已下架",
+      "total": "总量"
+    },
+    "distribution": {
+      "title": "房型分布",
+      "columns": {
+        "hotel": "酒店",
+        "roomTypes": "房型数",
+        "totalRooms": "总房间",
+        "usedRooms": "已用",
+        "availableRooms": "空闲",
+        "occupancy": "入住率"
+      }
+    },
+    "quickActions": {
+      "title": "快捷操作",
+      "newHotel": "新增酒店",
+      "pendingAudit": "待审核酒店",
+      "batchDiscount": "批量设置折扣",
+      "batchRoom": "批量房型操作"
+    },
+    "batchDiscount": {
+      "title": "批量设置折扣",
+      "scopeLabel": "适用范围",
+      "scopeAll": "全部已上架酒店",
+      "scopeSelected": "已选酒店",
+      "actionLabel": "操作",
+      "actionRequired": "请选择操作",
+      "actionSet": "设置折扣",
+      "actionCancel": "取消折扣",
+      "hotelSelectLabel": "选择酒店",
+      "roomTypeLabel": "房型",
+      "roomTypeRequired": "请选择房型",
+      "roomTypePlaceholderLoading": "正在加载房型...",
+      "roomTypePlaceholderSelect": "请选择房型",
+      "statsText": "已用 {{used}} 间，空闲 {{available}} 间",
+      "quantityLabel": "折扣数量",
+      "roomUnit": "{{value}} 间",
+      "discountTypeLabel": "折扣类型",
+      "discountTypeRate": "折扣率",
+      "discountTypeAmount": "固定减免",
+      "rateLabel": "折扣力度",
+      "rateUnit": "{{value}} 折",
+      "amountLabel": "减免金额",
+      "amountUnit": "¥{{value}}",
+      "periodsLabel": "生效时间",
+      "confirm": "确认设置",
+      "cancel": "取消",
+      "noTargetWarning": "没有可操作的酒店",
+      "success": "已成功{{action}} {{count}} 个房型",
+      "successActionCancel": "取消折扣",
+      "successActionSet": "设置折扣",
+      "error": "批量设置折扣失败"
+    },
+    "batchRoom": {
+      "title": "批量房型操作",
+      "hotelSelectLabel": "选择酒店",
+      "selectedHotelsText": "已选择 {{count}} 家酒店",
+      "actionLabel": "操作类型",
+      "actionOffline": "批量下架",
+      "actionAdjustStock": "调整库存",
+      "roomTypeLabel": "房型",
+      "roomTypeRequired": "请选择房型",
+      "roomTypePlaceholder": "请选择房型",
+      "statsText": "已用 {{used}} 间，空闲 {{available}} 间",
+      "stockLabel": "库存",
+      "roomUnit": "{{value}} 间",
+      "confirm": "确认操作",
+      "cancel": "取消",
+      "noTargetWarning": "没有可操作的酒店",
+      "success": "已成功操作 {{count}} 个房型",
+      "error": "批量房型操作失败"
+    },
+    "hotelTable": {
+      "name": "酒店",
+      "city": "城市",
+      "status": "状态"
+    }
+  }
+}

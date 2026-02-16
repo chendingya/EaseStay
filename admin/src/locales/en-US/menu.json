@@ -1,0 +1,12 @@
+{
+  "menu": {
+    "dashboard": "Dashboard",
+    "myHotels": "My Hotels",
+    "hotels": "Hotels",
+    "hotelAudit": "Hotel Audit",
+    "requestAudit": "Request Audit",
+    "messages": "Messages",
+    "account": "Account",
+    "merchants": "Merchants"
+  }
+}

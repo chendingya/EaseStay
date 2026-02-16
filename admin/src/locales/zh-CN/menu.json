@@ -1,0 +1,12 @@
+{
+  "menu": {
+    "dashboard": "工作台",
+    "myHotels": "我的酒店",
+    "hotels": "酒店管理",
+    "hotelAudit": "酒店审核",
+    "requestAudit": "申请审核",
+    "messages": "消息中心",
+    "account": "账户管理",
+    "merchants": "商户管理"
+  }
+}

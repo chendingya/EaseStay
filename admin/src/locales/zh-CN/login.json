@@ -1,0 +1,42 @@
+{
+  "login": {
+    "success": "登录成功",
+    "registerSuccess": "注册成功，已为你自动登录",
+    "fillUsernameFirst": "请先输入用户名",
+    "codeSent": "验证码已发送（{{code}}）",
+    "title": "欢迎使用易宿",
+    "subtitle": "登录后进入酒店管理后台",
+    "tabs": {
+      "login": "登录",
+      "register": "注册"
+    },
+    "rules": {
+      "usernameRequired": "请输入用户名",
+      "passwordRequired": "请输入密码",
+      "codeRequired": "请输入验证码",
+      "codePattern": "验证码需为6位数字",
+      "roleRequired": "请选择角色"
+    },
+    "placeholders": {
+      "username": "请输入用户名",
+      "password": "请输入密码",
+      "code": "请输入验证码",
+      "role": "请选择角色"
+    },
+    "codeCountdown": "{{seconds}} 秒后重试",
+    "getCode": "获取验证码",
+    "roles": {
+      "merchant": "商户",
+      "admin": "管理员"
+    },
+    "codeHint": "验证码仅用于模拟，后端会返回验证码",
+    "actions": {
+      "registerAndLogin": "注册并登录",
+      "login": "登录"
+    },
+    "activity": {
+      "text": "立即体验酒店管理后台",
+      "cta": "了解更多"
+    }
+  }
+}

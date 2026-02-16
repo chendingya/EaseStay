@@ -1,0 +1,8 @@
+{
+  "error": {
+    "unauthorized": "无权访问",
+    "unauthorizedDesc": "当前账号无权限访问该页面",
+    "notFound": "页面不存在",
+    "notFoundDesc": "访问的页面不存在或已被移动"
+  }
+}

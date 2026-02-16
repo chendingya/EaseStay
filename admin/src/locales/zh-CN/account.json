@@ -1,0 +1,28 @@
+{
+  "account": {
+    "fetchError": "获取用户信息失败",
+    "passwordMismatch": "两次输入的密码不一致",
+    "passwordSuccess": "密码修改成功",
+    "passwordError": "密码修改失败",
+    "title": "账户管理",
+    "basicInfo": "基本信息",
+    "username": "用户名",
+    "role": "角色",
+    "registeredAt": "注册时间",
+    "security": "安全设置",
+    "loginPassword": "登录密码",
+    "passwordHint": "建议定期更换密码，提升账户安全",
+    "changePassword": "修改密码",
+    "oldPassword": "旧密码",
+    "oldPasswordRequired": "请输入旧密码",
+    "oldPasswordPlaceholder": "请输入旧密码",
+    "newPassword": "新密码",
+    "newPasswordRequired": "请输入新密码",
+    "passwordMin": "密码至少6位",
+    "newPasswordPlaceholder": "请输入新密码",
+    "confirmPassword": "确认新密码",
+    "confirmPasswordRequired": "请确认新密码",
+    "confirmPasswordPlaceholder": "请再次输入新密码",
+    "confirmChange": "确认修改"
+  }
+}

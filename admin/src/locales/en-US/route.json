@@ -1,0 +1,18 @@
+{
+  "route": {
+    "dashboard": "Dashboard",
+    "myHotels": "My Hotels",
+    "newHotel": "New Hotel",
+    "editHotel": "Edit Hotel",
+    "hotelDetail": "Hotel Detail",
+    "orderStats": "Order Statistics",
+    "hotels": "Hotels",
+    "hotelAudit": "Hotel Audit",
+    "auditDetail": "Audit Detail",
+    "requestAudit": "Request Audit",
+    "messages": "Messages",
+    "account": "Account",
+    "merchants": "Merchants",
+    "merchantDetail": "Merchant Detail"
+  }
+}

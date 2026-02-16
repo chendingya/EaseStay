@@ -22,7 +22,7 @@ export default function Login({ onLoggedIn }) {
       message.success(t('login.success'))
       return true
     } catch (error) {
-      console.error('登录失败:', error)
+      console.error(error)
       return false
     }
   }
@@ -39,7 +39,7 @@ export default function Login({ onLoggedIn }) {
       if (loginOk) message.success(t('login.registerSuccess'))
       return loginOk
     } catch (error) {
-      console.error('注册失败:', error)
+      console.error(error)
       return false
     }
   }

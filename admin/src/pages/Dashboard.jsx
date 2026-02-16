@@ -37,7 +37,7 @@ export default function Dashboard() {
       const data = await api.get('/api/merchant/hotels/overview')
       setOverview(data)
     } catch (error) {
-      console.error('获取概览数据失败:', error)
+      console.error(error)
     } finally {
       setOverviewLoading(false)
     }
@@ -73,7 +73,7 @@ export default function Dashboard() {
       const data = await api.get(`${base}/room-type-stats${query}`)
       setRoomTypeStats(data || [])
     } catch (error) {
-      console.error('获取房型统计失败:', error)
+      console.error(error)
     } finally {
       setStatsLoading(false)
     }
@@ -133,7 +133,7 @@ export default function Dashboard() {
       // 刷新数据
       fetchRoomTypeStats(targetHotels.map(h => h.id))
     } catch (error) {
-      console.error('批量设置折扣失败:', error)
+      console.error(error)
       message.error(t('dashboard.batchDiscount.error'))
     } finally {
       setBatchLoading(false)
@@ -169,7 +169,7 @@ export default function Dashboard() {
       // 刷新数据
       fetchRoomTypeStats(hotels.map(h => h.id)) // 简单起见，刷新所有
     } catch (error) {
-      console.error('批量房型操作失败:', error)
+      console.error(error)
       message.error(t('dashboard.batchRoom.error'))
     } finally {
       setBatchLoading(false)

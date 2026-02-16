@@ -16,7 +16,9 @@
     "noData": "No data",
     "notFilled": "Not filled",
     "view": "View",
-    "errorRetry": "Operation failed, please retry"
+    "errorRetry": "Operation failed, please retry",
+    "languageZh": "Chinese",
+    "languageEn": "English"
   },
   "auth": {
     "login": "Login",
@@ -678,7 +680,17 @@
       "cardAttractions": "Nearby Attractions",
       "cardTransport": "Transport",
       "cardMalls": "Malls",
-      "tagsPlaceholder": "Type or select to add"
+      "tagsPlaceholder": "Type or select to add",
+      "distanceMeter": "{{value}} m",
+      "searchKeywords": {
+        "attraction": "attraction|park|museum|landmark",
+        "transport": "metro|bus station|train station|airport",
+        "mall": "mall|shopping center|supermarket|department store"
+      },
+      "typeTokens": {
+        "transport": ["transport", "metro", "bus", "station", "airport", "交通", "地铁", "公交"],
+        "mall": ["mall", "shopping", "supermarket", "department", "购物", "商场", "超市", "百货"]
+      }
     },
     "preview": {
       "roomName": "Room Name",

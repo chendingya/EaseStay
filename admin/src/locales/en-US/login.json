@@ -1,0 +1,42 @@
+{
+  "login": {
+    "success": "Login successful",
+    "registerSuccess": "Registration successful, logged in automatically",
+    "fillUsernameFirst": "Please enter username first",
+    "codeSent": "Verification code sent ({{code}})",
+    "title": "Welcome to YiSu",
+    "subtitle": "Sign in to manage your hotels",
+    "tabs": {
+      "login": "Login",
+      "register": "Register"
+    },
+    "rules": {
+      "usernameRequired": "Please enter username",
+      "passwordRequired": "Please enter password",
+      "codeRequired": "Please enter verification code",
+      "codePattern": "Code must be 6 digits",
+      "roleRequired": "Please select a role"
+    },
+    "placeholders": {
+      "username": "Username",
+      "password": "Password",
+      "code": "Verification code",
+      "role": "Select role"
+    },
+    "codeCountdown": "{{seconds}}s",
+    "getCode": "Get code",
+    "roles": {
+      "merchant": "Merchant",
+      "admin": "Admin"
+    },
+    "codeHint": "Code is simulated; the backend will return it",
+    "actions": {
+      "registerAndLogin": "Register & Login",
+      "login": "Login"
+    },
+    "activity": {
+      "text": "Start managing your hotels now",
+      "cta": "Learn more"
+    }
+  }
+}

@@ -16,7 +16,9 @@
     "noData": "暂无数据",
     "notFilled": "未填写",
     "view": "查看",
-    "errorRetry": "操作失败，请重试"
+    "errorRetry": "操作失败，请重试",
+    "languageZh": "中文",
+    "languageEn": "English"
   },
   "auth": {
     "login": "登录",
@@ -678,7 +680,17 @@
       "cardAttractions": "附近景点",
       "cardTransport": "交通信息",
       "cardMalls": "商场信息",
-      "tagsPlaceholder": "输入或搜索添加"
+      "tagsPlaceholder": "输入或搜索添加",
+      "distanceMeter": "{{value}}米",
+      "searchKeywords": {
+        "attraction": "景点|公园|博物馆|名胜",
+        "transport": "地铁站|公交站|火车站|机场",
+        "mall": "商场|购物中心|超市|百货"
+      },
+      "typeTokens": {
+        "transport": ["交通", "地铁", "公交", "站", "station", "metro", "bus", "airport"],
+        "mall": ["购物", "商场", "超市", "百货", "mall", "shopping", "supermarket", "store"]
+      }
     },
     "preview": {
       "roomName": "房型名称",

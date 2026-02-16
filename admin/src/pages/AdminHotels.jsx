@@ -23,7 +23,7 @@ export default function AdminHotels() {
       const data = await api.get('/api/admin/hotels')
       setHotels(data)
     } catch (error) {
-      console.error('获取酒店列表失败:', error)
+      console.error(error)
     } finally {
       setLoading(false)
     }

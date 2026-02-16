@@ -1,0 +1,117 @@
+{
+  "hotels": {
+    "title": "酒店管理",
+    "total": "共 {{count}} 家酒店",
+    "fetchError": "获取酒店列表失败",
+    "priceValue": "¥{{value}}",
+    "actions": {
+      "import": "批量导入酒店",
+      "export": "导出酒店",
+      "new": "新增酒店"
+    },
+    "filter": {
+      "searchPlaceholder": "搜索酒店名称",
+      "allStatus": "全部状态",
+      "allCities": "全部城市"
+    },
+    "columns": {
+      "name": "酒店名称",
+      "nameEn": "英文名",
+      "city": "城市",
+      "star": "星级",
+      "lowestPrice": "最低价",
+      "openingTime": "开业时间",
+      "status": "状态",
+      "action": "操作"
+    },
+    "status": {
+      "offlineSuccess": "酒店已下架",
+      "restoreSuccess": "酒店已恢复上架"
+    },
+    "action": {
+      "offline": "下架"
+    },
+    "offline": {
+      "confirmTitle": "确认下架该酒店？",
+      "confirmDesc": "下架后酒店将不可预订",
+      "note": "下架后仍可在列表中查看"
+    },
+    "preview": {
+      "title": "导入预览（共 {{count}} 条）",
+      "name": "酒店名称",
+      "city": "城市",
+      "address": "地址",
+      "star": "星级",
+      "facilities": "设施服务",
+      "validation": "校验结果",
+      "valid": "校验通过"
+    },
+    "template": {
+      "name": "酒店名称",
+      "nameEn": "英文名",
+      "city": "城市",
+      "address": "地址",
+      "star": "星级",
+      "openingTime": "开业时间",
+      "description": "酒店介绍",
+      "facilities": "设施服务",
+      "images": "酒店图片",
+      "nearbyAttractions": "周边景点",
+      "nearbyTransport": "交通出行",
+      "nearbyMalls": "购物商场",
+      "fileName": "酒店导入模板.csv",
+      "example": {
+        "name": "易宿酒店",
+        "nameEn": "YiSu Hotel",
+        "city": "上海",
+        "address": "浦东新区世纪大道100号",
+        "star": "5",
+        "openingTime": "2020-01-01",
+        "description": "临近地铁，交通便利",
+        "facilities": "WiFi|健身房|泳池",
+        "images": "https://example.com/a.jpg|https://example.com/b.jpg",
+        "nearbyAttractions": "外滩|东方明珠",
+        "nearbyTransport": "地铁2号线",
+        "nearbyMalls": "国金中心"
+      }
+    },
+    "import": {
+      "title": "批量导入酒店",
+      "downloadTemplate": "下载模板",
+      "confirmImport": "确认导入",
+      "confirm": "确认导入（{{count}}条）",
+      "missingField": "缺少必填字段：{{field}}",
+      "starInvalid": "星级需为1-5的数字",
+      "openingTimeInvalid": "开业时间格式错误",
+      "emptyData": "导入数据为空",
+      "parseSuccess": "解析完成：共 {{total}} 条，{{valid}} 条可导入",
+      "parseError": "解析失败，请检查文件格式",
+      "noValidData": "没有可导入的数据",
+      "finish": "导入完成：成功 {{success}} 条，失败 {{fail}} 条，忽略 {{ignored}} 条",
+      "finishError": "导入失败，请重试",
+      "guideTitle": "导入指引",
+      "guide1": "请下载模板并按格式填写",
+      "guide2": "多张图片使用“|”分隔",
+      "guide3": "设施与周边信息使用“|”分隔",
+      "guide4": "星级与开业时间为可选字段",
+      "dragText": "点击或拖拽文件到此区域上传",
+      "dragHint": "仅支持 .csv 文件"
+    },
+    "export": {
+      "empty": "暂无可导出的酒店",
+      "fileName": "酒店列表.csv"
+    },
+    "delete": {
+      "title": "删除酒店",
+      "warning": "此操作不可恢复，请谨慎操作",
+      "inputLabel": "请输入酒店名称进行确认",
+      "placeholderFirst": "请输入酒店名称",
+      "placeholderSecond": "再次输入酒店名称",
+      "hint": "两次输入需一致",
+      "submit": "确认删除",
+      "nameMismatch": "酒店名称不一致",
+      "submitSuccess": "删除成功",
+      "submitError": "删除失败"
+    }
+  }
+}

@@ -48,7 +48,7 @@ function MapPicker({ onAddressChange }) {
         setSearchResults([])
       }
     } catch (err) {
-      console.error('搜索失败:', err)
+      console.error(err)
       message.error(t('hotelEdit.map.searchError'))
     } finally {
       setSearching(false)
@@ -779,6 +779,20 @@ function NearbyInfoEditor({ attractions = [], transport = [], malls = [], onChan
   const [searchResults, setSearchResults] = useState([])
   const [searching, setSearching] = useState(false)
   const [searchType, setSearchType] = useState('all') // all, attraction, transport, mall
+  const searchKeywords = {
+    attraction: t('hotelEdit.nearby.searchKeywords.attraction'),
+    transport: t('hotelEdit.nearby.searchKeywords.transport'),
+    mall: t('hotelEdit.nearby.searchKeywords.mall')
+  }
+  const typeTokens = {
+    transport: t('hotelEdit.nearby.typeTokens.transport', { returnObjects: true }),
+    mall: t('hotelEdit.nearby.typeTokens.mall', { returnObjects: true })
+  }
+
+  const hasAnyToken = (source, tokens) => {
+    const tokenList = Array.isArray(tokens) ? tokens : [tokens]
+    return tokenList.some((token) => String(source || '').includes(String(token || '').toLowerCase()))
+  }
 
   // 通过高德 API 搜索周边
   const handleSearch = async () => {
@@ -788,9 +802,9 @@ function NearbyInfoEditor({ attractions = [], transport = [], malls = [], onChan
     try {
       // 根据类型设置搜索关键词
       let keywords = searchText
-      if (searchType === 'attraction') keywords += ' 景点|公园|博物馆|名胜'
-      else if (searchType === 'transport') keywords += ' 地铁站|公交站|火车站|机场'
-      else if (searchType === 'mall') keywords += ' 商场|购物中心|超市|百货'
+      if (searchType !== 'all' && searchKeywords[searchType]) {
+        keywords += ` ${searchKeywords[searchType]}`
+      }
       
       const result = await api.get(`/api/map/search?keywords=${encodeURIComponent(keywords)}`)
       
@@ -800,16 +814,18 @@ function NearbyInfoEditor({ attractions = [], transport = [], malls = [], onChan
           // 根据POI类型判断分类
           let type = 'attraction'
           const typeName = (poi.type || '').toLowerCase()
-          if (typeName.includes('交通') || typeName.includes('地铁') || typeName.includes('公交') || typeName.includes('站')) {
+          if (hasAnyToken(typeName, typeTokens.transport)) {
             type = 'transport'
-          } else if (typeName.includes('购物') || typeName.includes('商场') || typeName.includes('超市') || typeName.includes('百货')) {
+          } else if (hasAnyToken(typeName, typeTokens.mall)) {
             type = 'mall'
           }
           
           return {
             name: poi.name,
             address: poi.address || '',
-            distance: (poi.distance && !isNaN(parseFloat(poi.distance))) ? `${poi.distance}米` : unknownDistance,
+            distance: (poi.distance && !isNaN(parseFloat(poi.distance)))
+              ? t('hotelEdit.nearby.distanceMeter', { value: poi.distance })
+              : unknownDistance,
             type: type
           }
         })
@@ -819,7 +835,7 @@ function NearbyInfoEditor({ attractions = [], transport = [], malls = [], onChan
         setSearchResults([])
       }
     } catch (err) {
-      console.error('搜索失败:', err)
+      console.error(err)
       message.error(t('hotelEdit.nearby.searchError'))
     } finally {
       setSearching(false)
@@ -1081,7 +1097,7 @@ export default function HotelEdit() {
           })
         }
       } catch (err) {
-        console.error('加载预设数据失败:', err)
+        console.error(err)
         message.error(t('hotelEdit.form.fetchPresetsError'))
       }
     }
@@ -1100,7 +1116,7 @@ export default function HotelEdit() {
         setApprovedRoomTypes(Array.isArray(roomTypes) ? roomTypes : [])
         setApprovedPromotions(Array.isArray(promotions) ? promotions : [])
       } catch (error) {
-        console.error('获取已通过申请失败:', error)
+        console.error(error)
         message.error(t('hotelEdit.form.fetchApprovedError'))
       }
     }
@@ -1135,7 +1151,7 @@ export default function HotelEdit() {
           })
           setPreviewData(data)
         } catch (error) { 
-          console.error('获取酒店详情失败:', error)
+          console.error(error)
           message.error(t('hotelEdit.form.fetchHotelError'))
           navigate('/hotels')
         }
@@ -1163,7 +1179,7 @@ export default function HotelEdit() {
       setPendingFacilities([...pendingFacilities, { name, status: 'pending' }])
       message.success(t('hotelEdit.request.facilitySuccess'))
     } catch (error) {
-      console.error('提交设施申请失败:', error)
+      console.error(error)
       message.error(t('hotelEdit.request.submitError'))
     }
   }
@@ -1190,7 +1206,7 @@ export default function HotelEdit() {
       setPendingRoomTypes([...pendingRoomTypes, { ...room, status: 'pending' }])
       message.success(t('hotelEdit.request.roomTypeSuccess'))
     } catch (error) {
-      console.error('提交房型申请失败:', error)
+      console.error(error)
       message.error(t('hotelEdit.request.submitError'))
     }
   }
@@ -1207,7 +1223,7 @@ export default function HotelEdit() {
       setPendingPromotions([...pendingPromotions, { ...promo, status: 'pending' }])
       message.success(t('hotelEdit.request.promotionSuccess'))
     } catch (error) {
-      console.error('提交优惠申请失败:', error)
+      console.error(error)
       message.error(t('hotelEdit.request.submitError'))
     }
   }

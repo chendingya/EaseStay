@@ -1,0 +1,8 @@
+{
+  "error": {
+    "unauthorized": "Unauthorized",
+    "unauthorizedDesc": "You don't have permission to access this page",
+    "notFound": "Not Found",
+    "notFoundDesc": "The page you are looking for does not exist"
+  }
+}

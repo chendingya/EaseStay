@@ -2,6 +2,7 @@ import axios from 'axios'
 import { glassMessage as message } from '../components'
 
 const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:4100'
+const defaultErrorMessage = 'Request failed'
 
 const request = axios.create({
   baseURL: apiBase,
@@ -34,8 +35,8 @@ request.interceptors.response.use(
     }
     const data = response?.data
     if (data && data.success === false) {
-      message.error(data.message || '请求失败')
-      return Promise.reject(new Error(data.message || '请求失败'))
+      message.error(data.message || defaultErrorMessage)
+      return Promise.reject(new Error(data.message || defaultErrorMessage))
     }
     if (data && data.warning) {
       message.warning(data.warning)
@@ -50,7 +51,7 @@ request.interceptors.response.use(
       const status = error?.response?.status || 'ERR'
       console.info(`[perf] ${method} ${url} ${status} ${Math.round(duration)}ms`)
     }
-    const msg = error?.response?.data?.message || error?.message || '请求失败'
+    const msg = error?.response?.data?.message || error?.message || defaultErrorMessage
     message.error(msg)
     return Promise.reject(error)
   }

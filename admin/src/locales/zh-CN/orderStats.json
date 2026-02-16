@@ -1,0 +1,31 @@
+{
+  "orderStats": {
+    "unknownStatus": "未知",
+    "unknownRoomType": "未知",
+    "legend": {
+      "nights": "入住间夜",
+      "revenue": "收入"
+    },
+    "title": "订单统计",
+    "fallbackHotelName": "酒店 {{id}}",
+    "backDetail": "返回详情",
+    "summary": {
+      "totalOrders": "订单总量",
+      "revenue": "订单收入",
+      "statusKinds": "状态种类",
+      "roomTypeCount": "房型数"
+    },
+    "cards": {
+      "status": "订单状态分布",
+      "monthly": "月度收入",
+      "roomType": "房型表现（入住间夜/收入）",
+      "daily": "日度收入趋势"
+    },
+    "empty": {
+      "status": "暂无状态统计",
+      "monthly": "暂无月度统计",
+      "roomType": "暂无房型统计",
+      "daily": "暂无日度统计"
+    }
+  }
+}

@@ -21,7 +21,7 @@ export default function Merchants() {
       const data = await api.get('/api/user/merchants')
       setMerchants(data)
     } catch (error) {
-      console.error('获取商户列表失败:', error)
+      console.error(error)
       message.error(t('merchants.fetchError'))
     } finally {
       setLoading(false)
@@ -43,7 +43,7 @@ export default function Merchants() {
       form.resetFields()
     } catch (err) {
       if (err.errorFields) return
-      console.error('重置密码失败:', err)
+      console.error(err)
       message.error(t('merchants.resetPassword.error'))
     } finally {
       setResetting(false)

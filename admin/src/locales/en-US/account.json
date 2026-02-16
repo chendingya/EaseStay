@@ -1,0 +1,28 @@
+{
+  "account": {
+    "fetchError": "Failed to load user info",
+    "passwordMismatch": "Passwords do not match",
+    "passwordSuccess": "Password updated",
+    "passwordError": "Failed to update password",
+    "title": "Account",
+    "basicInfo": "Basic Info",
+    "username": "Username",
+    "role": "Role",
+    "registeredAt": "Registered At",
+    "security": "Security",
+    "loginPassword": "Login Password",
+    "passwordHint": "Change your password regularly to stay secure",
+    "changePassword": "Change Password",
+    "oldPassword": "Old Password",
+    "oldPasswordRequired": "Please enter old password",
+    "oldPasswordPlaceholder": "Enter old password",
+    "newPassword": "New Password",
+    "newPasswordRequired": "Please enter new password",
+    "passwordMin": "Password must be at least 6 characters",
+    "newPasswordPlaceholder": "Enter new password",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordRequired": "Please confirm password",
+    "confirmPasswordPlaceholder": "Re-enter new password",
+    "confirmChange": "Confirm"
+  }
+}

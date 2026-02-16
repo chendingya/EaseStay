@@ -1,0 +1,23 @@
+{
+  "common": {
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "reset": "Reset",
+    "confirm": "Confirm",
+    "back": "Back",
+    "loading": "Loading...",
+    "success": "Success",
+    "error": "Error",
+    "noData": "No data",
+    "notFilled": "Not filled",
+    "view": "View",
+    "errorRetry": "Operation failed, please retry",
+    "languageZh": "Chinese",
+    "languageEn": "English"
+  }
+}

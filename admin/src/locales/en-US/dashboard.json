@@ -1,0 +1,101 @@
+{
+  "dashboard": {
+    "overview": {
+      "title": "Operations Overview",
+      "totalRoomsTitle": "Total Rooms",
+      "totalRoomsSuffix": "rooms",
+      "roomTypesTitle": "Room Types",
+      "roomTypesSuffix": "types",
+      "monthlyRevenue": "Revenue ({{month}})",
+      "hotelCountTitle": "Hotels",
+      "hotelCountSuffix": "hotels",
+      "occupancyRateTitle": "Occupancy",
+      "usedRoomsText": "{{count}} used",
+      "availableRateTitle": "Availability",
+      "availableRoomsText": "{{count}} available",
+      "offlineRateTitle": "Offline",
+      "offlineRoomsText": "{{count}} offline"
+    },
+    "stats": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "offline": "Offline",
+      "total": "Total"
+    },
+    "distribution": {
+      "title": "Room Type Distribution",
+      "columns": {
+        "hotel": "Hotel",
+        "roomTypes": "Room Types",
+        "totalRooms": "Total Rooms",
+        "usedRooms": "Used",
+        "availableRooms": "Available",
+        "occupancy": "Occupancy"
+      }
+    },
+    "quickActions": {
+      "title": "Quick Actions",
+      "newHotel": "New Hotel",
+      "pendingAudit": "Pending Audits",
+      "batchDiscount": "Batch Discount",
+      "batchRoom": "Batch Room Ops"
+    },
+    "batchDiscount": {
+      "title": "Batch Discount",
+      "scopeLabel": "Scope",
+      "scopeAll": "All approved hotels",
+      "scopeSelected": "Selected hotels",
+      "actionLabel": "Action",
+      "actionRequired": "Please select action",
+      "actionSet": "Set discount",
+      "actionCancel": "Cancel discount",
+      "hotelSelectLabel": "Select hotels",
+      "roomTypeLabel": "Room Type",
+      "roomTypeRequired": "Please select room type",
+      "roomTypePlaceholderLoading": "Loading room types...",
+      "roomTypePlaceholderSelect": "Select room type",
+      "statsText": "Used {{used}}, Available {{available}}",
+      "quantityLabel": "Discount quantity",
+      "roomUnit": "{{value}} rooms",
+      "discountTypeLabel": "Discount type",
+      "discountTypeRate": "Rate",
+      "discountTypeAmount": "Amount",
+      "rateLabel": "Rate",
+      "rateUnit": "{{value}} off",
+      "amountLabel": "Amount",
+      "amountUnit": "¥{{value}}",
+      "periodsLabel": "Effective period",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "noTargetWarning": "No eligible hotels",
+      "success": "Successfully {{action}} {{count}} room types",
+      "successActionCancel": "cancelled",
+      "successActionSet": "set",
+      "error": "Batch discount failed"
+    },
+    "batchRoom": {
+      "title": "Batch Room Operations",
+      "hotelSelectLabel": "Select hotels",
+      "selectedHotelsText": "{{count}} hotels selected",
+      "actionLabel": "Action",
+      "actionOffline": "Take offline",
+      "actionAdjustStock": "Adjust stock",
+      "roomTypeLabel": "Room Type",
+      "roomTypeRequired": "Please select room type",
+      "roomTypePlaceholder": "Select room type",
+      "statsText": "Used {{used}}, Available {{available}}",
+      "stockLabel": "Stock",
+      "roomUnit": "{{value}} rooms",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "noTargetWarning": "No eligible hotels",
+      "success": "Successfully updated {{count}} room types",
+      "error": "Batch room operation failed"
+    },
+    "hotelTable": {
+      "name": "Hotel",
+      "city": "City",
+      "status": "Status"
+    }
+  }
+}

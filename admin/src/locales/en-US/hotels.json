@@ -1,0 +1,117 @@
+{
+  "hotels": {
+    "title": "Hotels",
+    "total": "{{count}} hotels",
+    "fetchError": "Failed to load hotels",
+    "priceValue": "¥{{value}}",
+    "actions": {
+      "import": "Import Hotels",
+      "export": "Export Hotels",
+      "new": "New Hotel"
+    },
+    "filter": {
+      "searchPlaceholder": "Search hotel name",
+      "allStatus": "All Status",
+      "allCities": "All Cities"
+    },
+    "columns": {
+      "name": "Hotel Name",
+      "nameEn": "English Name",
+      "city": "City",
+      "star": "Star",
+      "lowestPrice": "Lowest Price",
+      "openingTime": "Opening Time",
+      "status": "Status",
+      "action": "Actions"
+    },
+    "status": {
+      "offlineSuccess": "Hotel taken offline",
+      "restoreSuccess": "Hotel restored"
+    },
+    "action": {
+      "offline": "Take offline"
+    },
+    "offline": {
+      "confirmTitle": "Take this hotel offline?",
+      "confirmDesc": "Hotel will not be available for booking",
+      "note": "The hotel will remain visible in the list"
+    },
+    "preview": {
+      "title": "Import Preview ({{count}} items)",
+      "name": "Hotel Name",
+      "city": "City",
+      "address": "Address",
+      "star": "Star",
+      "facilities": "Facilities",
+      "validation": "Validation",
+      "valid": "Valid"
+    },
+    "template": {
+      "name": "Hotel Name",
+      "nameEn": "English Name",
+      "city": "City",
+      "address": "Address",
+      "star": "Star",
+      "openingTime": "Opening Time",
+      "description": "Description",
+      "facilities": "Facilities",
+      "images": "Images",
+      "nearbyAttractions": "Nearby Attractions",
+      "nearbyTransport": "Transport",
+      "nearbyMalls": "Shopping Malls",
+      "fileName": "hotel_import_template.csv",
+      "example": {
+        "name": "YiSu Hotel",
+        "nameEn": "YiSu Hotel",
+        "city": "Shanghai",
+        "address": "100 Century Ave, Pudong",
+        "star": "5",
+        "openingTime": "2020-01-01",
+        "description": "Close to metro with great access",
+        "facilities": "WiFi|Gym|Pool",
+        "images": "https://example.com/a.jpg|https://example.com/b.jpg",
+        "nearbyAttractions": "The Bund|Oriental Pearl",
+        "nearbyTransport": "Metro Line 2",
+        "nearbyMalls": "IFC Mall"
+      }
+    },
+    "import": {
+      "title": "Import Hotels",
+      "downloadTemplate": "Download Template",
+      "confirmImport": "Confirm Import",
+      "confirm": "Confirm import ({{count}} items)",
+      "missingField": "Missing required field: {{field}}",
+      "starInvalid": "Star must be a number from 1 to 5",
+      "openingTimeInvalid": "Invalid opening time format",
+      "emptyData": "Import data is empty",
+      "parseSuccess": "Parsed: {{total}} total, {{valid}} valid",
+      "parseError": "Parse failed, please check the file format",
+      "noValidData": "No valid data to import",
+      "finish": "Import complete: {{success}} success, {{fail}} failed, {{ignored}} ignored",
+      "finishError": "Import failed, please retry",
+      "guideTitle": "Import Guide",
+      "guide1": "Download the template and fill it out",
+      "guide2": "Separate multiple images with “|”",
+      "guide3": "Separate facilities and nearby info with “|”",
+      "guide4": "Star and opening time are optional",
+      "dragText": "Click or drag file to this area to upload",
+      "dragHint": "Only .csv files are supported"
+    },
+    "export": {
+      "empty": "No hotels to export",
+      "fileName": "hotels.csv"
+    },
+    "delete": {
+      "title": "Delete Hotel",
+      "warning": "This action cannot be undone",
+      "inputLabel": "Please enter the hotel name to confirm",
+      "placeholderFirst": "Enter hotel name",
+      "placeholderSecond": "Re-enter hotel name",
+      "hint": "Both entries must match",
+      "submit": "Delete",
+      "nameMismatch": "Hotel name does not match",
+      "submitSuccess": "Deleted",
+      "submitError": "Delete failed"
+    }
+  }
+}

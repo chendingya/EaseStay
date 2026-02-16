@@ -2,29 +2,34 @@ import './App.css'
 import { Layout, Menu, Space, Typography, Tag, Button, Breadcrumb, Badge, Tooltip, Result, Select, ConfigProvider } from 'antd'
 import { HomeOutlined, SettingOutlined, UserOutlined, TeamOutlined, BellOutlined, FileSearchOutlined, ShopOutlined, MenuFoldOutlined, MenuUnfoldOutlined, GlobalOutlined } from '@ant-design/icons'
 import { Routes, Route, useLocation, useNavigate, Navigate, Outlet } from 'react-router-dom'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import zhCN from 'antd/locale/zh_CN'
 import enUS from 'antd/locale/en_US'
+import { loadNamespaces } from './locales'
 import { getUnreadCount, onUnreadCountChange, api } from './services'
-import Login from './pages/Login.jsx'
-import Hotels from './pages/Hotels.jsx'
-import HotelDetail from './pages/HotelDetail.jsx'
-import HotelEdit from './pages/HotelEdit.jsx'
-import Audit from './pages/Audit.jsx'
-import AuditDetail from './pages/AuditDetail.jsx'
-import Dashboard from './pages/Dashboard.jsx'
-import Account from './pages/Account.jsx'
-import Merchants from './pages/Merchants.jsx'
-import RequestAudit from './pages/RequestAudit.jsx'
-import Messages from './pages/Messages.jsx'
-import AdminHotels from './pages/AdminHotels.jsx'
-import AdminHotelDetail from './pages/AdminHotelDetail.jsx'
-import MerchantDetail from './pages/MerchantDetail.jsx'
-import OrderStats from './pages/OrderStats.jsx'
-import { routeConfig } from './routes/routeConfig'
+import { routeConfig, getRouteNamespaces } from './routes/routeConfig'
 
 const appPerfStart = import.meta.env.DEV ? performance.now() : 0
+const Login = lazy(() => import('./pages/Login.jsx'))
+const Hotels = lazy(() => import('./pages/Hotels.jsx'))
+const HotelDetail = lazy(() => import('./pages/HotelDetail.jsx'))
+const HotelEdit = lazy(() => import('./pages/HotelEdit.jsx'))
+const Audit = lazy(() => import('./pages/Audit.jsx'))
+const AuditDetail = lazy(() => import('./pages/AuditDetail.jsx'))
+const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
+const Account = lazy(() => import('./pages/Account.jsx'))
+const Merchants = lazy(() => import('./pages/Merchants.jsx'))
+const RequestAudit = lazy(() => import('./pages/RequestAudit.jsx'))
+const Messages = lazy(() => import('./pages/Messages.jsx'))
+const AdminHotels = lazy(() => import('./pages/AdminHotels.jsx'))
+const AdminHotelDetail = lazy(() => import('./pages/AdminHotelDetail.jsx'))
+const MerchantDetail = lazy(() => import('./pages/MerchantDetail.jsx'))
+const OrderStats = lazy(() => import('./pages/OrderStats.jsx'))
+
+function LazyRoute({ children }) {
+  return <Suspense fallback={null}>{children}</Suspense>
+}
 
 // 面包屑组件
 function AppBreadcrumb() {
@@ -142,7 +147,7 @@ function NotFound({ homePath }) {
 }
 
 function LanguageSwitcher() {
-  const { i18n } = useTranslation()
+  const { i18n, t } = useTranslation()
   
   const handleChange = (lng) => {
     i18n.changeLanguage(lng)
@@ -157,8 +162,8 @@ function LanguageSwitcher() {
       style={{ width: 100 }}
       suffixIcon={<GlobalOutlined />}
       options={[
-        { value: 'zh-CN', label: '中文' },
-        { value: 'en-US', label: 'English' }
+        { value: 'zh-CN', label: t('common.languageZh') },
+        { value: 'en-US', label: t('common.languageEn') }
       ]}
     />
   )
@@ -252,6 +257,7 @@ function App() {
   }))
   const [unreadCount, setUnreadCount] = useState(0)
   const [adminPending, setAdminPending] = useState({ pendingHotels: 0, pendingRequests: 0 })
+  const [routeNamespacesReady, setRouteNamespacesReady] = useState(false)
   
   const antdLocale = i18n.language === 'en-US' ? enUS : zhCN
 
@@ -261,6 +267,31 @@ function App() {
       console.info(`[perf] app-mounted ${duration}ms`)
     }
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function syncRouteNamespaces() {
+      setRouteNamespacesReady(false)
+      const namespaces = getRouteNamespaces(location.pathname)
+      await loadNamespaces(namespaces)
+
+      if (!cancelled) {
+        setRouteNamespacesReady(true)
+      }
+    }
+
+    syncRouteNamespaces().catch((error) => {
+      console.error(error)
+      if (!cancelled) {
+        setRouteNamespacesReady(true)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [location.pathname, i18n.language])
 
   // Fetch unread count and subscribe to changes
   useEffect(() => {
@@ -288,7 +319,7 @@ function App() {
         pendingRequests: Array.isArray(requests) ? requests.length : 0
       })
     } catch (error) {
-      console.error('获取待审核汇总失败:', error)
+      console.error(error)
     }
   }, [auth.role, auth.token])
 
@@ -381,10 +412,21 @@ function App() {
 
   const homePath = auth.role === 'admin' ? '/audit' : auth.role === 'merchant' ? '/hotels' : '/'
 
+  if (!routeNamespacesReady) {
+    return <div style={{ minHeight: '100vh' }} />
+  }
+
   return (
     <ConfigProvider locale={antdLocale}>
       <Routes>
-        <Route path="/login" element={auth.token ? <Navigate to={homePath} replace /> : <Login onLoggedIn={handleLoggedIn} />} />
+        <Route
+          path="/login"
+          element={
+            auth.token
+              ? <Navigate to={homePath} replace />
+              : <LazyRoute><Login onLoggedIn={handleLoggedIn} /></LazyRoute>
+          }
+        />
         <Route element={<RequireAuth token={auth.token} />}>
           <Route
             element={
@@ -400,26 +442,26 @@ function App() {
               />
             }
           >
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<LazyRoute><Dashboard /></LazyRoute>} />
             <Route element={<RequireRole role={auth.role} allow="merchant" />}>
-              <Route path="/hotels" element={<Hotels />} />
-              <Route path="/hotels/new" element={<HotelEdit />} />
-              <Route path="/hotels/edit/:id" element={<HotelEdit />} />
-              <Route path="/hotels/:id" element={<HotelDetail />} />
-              <Route path="/hotels/:id/stats" element={<OrderStats />} />
+              <Route path="/hotels" element={<LazyRoute><Hotels /></LazyRoute>} />
+              <Route path="/hotels/new" element={<LazyRoute><HotelEdit /></LazyRoute>} />
+              <Route path="/hotels/edit/:id" element={<LazyRoute><HotelEdit /></LazyRoute>} />
+              <Route path="/hotels/:id" element={<LazyRoute><HotelDetail /></LazyRoute>} />
+              <Route path="/hotels/:id/stats" element={<LazyRoute><OrderStats /></LazyRoute>} />
             </Route>
             <Route element={<RequireRole role={auth.role} allow="admin" />}>
-              <Route path="/admin-hotels" element={<AdminHotels />} />
-              <Route path="/admin-hotels/:id" element={<AdminHotelDetail />} />
-              <Route path="/admin-hotels/:id/stats" element={<OrderStats />} />
-              <Route path="/audit" element={<Audit />} />
-              <Route path="/audit/:id" element={<AuditDetail />} />
-              <Route path="/requests" element={<RequestAudit />} />
-              <Route path="/merchants" element={<Merchants />} />
-              <Route path="/merchants/:id" element={<MerchantDetail />} />
+              <Route path="/admin-hotels" element={<LazyRoute><AdminHotels /></LazyRoute>} />
+              <Route path="/admin-hotels/:id" element={<LazyRoute><AdminHotelDetail /></LazyRoute>} />
+              <Route path="/admin-hotels/:id/stats" element={<LazyRoute><OrderStats /></LazyRoute>} />
+              <Route path="/audit" element={<LazyRoute><Audit /></LazyRoute>} />
+              <Route path="/audit/:id" element={<LazyRoute><AuditDetail /></LazyRoute>} />
+              <Route path="/requests" element={<LazyRoute><RequestAudit /></LazyRoute>} />
+              <Route path="/merchants" element={<LazyRoute><Merchants /></LazyRoute>} />
+              <Route path="/merchants/:id" element={<LazyRoute><MerchantDetail /></LazyRoute>} />
             </Route>
-            <Route path="/messages" element={<Messages />} />
-            <Route path="/account" element={<Account />} />
+            <Route path="/messages" element={<LazyRoute><Messages /></LazyRoute>} />
+            <Route path="/account" element={<LazyRoute><Account /></LazyRoute>} />
             <Route path="/unauthorized" element={<Unauthorized homePath={homePath} />} />
             <Route path="*" element={<NotFound homePath={homePath} />} />
           </Route>

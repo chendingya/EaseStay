@@ -1,0 +1,124 @@
+{
+  "hotelDetail": {
+    "actions": {
+      "edit": "Edit Hotel"
+    },
+    "sections": {
+      "basic": "Basic Information",
+      "images": "Hotel Images",
+      "facilities": "Facilities",
+      "promotions": "Promotions",
+      "nearby": "Nearby"
+    },
+    "basic": {
+      "city": "City",
+      "address": "Address",
+      "star": "Star Rating",
+      "starValue": "{{value}} Star",
+      "unrated": "Unrated",
+      "openingTime": "Opening Time"
+    },
+    "tabs": {
+      "overview": "Room Overview",
+      "rooms": "Room Types",
+      "orders": "Orders"
+    },
+    "overview": {
+      "total": "Total Rooms",
+      "used": "Used",
+      "available": "Available",
+      "offline": "Offline",
+      "suffixRoom": "rooms",
+      "occupancyRate": "Occupancy {{value}}%",
+      "usedRate": "Used Ratio",
+      "availableRate": "Available Ratio",
+      "offlineRate": "Offline Ratio"
+    },
+    "room": {
+      "name": "Room Type",
+      "capacity": "Capacity",
+      "capacityValue": "{{value}} guests",
+      "bedWidth": "Bed Width",
+      "bedWidthValue": "{{value}} cm",
+      "area": "Area",
+      "areaValue": "{{value}} ㎡",
+      "ceiling": "Ceiling",
+      "ceilingValue": "{{value}} m",
+      "price": "Price",
+      "basePrice": "Base ¥{{value}}",
+      "currentPrice": "Current ¥{{value}}",
+      "discount": "Discount",
+      "noDiscount": "No discount",
+      "batchDiscountRate": "Bulk {{rate}} off, {{quota}} left",
+      "batchDiscountAmount": "Save ¥{{value}}, {{quota}} left",
+      "stock": "Stock",
+      "wifi": "WiFi",
+      "wifiYes": "Yes",
+      "wifiNo": "No",
+      "breakfast": "Breakfast",
+      "breakfastYes": "Yes",
+      "breakfastNo": "No",
+      "used": "Used",
+      "available": "Available",
+      "action": "Actions",
+      "setDiscount": "Set Discount",
+      "cancelDiscount": "Cancel Discount"
+    },
+    "order": {
+      "id": "Order ID",
+      "roomType": "Room Type",
+      "quantity": "Quantity",
+      "price": "Price",
+      "nights": "Nights",
+      "totalPrice": "Total",
+      "status": "Status",
+      "checkIn": "Check-in",
+      "createdAt": "Created At",
+      "title": "Order List",
+      "stats": "Order Stats"
+    },
+    "promo": {
+      "longTerm": "Long-term",
+      "discountAmount": "Save ¥{{value}}",
+      "discountRate": "{{value}} off",
+      "fallback": "Promotion",
+      "period": "Period {{value}}"
+    },
+    "nearby": {
+      "attractions": "Attractions",
+      "transport": "Transport",
+      "malls": "Shopping Malls"
+    },
+    "discount": {
+      "title": "Set Discount",
+      "titleWithRoom": "Set Discount - {{name}}",
+      "quantity": "Discount Quantity",
+      "quantityValue": "{{value}} rooms",
+      "type": "Discount Type",
+      "typeRate": "Rate",
+      "typeAmount": "Fixed Amount",
+      "rate": "Discount Rate",
+      "rateValue": "{{value}} off",
+      "amount": "Discount Amount",
+      "amountValue": "¥ {{value}}",
+      "amountTooHigh": "Discount amount cannot exceed base price",
+      "periods": "Effective Period",
+      "notEffective": "Discount not applied, please check limits",
+      "success": "Discount set",
+      "failed": "Failed to set discount",
+      "failedRetry": "Failed to set discount, please retry",
+      "cancelTitle": "Cancel discount for this room type?",
+      "cancelContent": "Room: {{name}}",
+      "cancelConfirm": "Confirm Cancel",
+      "cancelSuccess": "Discount cancelled",
+      "cancelFailed": "Failed to cancel discount",
+      "cancelFailedRetry": "Failed to cancel discount, please retry"
+    },
+    "errors": {
+      "overviewFailed": "Failed to load overview",
+      "ordersFailed": "Failed to load orders"
+    },
+    "emptyRooms": "No room types",
+    "emptyOrders": "No orders"
+  }
+}

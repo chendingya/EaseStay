@@ -40,7 +40,7 @@ export default function AdminHotelDetail() {
       const data = await api.get(`/api/admin/hotels/${id}/overview`)
       setOverview(data)
     } catch (error) {
-      console.error('获取酒店概览失败:', error)
+      console.error(error)
       setOverview(null)
     }
   }, [id])
@@ -53,7 +53,7 @@ export default function AdminHotelDetail() {
       setOrders(data.list || [])
       setOrdersTotal(data.total || 0)
     } catch (error) {
-      console.error('获取订单列表失败:', error)
+      console.error(error)
     } finally {
       setOrdersLoading(false)
     }
@@ -107,7 +107,7 @@ export default function AdminHotelDetail() {
           message.success(t('adminHotelDetail.offline.success'))
           fetchHotel()
         } catch (error) {
-          console.error('下架酒店失败:', error)
+          console.error(error)
           message.error(t('adminHotelDetail.offline.error'))
         }
       }
@@ -128,7 +128,7 @@ export default function AdminHotelDetail() {
           message.success(t('adminHotelDetail.restore.success'))
           fetchHotel()
         } catch (error) {
-          console.error('恢复上架失败:', error)
+          console.error(error)
           message.error(t('adminHotelDetail.restore.error'))
         }
       }

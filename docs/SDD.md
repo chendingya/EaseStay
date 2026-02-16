@@ -686,3 +686,37 @@ Query：page、pageSize、status（可选）
 - `components/OrderList`：收藏列表容器，支持滑动取消收藏
 - `components/HotelCard`：酒店图文卡片（中英名、地址、星级/开业、收藏时间、价格）
 - 收藏存储：`services/favorites` 基于本地存储，支持单条取消收藏与批量清空
+
+## 12. Admin 国际化实现细节（2026-02）
+### 12.1 目录与资源组织
+- 语言目录：`admin/src/locales/zh-CN`、`admin/src/locales/en-US`
+- 资源格式：`{namespace}.json`
+- 基础 namespace：`common/auth/menu/route/header/role/status/error/brand`
+- 业务 namespace：`dashboard/hotels/hotelEdit/hotelDetail/orderStats/messages/account/login`
+
+### 12.2 加载流程
+1. `main.jsx` 启动时执行 `initI18n()`。
+2. i18n 初始化后仅加载基础 namespace（按当前语言）。
+3. 路由切换时，根据 `routeConfig.namespaces` 调用 `loadNamespaces()`。
+4. namespace 就绪后再渲染路由页面，防止首帧 key 闪烁。
+
+### 12.3 路由与 namespace 映射策略
+- 路由元数据集中在 `admin/src/routes/routeConfig.js`。
+- 每条路由可声明 `namespaces: string[]`。
+- 映射函数 `getRouteNamespaces(pathname)` 负责动态路由匹配与 namespace 解析。
+
+### 12.4 校验脚本设计
+- 脚本：`admin/scripts/i18n-check.js`
+- 能力：
+  - 自动合并每个语言目录下所有 namespace 文件
+  - 扁平化 key 后比对双语一致性
+  - 扫描 `src` 非测试文件中的中文硬编码字面量
+  - 产出 `i18n-report.json` 与 `i18n-todo.json`
+
+### 12.5 CI 分级门禁
+- `npm run i18n:check`：仅 key 一致性，作为 PR 必过项
+- `npm run i18n:check:strict`：一致性 + 硬编码扫描，作为主分支保护项
+
+### 12.6 当前落地范围与后续计划
+- 已覆盖按需加载的业务域：登录、工作台、酒店管理、酒店编辑、酒店详情、订单统计、消息、账户。
+- 待补齐业务域：审核、申请审核、商户管理相关 namespace 独立拆分与路由映射。

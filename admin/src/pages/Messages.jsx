@@ -29,7 +29,7 @@ export default function Messages() {
       setNotifications(data)
       setUnreadCount(data.filter(n => !n.is_read).length)
     } catch (error) {
-      console.error('获取消息失败:', error)
+      console.error(error)
     } finally {
       setLoading(false)
     }
@@ -57,7 +57,7 @@ export default function Messages() {
         message.success(t('messages.markAllSuccess'))
       }
     } catch (error) {
-      console.error('全部标记已读失败:', error)
+      console.error(error)
       message.error(t('messages.markAllError'))
     } finally {
       setLoading(false)

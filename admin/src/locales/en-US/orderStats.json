@@ -1,0 +1,31 @@
+{
+  "orderStats": {
+    "unknownStatus": "Unknown",
+    "unknownRoomType": "Unknown",
+    "legend": {
+      "nights": "Room nights",
+      "revenue": "Revenue"
+    },
+    "title": "Order Statistics",
+    "fallbackHotelName": "Hotel {{id}}",
+    "backDetail": "Back to Detail",
+    "summary": {
+      "totalOrders": "Total Orders",
+      "revenue": "Revenue",
+      "statusKinds": "Status Types",
+      "roomTypeCount": "Room Types"
+    },
+    "cards": {
+      "status": "Order Status Distribution",
+      "monthly": "Monthly Revenue",
+      "roomType": "Room Type Performance (Nights/Revenue)",
+      "daily": "Daily Revenue Trend"
+    },
+    "empty": {
+      "status": "No status data",
+      "monthly": "No monthly data",
+      "roomType": "No room type data",
+      "daily": "No daily data"
+    }
+  }
+}

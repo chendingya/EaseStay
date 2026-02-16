@@ -32,7 +32,7 @@ export default function RequestAudit() {
       const data = await api.get(`/api/admin/requests${query}`)
       setRequests(data)
     } catch (error) {
-      console.error('获取申请列表失败:', error)
+      console.error(error)
     } finally {
       setLoading(false)
     }
@@ -52,7 +52,7 @@ export default function RequestAudit() {
       rejectForm.resetFields()
       fetchRequests(activeTab)
     } catch (error) {
-      console.error('审核申请失败:', error)
+      console.error(error)
       message.error(t('requestAudit.errorReview'))
     } finally {
       setLoading(false)

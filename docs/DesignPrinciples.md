@@ -155,6 +155,31 @@ message.success('成功')
 - Token 由请求拦截器统一注入
 - 响应错误由统一拦截器与页面级处理协作完成
 
+### 8.3 国际化规范
+- 统一使用 `react-i18next` 的 `useTranslation` 获取 `t`，不要在组件内条件调用 Hook
+- 页面文案不得硬编码，统一使用 `t('模块.子模块.字段')` 形式
+- 新增文案必须同时补齐 `admin/src/locales/zh-CN/*.json` 与 `admin/src/locales/en-US/*.json` 对应 namespace 文件
+- 使用插值完成动态文案，不拼接字符串或把单位写在代码里
+- 文案 key 以页面/功能域为前缀，保持层级清晰与可检索
+- 语言切换由全局组件处理，页面内不自行维护语言状态
+- 词典按业务域拆分 namespace，禁止把所有文案堆到单个巨型 `translation.json`
+- 路由必须声明 namespace 依赖并按需加载，避免全量词典首屏注入
+
+### 8.4 国际化门禁规范（CI）
+- PR 必过：`npm run i18n:check`（双语 key 一致性）
+- 主分支必过：`npm run i18n:check:strict`（包含硬编码中文扫描）
+- 对硬编码治理采用“先增量阻断，后存量清理”策略
+
+示例：
+```jsx
+import { useTranslation } from 'react-i18next'
+
+const { t } = useTranslation()
+
+<Typography.Title level={4}>{t('dashboard.overview.title')}</Typography.Title>
+<Typography.Text>{t('hotels.total', { count })}</Typography.Text>
+```
+
 ## 9. 统计与批量操作规范
 
 ## 10. 移动端交互反馈
@@ -196,7 +221,10 @@ message.success('成功')
 - 影响用户操作结果的失败需要给出可理解的提示（使用 glassMessage）
 - 页面级 catch 只处理本地状态与必要提示，通用错误由统一请求层负责
 
-## 12. 最近更新（2026-02-03）
+## 12. 最近更新（2026-02-16）
+- Admin 国际化已切换为 namespace 分层 + 路由级懒加载
+- 国际化校验脚本升级为多 namespace 合并检查
+- CI 双门禁落地：一致性检查与严格检查分级执行
 - 管理员酒店详情页对齐商户端功能（Tabs、房型总览、订单展示与统计）
 - 扩展管理员 API 端点以支持无商户 ID 限制的数据访问
 - 统一使用 GlassUI 组件保持视觉一致性

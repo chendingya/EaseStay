@@ -28,7 +28,7 @@ const notifyUnreadUpdate = async () => {
     const count = await getUnreadCount()
     listeners.forEach(cb => cb(count))
   } catch (error) {
-    console.error('更新未读数量失败:', error)
+    console.error(error)
   }
 }
 
@@ -53,7 +53,7 @@ export const getUnreadCount = async () => {
     const data = await api.get(`/api/notifications/unread-count?t=${Date.now()}`)
     return data?.count || 0
   } catch (error) {
-    console.error('获取未读通知数量失败:', error)
+    console.error(error)
     return 0
   }
 }
@@ -72,7 +72,7 @@ export const markAsRead = async (notificationId) => {
     notifyUnreadUpdate()
     return true
   } catch (error) {
-    console.error('标记通知已读失败:', error)
+    console.error(error)
     return false
   }
 }
@@ -88,7 +88,7 @@ export const deleteNotification = async (notificationId) => {
     notifyUnreadUpdate()
     return true
   } catch (error) {
-    console.error('删除通知失败:', error)
+    console.error(error)
     return false
   }
 }
@@ -97,10 +97,10 @@ export const deleteNotification = async (notificationId) => {
  * 通知类型配置
  */
 export const NotificationTypeConfig = {
-  success: { color: 'green', icon: 'CheckCircleOutlined', label: '成功' },
-  warning: { color: 'orange', icon: 'ExclamationCircleOutlined', label: '警告' },
-  info: { color: 'blue', icon: 'InfoCircleOutlined', label: '信息' },
-  error: { color: 'red', icon: 'CloseCircleOutlined', label: '错误' }
+  success: { color: 'green', icon: 'CheckCircleOutlined', label: 'Success' },
+  warning: { color: 'orange', icon: 'ExclamationCircleOutlined', label: 'Warning' },
+  info: { color: 'blue', icon: 'InfoCircleOutlined', label: 'Info' },
+  error: { color: 'red', icon: 'CloseCircleOutlined', label: 'Error' }
 }
 
 /**
@@ -114,29 +114,26 @@ export const formatNotificationTime = (dateString) => {
   const date = new Date(dateString)
   const now = new Date()
   const diff = now - date
+  const locale = typeof navigator !== 'undefined' ? navigator.language : 'en-US'
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
   
-  // 小于1分钟
   if (diff < 60 * 1000) {
-    return '刚刚'
+    return rtf.format(0, 'second')
   }
   
-  // 小于1小时
   if (diff < 60 * 60 * 1000) {
-    return `${Math.floor(diff / 60 / 1000)}分钟前`
+    return rtf.format(-Math.floor(diff / 60 / 1000), 'minute')
   }
   
-  // 小于24小时
   if (diff < 24 * 60 * 60 * 1000) {
-    return `${Math.floor(diff / 60 / 60 / 1000)}小时前`
+    return rtf.format(-Math.floor(diff / 60 / 60 / 1000), 'hour')
   }
   
-  // 小于7天
   if (diff < 7 * 24 * 60 * 60 * 1000) {
-    return `${Math.floor(diff / 24 / 60 / 60 / 1000)}天前`
+    return rtf.format(-Math.floor(diff / 24 / 60 / 60 / 1000), 'day')
   }
   
-  // 其他情况显示日期
-  return date.toLocaleDateString('zh-CN')
+  return new Intl.DateTimeFormat(locale).format(date)
 }
 
 export default {

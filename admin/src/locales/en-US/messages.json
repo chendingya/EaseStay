@@ -1,0 +1,14 @@
+{
+  "messages": {
+    "title": "Messages",
+    "markAll": "Mark all as read",
+    "markAllSuccess": "All messages marked as read",
+    "markAllError": "Failed to mark all as read",
+    "tabs": {
+      "all": "All",
+      "unread": "Unread"
+    },
+    "empty": "No messages",
+    "unreadTag": "Unread"
+  }
+}

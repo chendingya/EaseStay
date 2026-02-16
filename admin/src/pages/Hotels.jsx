@@ -121,7 +121,7 @@ export default function Hotels() {
       const data = await api.get('/api/merchant/hotels')
       setHotels(data)
     } catch (error) {
-      console.error('获取酒店列表失败:', error)
+      console.error(error)
       message.error(t('hotels.fetchError'))
     } finally {
       setLoading(false)
@@ -159,7 +159,7 @@ export default function Hotels() {
       message.success(action === 'offline' ? t('hotels.status.offlineSuccess') : t('hotels.status.restoreSuccess'))
       fetchHotels()
     } catch (error) {
-      console.error('更新酒店状态失败:', error)
+      console.error(error)
       message.error(t('common.errorRetry'))
     }
   }
@@ -179,7 +179,7 @@ export default function Hotels() {
         const validCount = data.filter(item => !item._errors || item._errors.length === 0).length
         message.success(t('hotels.import.parseSuccess', { total: data.length, valid: validCount }))
       } catch (error) {
-        console.error('解析导入文件失败:', error)
+        console.error(error)
         message.error(t('hotels.import.parseError'))
       }
     }
@@ -204,7 +204,7 @@ export default function Hotels() {
         await api.post('/api/merchant/hotels', hotel)
         successCount++
       } catch (error) {
-        console.error('导入酒店失败:', error)
+        console.error(error)
         failCount++
       }
     }
@@ -257,7 +257,7 @@ export default function Hotels() {
       closeDeleteModal()
       fetchHotels()
     } catch (error) {
-      console.error('提交删除申请失败:', error)
+      console.error(error)
       message.error(t('hotels.delete.submitError'))
     } finally {
       setDeleting(false)
