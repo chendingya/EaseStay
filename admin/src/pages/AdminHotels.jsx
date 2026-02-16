@@ -5,6 +5,7 @@ import { SearchOutlined, ShopOutlined, StarFilled, EnvironmentOutlined } from '@
 import { GlassButton } from '../components'
 import { api } from '../services'
 import { useTranslation } from 'react-i18next'
+import { estimateActionColumnWidth } from '../utils/tableWidth'
 
 export default function AdminHotels() {
   const navigate = useNavigate()
@@ -67,6 +68,20 @@ export default function AdminHotels() {
     offline: { color: 'default', label: t('status.offline') }
   }
 
+  const actionColumnWidth = useMemo(() => {
+    const actionRows = filteredHotels.map((record) => {
+      const labels = [t('common.view')]
+      if (record.status === 'pending') {
+        labels.push(t('common.audit'))
+      }
+      return labels
+    })
+    return estimateActionColumnWidth(actionRows, {
+      minColumnWidth: 140,
+      maxColumnWidth: 320
+    })
+  }, [filteredHotels, t])
+
   const columns = [
     { 
       title: t('adminHotels.columns.name'), 
@@ -113,9 +128,10 @@ export default function AdminHotels() {
     },
     {
       title: t('adminHotels.columns.action'),
-      width: 150,
+      width: actionColumnWidth,
+      fixed: 'right',
       render: (_, record) => (
-        <Space size="small">
+        <Space size={[4, 4]} wrap>
           <GlassButton type="link" size="small" onClick={() => navigate(`/admin-hotels/${record.id}`)}>
             {t('common.view')}
           </GlassButton>
@@ -216,6 +232,7 @@ export default function AdminHotels() {
             showSizeChanger: true,
             showQuickJumper: true
           }}
+          scroll={{ x: 'max-content' }}
         />
       </Card>
     </div>

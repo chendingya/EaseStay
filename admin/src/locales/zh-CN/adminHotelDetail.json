@@ -12,7 +12,7 @@
     "emptyRooms": "暂无房型数据",
     "goAudit": "进入审核",
     "merchant": {
-      "id": "商户ID：{{id}}",
+      "id": "商户ID",
       "phone": "联系电话"
     },
     "nearby": {
@@ -33,7 +33,7 @@
     "order": {
       "checkIn": "入住日期",
       "createdAt": "下单时间",
-      "id": "订单号：{{id}}",
+      "id": "订单号",
       "nights": "间夜",
       "price": "单价",
       "quantity": "数量",
@@ -74,7 +74,7 @@
       "area": "面积",
       "areaValue": "{{value}}㎡",
       "available": "可售",
-      "basePrice": "原价",
+      "basePrice": "原价 ¥{{value}}",
       "batchDiscountAmount": "满减 {{count}} 元",
       "batchDiscountRate": "折扣 {{count}}",
       "bedWidth": "床宽",
@@ -84,7 +84,7 @@
       "capacityValue": "{{value}} 人",
       "ceiling": "层高",
       "ceilingValue": "{{value}}m",
-      "currentPrice": "现价",
+      "currentPrice": "现价 ¥{{value}}",
       "discount": "优惠",
       "name": "房型",
       "noDiscount": "无优惠",

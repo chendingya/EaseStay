@@ -168,9 +168,9 @@ export default function AdminHotelDetail() {
   }
   const getPromotionValueText = (value) => {
     const val = Number(value) || 0
-    if (val < 0) return t('adminHotelDetail.promo.discountAmount', { value: Math.abs(val) })
-    if (val > 10) return t('adminHotelDetail.promo.discountAmount', { value: val })
-    if (val > 0) return t('adminHotelDetail.promo.discountRate', { value: val })
+    if (val < 0) return t('adminHotelDetail.promo.discountAmount', { count: Math.abs(val) })
+    if (val > 10) return t('adminHotelDetail.promo.discountAmount', { count: val })
+    if (val > 0) return t('adminHotelDetail.promo.discountRate', { count: val })
     return ''
   }
 
@@ -233,8 +233,8 @@ export default function AdminHotelDetail() {
           tags.push(
             <Tag color="purple" key={`batch-${record.id || record.name}`}>
               {discountRate > 0
-                ? t('adminHotelDetail.room.batchDiscountRate', { rate: discountRate, quota: discountQuota })
-                : t('adminHotelDetail.room.batchDiscountAmount', { value: Math.abs(discountRate), quota: discountQuota })}
+                ? t('adminHotelDetail.room.batchDiscountRate', { count: discountRate, quota: discountQuota })
+                : t('adminHotelDetail.room.batchDiscountAmount', { count: Math.abs(discountRate), quota: discountQuota })}
             </Tag>
           )
         }

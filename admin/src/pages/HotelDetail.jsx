@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Card, Descriptions, Tag, Image, Space, Typography, Table, Spin, Row, Col, Tabs, Progress, Statistic, Modal, Form, InputNumber, Radio, DatePicker } from 'antd'
 import { StarFilled, EnvironmentOutlined, CalendarOutlined } from '@ant-design/icons'
@@ -6,6 +6,7 @@ import { GlassButton, GanttTimeline, glassMessage as message } from '../componen
 import dayjs from 'dayjs'
 import { api } from '../services'
 import { useTranslation } from 'react-i18next'
+import { estimateActionColumnWidth } from '../utils/tableWidth'
 
 export default function HotelDetail() {
   const { id } = useParams()
@@ -107,6 +108,16 @@ export default function HotelDetail() {
     if (val > 0) return t('hotelDetail.promo.discountRate', { value: val })
     return ''
   }
+
+  const roomActionColumnWidth = useMemo(() => {
+    return estimateActionColumnWidth(
+      [[t('hotelDetail.room.setDiscount'), t('hotelDetail.room.cancelDiscount')]],
+      {
+        minColumnWidth: 180,
+        maxColumnWidth: 380
+      }
+    )
+  }, [t])
 
   const openDiscountModal = (room) => {
     setSelectedRoom(room)
@@ -271,12 +282,13 @@ export default function HotelDetail() {
     {
       title: t('hotelDetail.room.action'),
       key: 'action',
+      width: roomActionColumnWidth,
       render: (_, record) => {
         const discountRate = Number(record.discount_rate) || 0
         const discountQuota = Number(record.discount_quota) || 0
         const hasDiscount = discountQuota > 0 && ((discountRate > 0 && discountRate <= 10) || discountRate < 0)
         return (
-          <Space size="small">
+          <Space size={[4, 4]} wrap>
             <GlassButton type="link" size="small" onClick={() => openDiscountModal(record)}>{t('hotelDetail.room.setDiscount')}</GlassButton>
             <GlassButton type="link" size="small" danger disabled={!hasDiscount} onClick={() => handleCancelDiscount(record)}>{t('hotelDetail.room.cancelDiscount')}</GlassButton>
           </Space>

@@ -5,6 +5,7 @@ import { SearchOutlined, UploadOutlined, DownloadOutlined, InboxOutlined, StopOu
 import { GlassButton, glassMessage as message } from '../components'
 import { api } from '../services'
 import { useTranslation } from 'react-i18next'
+import { estimateActionColumnWidth } from '../utils/tableWidth'
 
 const getTemplateFields = (t) => [
   { field: 'name', label: t('hotels.template.name'), required: true, example: t('hotels.template.example.name') },
@@ -295,6 +296,23 @@ export default function Hotels() {
     offline: { color: 'default', label: t('status.offline') }
   }
 
+  const actionColumnWidth = useMemo(() => {
+    const actionRows = filteredHotels.map((record) => {
+      const labels = [t('common.edit'), t('common.delete')]
+      if (record.status === 'approved') {
+        labels.unshift(t('common.view'), t('hotels.action.offline'))
+      }
+      if (record.status === 'offline') {
+        labels.push(t('hotels.offline.note'))
+      }
+      return labels
+    })
+    return estimateActionColumnWidth(actionRows, {
+      minColumnWidth: 220,
+      maxColumnWidth: 520
+    })
+  }, [filteredHotels, t])
+
   const columns = [
     { title: t('hotels.columns.name'), dataIndex: 'name', width: 180, ellipsis: true },
     { title: t('hotels.columns.nameEn'), dataIndex: 'name_en', width: 220, ellipsis: true },
@@ -313,10 +331,10 @@ export default function Hotels() {
     },
     {
       title: t('hotels.columns.action'),
-      width: 200,
+      width: actionColumnWidth,
       fixed: 'right',
       render: (_, record) => (
-        <Space size="small">
+        <Space size={[4, 4]} wrap>
           {record.status === 'approved' && (
             <>
               <GlassButton type="link" size="small" onClick={() => navigate(`/hotels/${record.id}`)}>{t('common.view')}</GlassButton>
@@ -411,7 +429,7 @@ export default function Hotels() {
         loading={loading}
         pagination={{ pageSize: 8 }}
         size="middle"
-        scroll={{ x: 980 }}
+        scroll={{ x: 'max-content' }}
       />
 
       {/* 导入弹窗 */}

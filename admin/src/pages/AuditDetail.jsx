@@ -118,9 +118,9 @@ export default function AuditDetail() {
   }
   const getValueLabel = (promoValue) => {
     const val = Number(promoValue) || 0
-    if (val < 0) return t('auditDetail.promo.discountAmount', { value: Math.abs(val) })
-    if (val > 10) return t('auditDetail.promo.discountAmount', { value: val })
-    if (val > 0) return t('auditDetail.promo.discountRate', { value: val })
+    if (val < 0) return t('auditDetail.promo.discountAmount', { count: Math.abs(val) })
+    if (val > 10) return t('auditDetail.promo.discountAmount', { count: val })
+    if (val > 0) return t('auditDetail.promo.discountRate', { count: val })
     return ''
   }
 
@@ -182,8 +182,8 @@ export default function AuditDetail() {
           tags.push(
             <Tag color="purple" key={`batch-${record.id || record.name}`}>
               {discountRate > 0
-                ? t('auditDetail.room.batchDiscountRate', { rate: discountRate, quota: discountQuota, period: formatPeriodLabel(record.discount_periods) })
-                : t('auditDetail.room.batchDiscountAmount', { value: Math.abs(discountRate), quota: discountQuota, period: formatPeriodLabel(record.discount_periods) })}
+                ? t('auditDetail.room.batchDiscountRate', { count: discountRate, quota: discountQuota, period: formatPeriodLabel(record.discount_periods) })
+                : t('auditDetail.room.batchDiscountAmount', { count: Math.abs(discountRate), quota: discountQuota, period: formatPeriodLabel(record.discount_periods) })}
             </Tag>
           )
         }
