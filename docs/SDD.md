@@ -9,6 +9,14 @@
 - 安全：JWT 认证、角色鉴权、密码加密存储
 - 动效与交互：页面转场动画、列表分步入场、下拉刷新临界反馈
 
+### 1.3 国际化与展示一致性约束（2026-02）
+- 占位符一致性：词典占位符名必须与 `t()` 调用参数名严格一致。
+- 文案语义分层：
+  - 标题型 key（表头/按钮/标签）不允许占位符
+  - 模板型 key（金额/计数/日期）必须带占位符
+- 跨页面一致性：同一业务实体（房型、优惠）在商户详情、管理员详情、审核页保持同构展示。
+- 表格多语言韧性：`Actions` 列采用动态宽度估算，并使用横向滚动兜底。
+
 ## 1.2 移动端组件规范
 - 透明玻璃按钮 GlassButton：用于预订房型、退出登录、取消订单、确认使用、取消收藏
 
@@ -79,6 +87,7 @@
 | discount_rate | Number | 折扣（正数为折扣率，负数为直减） |
 | discount_quota | Number | 折扣配额 |
 | discount_periods | Array[Object] | 折扣生效区间（按增量新增） |
+| images | Array[String] | 房型图片URL列表 |
 | capacity | Number | 可住人数（默认 2） |
 | bed_width | Number | 床宽（cm，默认 180） |
 | area | Number | 面积（㎡，默认 20） |
@@ -255,6 +264,14 @@ Query：status（可选）
 #### PUT /api/merchant/hotels/:id
 请求：同创建，可部分字段更新
 响应：最新酒店数据与房型列表
+
+#### 详情页展示对齐说明（实现约束）
+- `/api/merchant/hotels/:id` 与 `/api/admin/hotels/:id` 返回的 `roomTypes` 使用统一数据结构。
+- `roomTypes.images` 为房型图片来源字段；前端兼容读取 `images/image_urls/room_images`。
+- 房型优惠展示需包含：
+  - 优惠值（折扣/直减）
+  - 生效区间（来自 `discount_periods`）
+- 酒店级优惠 `promotions` 在详情与审核页均提供甘特时间视图。
 
 #### GET /api/merchant/hotels/overview
 响应：商户工作台统计（酒店数量、房间概览、月度收入等）
