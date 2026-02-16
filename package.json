@@ -6,7 +6,8 @@
     "dev": "npm run dev:h5 --prefix mobile",
     "dev:admin": "npm run dev --prefix admin -- --host 127.0.0.1 --port 4101",
     "dev:server": "npm start --prefix server",
-    "dev:all": "concurrently -n server,admin,mobile -c yellow,cyan,green \"npm start --prefix server\" \"npm run dev --prefix admin -- --host 127.0.0.1 --port 4101\" \"npm run dev:h5 --prefix mobile\""
+    "dev:all": "concurrently -n server,admin,mobile -c yellow,cyan,green \"npm start --prefix server\" \"npm run dev --prefix admin -- --host 127.0.0.1 --port 4101\" \"npm run dev:h5 --prefix mobile\"",
+    "ai": "node scripts/ai-harness.js"
   },
   "devDependencies": {
     "concurrently": "^9.0.0"

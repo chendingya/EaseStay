@@ -1,0 +1,183 @@
+{
+  "version": "1.1.0",
+  "description": "Skills collection for AI-assisted development - Downloaded from awesome-cursorrules",
+  "categories": {
+    "code-quality": {
+      "description": "代码质量与规范相关技能",
+      "skills": [
+        {
+          "name": "github-code-quality",
+          "file": "github-code-quality.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "GitHub 代码质量规则，包含代码协作最佳实践"
+        },
+        {
+          "name": "typescript-convention",
+          "file": "typescript-convention.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "TypeScript 代码规范和最佳实践"
+        },
+        {
+          "name": "javascript-typescript-quality",
+          "file": "javascript-typescript-quality.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "JavaScript/TypeScript 代码质量指南"
+        },
+        {
+          "name": "code-style-consistency",
+          "file": "code-style-consistency.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "代码风格一致性分析规则"
+        },
+        {
+          "name": "optimize-dry-solid",
+          "file": "optimize-dry-solid.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "DRY 和 SOLID 原则优化指南"
+        }
+      ]
+    },
+    "frontend": {
+      "description": "前端开发相关技能",
+      "skills": [
+        {
+          "name": "react-components",
+          "file": "react-components.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "React 组件创建规则和最佳实践"
+        },
+        {
+          "name": "react-typescript-nextjs-nodejs",
+          "file": "react-typescript-nextjs-nodejs.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "React + TypeScript + Next.js + Node.js 开发规范"
+        },
+        {
+          "name": "react-query",
+          "file": "react-query.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "React Query 最佳实践和数据获取模式"
+        },
+        {
+          "name": "tailwind-css-nextjs",
+          "file": "tailwind-css-nextjs.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "Tailwind CSS + Next.js 开发指南"
+        },
+        {
+          "name": "react-native-expo",
+          "file": "react-native-expo.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "React Native Expo 移动开发最佳实践"
+        }
+      ]
+    },
+    "backend": {
+      "description": "后端开发相关技能",
+      "skills": [
+        {
+          "name": "nodejs-express-jwt",
+          "file": "nodejs-express-jwt.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "Node.js + Express + JWT 认证开发规范"
+        },
+        {
+          "name": "typescript-supabase",
+          "file": "typescript-supabase.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "TypeScript + Next.js + Supabase 全栈开发规范"
+        },
+        {
+          "name": "fastapi-python",
+          "file": "fastapi-python.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "Python FastAPI 后端开发最佳实践"
+        }
+      ]
+    },
+    "testing": {
+      "description": "测试相关技能",
+      "skills": [
+        {
+          "name": "vitest-unit-testing",
+          "file": "vitest-unit-testing.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "Vitest 单元测试最佳实践"
+        },
+        {
+          "name": "jest-unit-testing",
+          "file": "jest-unit-testing.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "Jest 单元测试最佳实践"
+        },
+        {
+          "name": "cypress-e2e-testing",
+          "file": "cypress-e2e-testing.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "Cypress E2E 端到端测试规则"
+        },
+        {
+          "name": "playwright-e2e-testing",
+          "file": "playwright-e2e-testing.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "Playwright E2E 端到端测试规则"
+        },
+        {
+          "name": "cypress-api-testing",
+          "file": "cypress-api-testing.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "Cypress API 测试规则"
+        },
+        {
+          "name": "playwright-api-testing",
+          "file": "playwright-api-testing.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "Playwright API 测试规则"
+        },
+        {
+          "name": "qa-bug-report",
+          "file": "qa-bug-report.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "QA 缺陷报告模板和最佳实践"
+        }
+      ]
+    },
+    "mobile": {
+      "description": "移动端开发相关技能",
+      "skills": [
+        {
+          "name": "taro-react-best-practices",
+          "file": "taro-react-best-practices.md",
+          "source": "Adapted for Taro framework",
+          "description": "Taro + React 小程序开发最佳实践"
+        },
+        {
+          "name": "react-native-expo",
+          "file": "react-native-expo.md",
+          "source": "https://github.com/PatrickJS/awesome-cursorrules",
+          "description": "React Native Expo 移动开发最佳实践"
+        }
+      ]
+    }
+  },
+  "originalSkills": [
+    {
+      "name": "repo-scan",
+      "goal": "快速收敛上下文并定位相关代码区域",
+      "inputs": ["目标问题或需求描述", "优先模块或目录"],
+      "outputs": ["关键文件清单", "建议的调查路径", "潜在依赖与风险点"]
+    },
+    {
+      "name": "task-plan",
+      "goal": "把需求拆成可执行任务并与task.json同步",
+      "inputs": ["需求摘要", "当前约束", "验收标准"],
+      "outputs": ["任务列表", "里程碑顺序", "阻塞项提示"]
+    },
+    {
+      "name": "implement-verify",
+      "goal": "实现变更并进行可验证的自检",
+      "inputs": ["变更范围", "目标行为", "可用脚本"],
+      "outputs": ["代码变更清单", "验证命令与结果", "风险说明"]
+    }
+  ]
+}
