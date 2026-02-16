@@ -1,0 +1,21 @@
+{
+  "audit": {
+    "action": {
+      "audit": "去审核"
+    },
+    "columns": {
+      "action": "操作",
+      "city": "城市",
+      "createdAt": "创建时间",
+      "lowestPrice": "最低价",
+      "name": "酒店名称",
+      "star": "星级",
+      "status": "状态"
+    },
+    "filter": {
+      "all": "全部状态"
+    },
+    "starLabel": "{{value}} 星",
+    "title": "酒店审核"
+  }
+}

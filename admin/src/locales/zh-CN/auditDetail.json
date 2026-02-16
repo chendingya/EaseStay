@@ -1,0 +1,101 @@
+{
+  "auditDetail": {
+    "action": {
+      "approve": "通过",
+      "approvedSuccess": "酒店审核通过",
+      "offline": "下架",
+      "offlineSuccess": "酒店已下架",
+      "reject": "驳回",
+      "rejectedSuccess": "酒店已驳回",
+      "restore": "恢复上架"
+    },
+    "basic": {
+      "address": "地址",
+      "city": "城市",
+      "createdAt": "创建时间",
+      "description": "酒店描述",
+      "name": "酒店名称",
+      "nameEn": "英文名",
+      "openingTime": "开业时间",
+      "star": "星级",
+      "starValue": "{{value}} 星",
+      "unrated": "未评级"
+    },
+    "emptyFacilities": "暂无设施信息",
+    "emptyHotel": "未找到酒店信息",
+    "emptyImages": "暂无酒店图片",
+    "emptyPromotions": "暂无优惠活动",
+    "emptyRooms": "暂无房型数据",
+    "fetchHotelError": "获取酒店信息失败",
+    "goAudit": "返回审核列表",
+    "merchant": {
+      "id": "商户ID：{{id}}"
+    },
+    "offlineModal": {
+      "confirm": "确认下架",
+      "content": "确认将该酒店下架？下架后将不可预订。",
+      "reason": "下架原因",
+      "reasonPlaceholder": "请输入下架原因",
+      "reasonRequired": "请填写下架原因",
+      "title": "下架酒店"
+    },
+    "pendingRequests": "待处理申请",
+    "promo": {
+      "active": "生效中",
+      "discountAmount": "减 {{count}} 元",
+      "discountRate": "{{count}} 折",
+      "inactive": "未生效",
+      "longTerm": "长期有效"
+    },
+    "rejectModal": {
+      "confirm": "确认驳回",
+      "content": "确认驳回该酒店审核申请？",
+      "reason": "驳回原因",
+      "reasonPlaceholder": "请输入驳回原因",
+      "reasonRequired": "请填写驳回原因",
+      "title": "驳回审核"
+    },
+    "rejectReason": "驳回原因",
+    "requestType": {
+      "facility": "设施",
+      "hotelDelete": "删除酒店",
+      "promotion": "活动",
+      "roomType": "房型"
+    },
+    "room": {
+      "area": "面积",
+      "areaValue": "{{value}}㎡",
+      "basePrice": "原价",
+      "batchDiscountAmount": "满减 {{count}} 元",
+      "batchDiscountRate": "折扣 {{count}}",
+      "bedWidth": "床宽",
+      "bedWidthValue": "{{value}}m",
+      "breakfast": "早餐",
+      "capacity": "可住人数",
+      "capacityValue": "{{value}} 人",
+      "ceiling": "层高",
+      "ceilingValue": "{{value}}m",
+      "currentPrice": "现价",
+      "discount": "优惠 {{count}}",
+      "name": "房型：{{name}}",
+      "offline": "已下线",
+      "online": "上架中",
+      "price": "价格",
+      "promoFallback": "暂无活动",
+      "status": "状态",
+      "stock": "库存",
+      "wifi": "无线网络"
+    },
+    "sections": {
+      "attractions": "周边景点",
+      "basic": "基本信息",
+      "facilities": "设施服务",
+      "images": "酒店图片",
+      "malls": "周边商场",
+      "merchant": "商户信息",
+      "promotions": "优惠活动",
+      "rooms": "房型信息",
+      "transport": "交通信息"
+    }
+  }
+}

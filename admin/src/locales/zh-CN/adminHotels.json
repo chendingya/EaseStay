@@ -1,0 +1,33 @@
+{
+  "adminHotels": {
+    "columns": {
+      "action": "操作",
+      "city": "城市",
+      "lowestPrice": "最低价",
+      "name": "酒店名称",
+      "nameEn": "英文名",
+      "openingTime": "开业时间",
+      "roomTypes": "房型数",
+      "star": "星级",
+      "status": "状态"
+    },
+    "filter": {
+      "allCities": "全部城市",
+      "allStatus": "全部状态",
+      "reset": "重置",
+      "searchPlaceholder": "搜索酒店名称 / 英文名 / 地址"
+    },
+    "pagination": {
+      "total": "共 {{total}} 条"
+    },
+    "starLabel": "{{value}} 星",
+    "stats": {
+      "approved": "已上架",
+      "offline": "已下线",
+      "pending": "待审核",
+      "suffixHotel": "家",
+      "total": "酒店总数"
+    },
+    "title": "酒店管理"
+  }
+}

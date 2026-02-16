@@ -18,6 +18,17 @@
     "view": "查看",
     "errorRetry": "操作失败，请重试",
     "languageZh": "中文",
-    "languageEn": "English"
+    "languageEn": "English",
+    "approve": "通过",
+    "audit": "审核",
+    "backToList": "返回列表",
+    "close": "关闭",
+    "detail": "详情",
+    "no": "否",
+    "none": "无",
+    "refresh": "刷新",
+    "reject": "驳回",
+    "viewDetail": "查看详情",
+    "yes": "是"
   }
 }

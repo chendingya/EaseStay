@@ -1,0 +1,114 @@
+{
+  "adminHotelDetail": {
+    "basic": {
+      "address": "地址",
+      "city": "城市",
+      "openingTime": "开业时间",
+      "star": "星级",
+      "starValue": "{{value}} 星",
+      "unrated": "未评级"
+    },
+    "emptyOrders": "暂无订单数据",
+    "emptyRooms": "暂无房型数据",
+    "goAudit": "进入审核",
+    "merchant": {
+      "id": "商户ID：{{id}}",
+      "phone": "联系电话"
+    },
+    "nearby": {
+      "attractions": "周边景点",
+      "malls": "周边商场",
+      "transport": "交通出行"
+    },
+    "offline": {
+      "action": "下架",
+      "confirm": "确认下架",
+      "error": "下架失败，请重试",
+      "reasonLabel": "下架原因",
+      "reasonPlaceholder": "请输入下架原因",
+      "reasonRequired": "请填写下架原因",
+      "success": "酒店已下架",
+      "title": "下架酒店"
+    },
+    "order": {
+      "checkIn": "入住日期",
+      "createdAt": "下单时间",
+      "id": "订单号：{{id}}",
+      "nights": "间夜",
+      "price": "单价",
+      "quantity": "数量",
+      "roomType": "房型",
+      "stats": "订单统计",
+      "status": "状态",
+      "title": "订单列表",
+      "totalPrice": "总价"
+    },
+    "overview": {
+      "available": "可售",
+      "availableRate": "可售占比",
+      "occupancyRate": "入住率",
+      "offline": "下线",
+      "offlineRate": "下线占比",
+      "suffixRoom": "间",
+      "total": "总房间数",
+      "used": "已售",
+      "usedRate": "已售占比"
+    },
+    "promo": {
+      "discountAmount": "减 {{count}} 元",
+      "discountRate": "{{count}} 折",
+      "fallback": "暂无优惠",
+      "longTerm": "长期有效",
+      "period": "有效期"
+    },
+    "refreshSuccess": "刷新成功",
+    "restore": {
+      "action": "恢复上架",
+      "confirm": "确认恢复",
+      "content": "确认将该酒店恢复上架？",
+      "error": "恢复上架失败",
+      "success": "已恢复上架",
+      "title": "恢复上架"
+    },
+    "room": {
+      "area": "面积",
+      "areaValue": "{{value}}㎡",
+      "available": "可售",
+      "basePrice": "原价",
+      "batchDiscountAmount": "满减 {{count}} 元",
+      "batchDiscountRate": "折扣 {{count}}",
+      "bedWidth": "床宽",
+      "bedWidthValue": "{{value}}m",
+      "breakfast": "早餐",
+      "capacity": "可住人数",
+      "capacityValue": "{{value}} 人",
+      "ceiling": "层高",
+      "ceilingValue": "{{value}}m",
+      "currentPrice": "现价",
+      "discount": "优惠",
+      "name": "房型",
+      "noDiscount": "无优惠",
+      "offline": "下线",
+      "online": "上架",
+      "price": "价格",
+      "promoFallback": "暂无活动",
+      "status": "状态",
+      "stock": "库存",
+      "used": "已售",
+      "wifi": "无线网络"
+    },
+    "sections": {
+      "basic": "基本信息",
+      "facilities": "设施服务",
+      "images": "酒店图片",
+      "merchant": "商户信息",
+      "nearby": "周边信息",
+      "promotions": "优惠活动"
+    },
+    "tabs": {
+      "orders": "订单",
+      "overview": "总览",
+      "rooms": "房型"
+    }
+  }
+}

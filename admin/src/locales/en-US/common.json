@@ -18,6 +18,17 @@
     "view": "View",
     "errorRetry": "Operation failed, please retry",
     "languageZh": "Chinese",
-    "languageEn": "English"
+    "languageEn": "English",
+    "approve": "Approve",
+    "audit": "Audit",
+    "backToList": "Back To List",
+    "close": "Close",
+    "detail": "Detail",
+    "no": "No",
+    "none": "None",
+    "refresh": "Refresh",
+    "reject": "Reject",
+    "viewDetail": "View Detail",
+    "yes": "Yes"
   }
 }

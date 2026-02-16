@@ -1,0 +1,101 @@
+{
+  "auditDetail": {
+    "action": {
+      "approve": "Approve",
+      "approvedSuccess": "Hotel approved",
+      "offline": "Take Offline",
+      "offlineSuccess": "Hotel taken offline",
+      "reject": "Reject",
+      "rejectedSuccess": "Hotel rejected",
+      "restore": "Restore Online"
+    },
+    "basic": {
+      "address": "Address",
+      "city": "City",
+      "createdAt": "Created At",
+      "description": "Description",
+      "name": "Hotel Name",
+      "nameEn": "English Name",
+      "openingTime": "Opening Time",
+      "star": "Star",
+      "starValue": "{{value}} stars",
+      "unrated": "Unrated"
+    },
+    "emptyFacilities": "Empty Facilities",
+    "emptyHotel": "Empty Hotel",
+    "emptyImages": "Empty Images",
+    "emptyPromotions": "Empty Promotions",
+    "emptyRooms": "Empty Rooms",
+    "fetchHotelError": "Failed to load hotel details",
+    "goAudit": "Back to Audit",
+    "merchant": {
+      "id": "Merchant ID: "
+    },
+    "offlineModal": {
+      "confirm": "Confirm",
+      "content": "Are you sure you want to take this hotel offline?",
+      "reason": "Reason",
+      "reasonPlaceholder": "Enter offline reason",
+      "reasonRequired": "Please enter offline reason",
+      "title": "Take Hotel Offline"
+    },
+    "pendingRequests": "Pending Requests",
+    "promo": {
+      "active": "Active",
+      "discountAmount": "Save {{count}}",
+      "discountRate": "{{count}}% off",
+      "inactive": "Inactive",
+      "longTerm": "Long Term"
+    },
+    "rejectModal": {
+      "confirm": "Reject",
+      "content": "Are you sure you want to reject this hotel?",
+      "reason": "Reason",
+      "reasonPlaceholder": "Enter reject reason",
+      "reasonRequired": "Please enter reject reason",
+      "title": "Reject Hotel"
+    },
+    "rejectReason": "Reject Reason",
+    "requestType": {
+      "facility": "Facility",
+      "hotelDelete": "Hotel Delete",
+      "promotion": "Promotion",
+      "roomType": "Room Type"
+    },
+    "room": {
+      "area": "Area",
+      "areaValue": "{{value}}㎡",
+      "basePrice": "Base Price",
+      "batchDiscountAmount": "Batch save {{count}}",
+      "batchDiscountRate": "Batch {{count}}% off",
+      "bedWidth": "Bed Width",
+      "bedWidthValue": "{{value}}m",
+      "breakfast": "Breakfast",
+      "capacity": "Capacity",
+      "capacityValue": "{{value}} guests",
+      "ceiling": "Ceiling",
+      "ceilingValue": "{{value}}m",
+      "currentPrice": "Current Price",
+      "discount": "Discount {{count}}",
+      "name": "Room: {{name}}",
+      "offline": "Offline",
+      "online": "Online",
+      "price": "Price",
+      "promoFallback": "No promotion",
+      "status": "Status",
+      "stock": "Stock",
+      "wifi": "Wi‑Fi"
+    },
+    "sections": {
+      "attractions": "Attractions",
+      "basic": "Basic",
+      "facilities": "Facilities",
+      "images": "Images",
+      "malls": "Malls",
+      "merchant": "Merchant",
+      "promotions": "Promotions",
+      "rooms": "Rooms",
+      "transport": "Transport"
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "merchantDetail": {
+    "basic": {
+      "createdAt": "Created At",
+      "id": "Merchant ID:",
+      "username": "Username:"
+    },
+    "columns": {
+      "action": "Action",
+      "city": "City",
+      "hotelName": "Hotel Name",
+      "star": "Star",
+      "status": "Status"
+    },
+    "emptyHotels": "No hotels yet",
+    "sections": {
+      "basic": "Basic",
+      "hotels": "Hotels"
+    },
+    "starValue": "{{value}} stars",
+    "stats": {
+      "approved": "Approved",
+      "offline": "Offline",
+      "pending": "Pending",
+      "suffix": "hotels",
+      "total": "Total Hotels"
+    },
+    "subtitle": "Hotels owned by this merchant"
+  }
+}

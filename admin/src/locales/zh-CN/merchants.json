@@ -1,0 +1,32 @@
+{
+  "merchants": {
+    "actions": {
+      "resetPassword": "重置密码"
+    },
+    "approvedCountValue": "已通过 {{count}} 家",
+    "columns": {
+      "action": "操作",
+      "createdAt": "创建时间",
+      "hotelCount": "酒店数",
+      "username": "用户名"
+    },
+    "fetchError": "获取商户列表失败",
+    "hotelCountValue": "共 {{count}} 家",
+    "resetPassword": {
+      "confirm": "确认密码",
+      "confirmAction": "确认重置",
+      "confirmPlaceholder": "请再次输入新密码",
+      "confirmRequired": "请再次输入密码",
+      "error": "密码重置失败",
+      "minLength": "密码至少 6 位",
+      "mismatch": "两次输入密码不一致",
+      "new": "新密码",
+      "newPlaceholder": "请输入新密码",
+      "newRequired": "请输入新密码",
+      "success": "密码重置成功",
+      "title": "为 {{username}} 重置密码"
+    },
+    "title": "商户管理",
+    "total": "共 {{count}} 位商户"
+  }
+}

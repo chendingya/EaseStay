@@ -1,0 +1,30 @@
+{
+  "merchantDetail": {
+    "basic": {
+      "createdAt": "创建时间",
+      "id": "商户ID：{{id}}",
+      "username": "用户名：{{name}}"
+    },
+    "columns": {
+      "action": "操作",
+      "city": "城市",
+      "hotelName": "酒店名称",
+      "star": "星级",
+      "status": "状态"
+    },
+    "emptyHotels": "该商户暂无酒店",
+    "sections": {
+      "basic": "基础信息",
+      "hotels": "酒店列表"
+    },
+    "starValue": "{{value}} 星",
+    "stats": {
+      "approved": "已上架",
+      "offline": "已下线",
+      "pending": "待审核",
+      "suffix": "家",
+      "total": "酒店总数"
+    },
+    "subtitle": "查看商户名下酒店及状态"
+  }
+}

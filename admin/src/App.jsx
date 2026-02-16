@@ -6,7 +6,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react
 import { useTranslation } from 'react-i18next'
 import zhCN from 'antd/locale/zh_CN'
 import enUS from 'antd/locale/en_US'
-import { loadNamespaces } from './locales'
+import { changeLanguage, loadNamespaces } from './locales'
 import { getUnreadCount, onUnreadCountChange, api } from './services'
 import { routeConfig, getRouteNamespaces } from './routes/routeConfig'
 
@@ -150,7 +150,7 @@ function LanguageSwitcher() {
   const { i18n, t } = useTranslation()
   
   const handleChange = (lng) => {
-    i18n.changeLanguage(lng)
+    changeLanguage(lng)
   }
   
   return (
@@ -266,7 +266,7 @@ function App() {
       const duration = Math.round(performance.now() - appPerfStart)
       console.info(`[perf] app-mounted ${duration}ms`)
     }
-  }, [])
+  }, [i18n])
 
   useEffect(() => {
     let cancelled = false

@@ -5,6 +5,7 @@ import LanguageDetector from 'i18next-browser-languagedetector'
 const fallbackLng = 'zh-CN'
 const supportedLngs = ['zh-CN', 'en-US']
 const baseNamespaces = ['common', 'auth', 'menu', 'route', 'header', 'role', 'status', 'error', 'brand']
+const unwrapLocaleModule = (mod) => mod?.default ?? mod ?? {}
 
 const namespaceLoaders = {
   'zh-CN': {
@@ -24,7 +25,14 @@ const namespaceLoaders = {
     messages: () => import('./zh-CN/messages.json'),
     dashboard: () => import('./zh-CN/dashboard.json'),
     orderStats: () => import('./zh-CN/orderStats.json'),
-    hotelEdit: () => import('./zh-CN/hotelEdit.json')
+    hotelEdit: () => import('./zh-CN/hotelEdit.json'),
+    audit: () => import('./zh-CN/audit.json'),
+    auditDetail: () => import('./zh-CN/auditDetail.json'),
+    requestAudit: () => import('./zh-CN/requestAudit.json'),
+    merchants: () => import('./zh-CN/merchants.json'),
+    merchantDetail: () => import('./zh-CN/merchantDetail.json'),
+    adminHotels: () => import('./zh-CN/adminHotels.json'),
+    adminHotelDetail: () => import('./zh-CN/adminHotelDetail.json')
   },
   'en-US': {
     common: () => import('./en-US/common.json'),
@@ -43,18 +51,28 @@ const namespaceLoaders = {
     messages: () => import('./en-US/messages.json'),
     dashboard: () => import('./en-US/dashboard.json'),
     orderStats: () => import('./en-US/orderStats.json'),
-    hotelEdit: () => import('./en-US/hotelEdit.json')
+    hotelEdit: () => import('./en-US/hotelEdit.json'),
+    audit: () => import('./en-US/audit.json'),
+    auditDetail: () => import('./en-US/auditDetail.json'),
+    requestAudit: () => import('./en-US/requestAudit.json'),
+    merchants: () => import('./en-US/merchants.json'),
+    merchantDetail: () => import('./en-US/merchantDetail.json'),
+    adminHotels: () => import('./en-US/adminHotels.json'),
+    adminHotelDetail: () => import('./en-US/adminHotelDetail.json')
   }
 }
 
 const loadedNamespacesByLanguage = new Map()
-const rawChangeLanguage = i18n.changeLanguage.bind(i18n)
 
 function normalizeLanguage(lng) {
   if (!lng) return fallbackLng
-  if (supportedLngs.includes(lng)) return lng
-  if (lng.startsWith('zh')) return 'zh-CN'
-  if (lng.startsWith('en')) return 'en-US'
+  const normalizedInput = String(lng)
+  const lower = normalizedInput.toLowerCase()
+  if (supportedLngs.includes(normalizedInput)) return normalizedInput
+  if (lower === 'zh-cn') return 'zh-CN'
+  if (lower === 'en-us') return 'en-US'
+  if (lower.startsWith('zh')) return 'zh-CN'
+  if (lower.startsWith('en')) return 'en-US'
   return fallbackLng
 }
 
@@ -71,14 +89,15 @@ async function ensureLanguageLoaded(lng) {
 async function ensureNamespaceLoaded(lng, namespace) {
   const normalized = await ensureLanguageLoaded(lng)
   const loadedNamespaces = loadedNamespacesByLanguage.get(normalized)
+  const shouldForceReloadInDev = import.meta.env.DEV
 
-  if (loadedNamespaces.has(namespace)) return normalized
+  if (!shouldForceReloadInDev && loadedNamespaces.has(namespace)) return normalized
 
   const loader = namespaceLoaders[normalized]?.[namespace]
   if (!loader) return normalized
 
   const mod = await loader()
-  i18n.addResourceBundle(normalized, 'translation', mod.default ?? mod, true, true)
+  i18n.addResourceBundle(normalized, 'translation', unwrapLocaleModule(mod), true, true)
   loadedNamespaces.add(namespace)
 
   return normalized
@@ -95,9 +114,9 @@ async function ensureNamespacesLoaded(lng, namespaces = []) {
   return normalized
 }
 
-i18n.changeLanguage = async (lng, ...args) => {
+export async function changeLanguage(lng, ...args) {
   const normalized = await ensureNamespacesLoaded(lng)
-  return rawChangeLanguage(normalized, ...args)
+  return i18n.changeLanguage(normalized, ...args)
 }
 
 export async function loadNamespaces(namespaces = []) {
@@ -112,9 +131,14 @@ export async function initI18n() {
       .use(initReactI18next)
       .init({
         resources: {},
+        ns: ['translation'],
+        defaultNS: 'translation',
+        fallbackNS: 'translation',
         fallbackLng,
         supportedLngs,
-        nonExplicitSupportedLngs: true,
+        nonExplicitSupportedLngs: false,
+        cleanCode: false,
+        lowerCaseLng: false,
         load: 'currentOnly',
         detection: {
           order: ['localStorage', 'navigator'],
@@ -123,6 +147,9 @@ export async function initI18n() {
         interpolation: {
           escapeValue: false
         },
+        keySeparator: '.',
+        nsSeparator: ':',
+        ignoreJSONStructure: false,
         react: {
           useSuspense: false
         }
@@ -131,7 +158,7 @@ export async function initI18n() {
 
   const initialLng = normalizeLanguage(i18n.resolvedLanguage || i18n.language || fallbackLng)
   await ensureNamespacesLoaded(initialLng)
-  await rawChangeLanguage(initialLng)
+  await i18n.changeLanguage(initialLng)
 
   return i18n
 }

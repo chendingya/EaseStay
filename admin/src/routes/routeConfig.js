@@ -8,16 +8,16 @@ export const routeConfig = {
   '/hotels/edit/:id': { titleKey: 'route.editHotel', parent: '/hotels', namespaces: ['hotelEdit'] },
   '/hotels/:id': { titleKey: 'route.hotelDetail', parent: '/hotels', namespaces: ['hotelDetail'] },
   '/hotels/:id/stats': { titleKey: 'route.orderStats', parent: '/hotels/:id', namespaces: ['orderStats'] },
-  '/admin-hotels': { titleKey: 'route.hotels', icon: ShopOutlined, namespaces: ['hotels'] },
-  '/admin-hotels/:id': { titleKey: 'route.hotelDetail', parent: '/admin-hotels', namespaces: ['hotelDetail'] },
+  '/admin-hotels': { titleKey: 'route.hotels', icon: ShopOutlined, namespaces: ['adminHotels'] },
+  '/admin-hotels/:id': { titleKey: 'route.hotelDetail', parent: '/admin-hotels', namespaces: ['adminHotelDetail'] },
   '/admin-hotels/:id/stats': { titleKey: 'route.orderStats', parent: '/admin-hotels/:id', namespaces: ['orderStats'] },
-  '/audit': { titleKey: 'route.hotelAudit', icon: SettingOutlined, namespaces: [] },
-  '/audit/:id': { titleKey: 'route.auditDetail', parent: '/audit', namespaces: [] },
-  '/requests': { titleKey: 'route.requestAudit', icon: FileSearchOutlined, namespaces: [] },
+  '/audit': { titleKey: 'route.hotelAudit', icon: SettingOutlined, namespaces: ['audit'] },
+  '/audit/:id': { titleKey: 'route.auditDetail', parent: '/audit', namespaces: ['auditDetail'] },
+  '/requests': { titleKey: 'route.requestAudit', icon: FileSearchOutlined, namespaces: ['requestAudit'] },
   '/messages': { titleKey: 'route.messages', icon: BellOutlined, namespaces: ['messages'] },
   '/account': { titleKey: 'route.account', icon: UserOutlined, namespaces: ['account'] },
-  '/merchants': { titleKey: 'route.merchants', icon: TeamOutlined, namespaces: [] },
-  '/merchants/:id': { titleKey: 'route.merchantDetail', parent: '/merchants', namespaces: [] }
+  '/merchants': { titleKey: 'route.merchants', icon: TeamOutlined, namespaces: ['merchants'] },
+  '/merchants/:id': { titleKey: 'route.merchantDetail', parent: '/merchants', namespaces: ['merchants', 'merchantDetail'] }
 }
 
 const routeMatchers = [

@@ -1,0 +1,70 @@
+{
+  "requestAudit": {
+    "backToHotelAudit": "返回酒店审核",
+    "columns": {
+      "action": "操作",
+      "createdAt": "提交时间",
+      "hotel": "酒店",
+      "merchant": "商户",
+      "name": "名称",
+      "status": "状态",
+      "type": "类型"
+    },
+    "detail": {
+      "content": "申请内容",
+      "createdAt": "提交时间",
+      "deleteNote": "删除申请，审核通过后将删除酒店",
+      "description": "描述",
+      "discount": "优惠力度",
+      "discountRate": "{{count}} 折",
+      "facilityName": "设施名称",
+      "hotel": "酒店",
+      "hotelName": "酒店名称",
+      "merchant": "商户",
+      "noteLabel": "备注",
+      "price": "价格",
+      "priceValue": "¥{{value}}",
+      "promoDefault": "未设置",
+      "promoTitle": "活动标题",
+      "promoType": "活动类型",
+      "roomName": "房型名称",
+      "status": "状态",
+      "stock": "库存",
+      "stockValue": "{{value}} 间"
+    },
+    "empty": "暂无申请数据",
+    "errorReview": "审核失败，请稍后重试",
+    "hotelFilterTip": "当前仅查看该酒店的申请",
+    "pendingTip": "待审核申请，请尽快处理",
+    "rejectModal": {
+      "confirm": "确认驳回",
+      "content": "确认驳回「{{name}}」的申请？",
+      "reason": "驳回原因",
+      "reasonPlaceholder": "请输入驳回原因",
+      "reasonRequired": "请填写驳回原因",
+      "title": "驳回申请"
+    },
+    "status": {
+      "approved": "已通过",
+      "rejected": "已驳回"
+    },
+    "successApprove": "审核通过",
+    "successReject": "已驳回申请",
+    "tabs": {
+      "all": "全部",
+      "facility": "设施申请",
+      "hotelDelete": "酒店删除",
+      "promotion": "活动申请",
+      "roomType": "房型申请"
+    },
+    "title": "申请审核",
+    "type": {
+      "default": "其他",
+      "facility": "设施",
+      "hotelDelete": "删除酒店",
+      "promotion": "活动",
+      "roomType": "房型"
+    },
+    "viewAll": "查看全部"
+  }
+}

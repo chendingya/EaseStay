@@ -1,0 +1,21 @@
+{
+  "audit": {
+    "action": {
+      "audit": "Audit"
+    },
+    "columns": {
+      "action": "Action",
+      "city": "City",
+      "createdAt": "Created At",
+      "lowestPrice": "Lowest Price",
+      "name": "Hotel Name",
+      "star": "Star",
+      "status": "Status"
+    },
+    "filter": {
+      "all": "All Statuses"
+    },
+    "starLabel": "{{value}} stars",
+    "title": "Hotel Audit"
+  }
+}

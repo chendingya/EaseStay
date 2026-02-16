@@ -1,0 +1,114 @@
+{
+  "adminHotelDetail": {
+    "basic": {
+      "address": "Address",
+      "city": "City",
+      "openingTime": "Opening Time",
+      "star": "Star",
+      "starValue": "{{value}} stars",
+      "unrated": "Unrated"
+    },
+    "emptyOrders": "Empty Orders",
+    "emptyRooms": "Empty Rooms",
+    "goAudit": "Go to Audit",
+    "merchant": {
+      "id": "Merchant ID: ",
+      "phone": "Phone"
+    },
+    "nearby": {
+      "attractions": "Attractions",
+      "malls": "Malls",
+      "transport": "Transport"
+    },
+    "offline": {
+      "action": "Take Offline",
+      "confirm": "Confirm",
+      "error": "Failed to take hotel offline",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Enter offline reason",
+      "reasonRequired": "Please enter offline reason",
+      "success": "Hotel has been taken offline",
+      "title": "Take Hotel Offline"
+    },
+    "order": {
+      "checkIn": "Check In",
+      "createdAt": "Created At",
+      "id": "Order ID: {{id}}",
+      "nights": "Nights",
+      "price": "Price",
+      "quantity": "Quantity",
+      "roomType": "Room Type",
+      "stats": "Order Stats",
+      "status": "Status",
+      "title": "Orders",
+      "totalPrice": "Total Price"
+    },
+    "overview": {
+      "available": "Available",
+      "availableRate": "Available Rate",
+      "occupancyRate": "Occupancy Rate",
+      "offline": "Offline",
+      "offlineRate": "Offline Rate",
+      "suffixRoom": "rooms",
+      "total": "Total Rooms",
+      "used": "Used",
+      "usedRate": "Used Rate"
+    },
+    "promo": {
+      "discountAmount": "Save {{count}}",
+      "discountRate": "{{count}}% off",
+      "fallback": "No promotion",
+      "longTerm": "Long Term",
+      "period": "Period"
+    },
+    "refreshSuccess": "Refreshed successfully",
+    "restore": {
+      "action": "Restore Online",
+      "confirm": "Confirm",
+      "content": "Are you sure you want to restore this hotel online?",
+      "error": "Failed to restore hotel",
+      "success": "Hotel restored online",
+      "title": "Restore Hotel"
+    },
+    "room": {
+      "area": "Area",
+      "areaValue": "{{value}}㎡",
+      "available": "Available",
+      "basePrice": "Base Price",
+      "batchDiscountAmount": "Batch save {{count}}",
+      "batchDiscountRate": "Batch {{count}}% off",
+      "bedWidth": "Bed Width",
+      "bedWidthValue": "{{value}}m",
+      "breakfast": "Breakfast",
+      "capacity": "Capacity",
+      "capacityValue": "{{value}} guests",
+      "ceiling": "Ceiling",
+      "ceilingValue": "{{value}}m",
+      "currentPrice": "Current Price",
+      "discount": "Discount",
+      "name": "Room:",
+      "noDiscount": "No discount",
+      "offline": "Offline",
+      "online": "Online",
+      "price": "Price",
+      "promoFallback": "No promotion",
+      "status": "Status",
+      "stock": "Stock",
+      "used": "Used",
+      "wifi": "Wi‑Fi"
+    },
+    "sections": {
+      "basic": "Basic",
+      "facilities": "Facilities",
+      "images": "Images",
+      "merchant": "Merchant",
+      "nearby": "Nearby",
+      "promotions": "Promotions"
+    },
+    "tabs": {
+      "orders": "Orders",
+      "overview": "Overview",
+      "rooms": "Rooms"
+    }
+  }
+}

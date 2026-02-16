@@ -1,0 +1,32 @@
+{
+  "merchants": {
+    "actions": {
+      "resetPassword": "Reset Password"
+    },
+    "approvedCountValue": "Approved {{count}}",
+    "columns": {
+      "action": "Action",
+      "createdAt": "Created At",
+      "hotelCount": "Hotel Count",
+      "username": "Username"
+    },
+    "fetchError": "Failed to load merchants",
+    "hotelCountValue": "{{count}} hotels",
+    "resetPassword": {
+      "confirm": "Confirm Password",
+      "confirmAction": "Confirm Reset",
+      "confirmPlaceholder": "Enter password again",
+      "confirmRequired": "Please confirm the new password",
+      "error": "Failed to reset password",
+      "minLength": "Password must be at least 6 characters",
+      "mismatch": "Passwords do not match",
+      "new": "New Password",
+      "newPlaceholder": "Enter new password",
+      "newRequired": "Please enter a new password",
+      "success": "Password reset successfully",
+      "title": "Reset password for {{username}}"
+    },
+    "title": "Merchants",
+    "total": "{{count}} merchants"
+  }
+}

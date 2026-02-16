@@ -1,0 +1,33 @@
+{
+  "adminHotels": {
+    "columns": {
+      "action": "Action",
+      "city": "City",
+      "lowestPrice": "Lowest Price",
+      "name": "Hotel Name",
+      "nameEn": "English Name",
+      "openingTime": "Opening Time",
+      "roomTypes": "Room Types",
+      "star": "Star",
+      "status": "Status"
+    },
+    "filter": {
+      "allCities": "All Cities",
+      "allStatus": "All Statuses",
+      "reset": "Reset",
+      "searchPlaceholder": "Search by hotel name / English name / address"
+    },
+    "pagination": {
+      "total": "Total {{total}} items"
+    },
+    "starLabel": "{{value}} stars",
+    "stats": {
+      "approved": "Approved",
+      "offline": "Offline",
+      "pending": "Pending",
+      "suffixHotel": "hotels",
+      "total": "Total Hotels"
+    },
+    "title": "Hotels"
+  }
+}

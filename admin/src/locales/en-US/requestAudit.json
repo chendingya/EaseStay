@@ -1,0 +1,70 @@
+{
+  "requestAudit": {
+    "backToHotelAudit": "Back to Hotel Audit",
+    "columns": {
+      "action": "Action",
+      "createdAt": "Created At",
+      "hotel": "Hotel",
+      "merchant": "Merchant",
+      "name": "Name",
+      "status": "Status",
+      "type": "Type"
+    },
+    "detail": {
+      "content": "Request Content",
+      "createdAt": "Created At",
+      "deleteNote": "This request will delete the hotel after approval",
+      "description": "Description",
+      "discount": "Discount",
+      "discountRate": "{{count}}% off",
+      "facilityName": "Facility Name",
+      "hotel": "Hotel",
+      "hotelName": "Hotel Name",
+      "merchant": "Merchant",
+      "noteLabel": "Notes",
+      "price": "Price",
+      "priceValue": "$ {{value}}",
+      "promoDefault": "Not set",
+      "promoTitle": "Promo Title",
+      "promoType": "Promo Type",
+      "roomName": "Room Name",
+      "status": "Status",
+      "stock": "Stock",
+      "stockValue": "{{value}} rooms"
+    },
+    "empty": "No requests",
+    "errorReview": "Failed to review request",
+    "hotelFilterTip": "Viewing requests for this hotel",
+    "pendingTip": "Pending request, please review in time",
+    "rejectModal": {
+      "confirm": "Reject",
+      "content": "Reject request \"{{name}}\"?",
+      "reason": "Reject Reason",
+      "reasonPlaceholder": "Enter reject reason",
+      "reasonRequired": "Please enter a reject reason",
+      "title": "Reject Request"
+    },
+    "status": {
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "successApprove": "Request approved",
+    "successReject": "Request rejected",
+    "tabs": {
+      "all": "All",
+      "facility": "Facility",
+      "hotelDelete": "Hotel Delete",
+      "promotion": "Promotion",
+      "roomType": "Room Type"
+    },
+    "title": "Request Audit",
+    "type": {
+      "default": "Other",
+      "facility": "Facility",
+      "hotelDelete": "Hotel Delete",
+      "promotion": "Promotion",
+      "roomType": "Room Type"
+    },
+    "viewAll": "View all"
+  }
+}
