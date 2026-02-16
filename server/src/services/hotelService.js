@@ -192,6 +192,123 @@ const getLowestPrices = async (hotelIds) => {
   return priceMap
 }
 
+const getRoomTypeCountMap = async (hotelIds) => {
+  if (!hotelIds.length) return {}
+
+  const { data: roomTypes, error } = await supabase
+    .from('room_types')
+    .select('hotel_id')
+    .in('hotel_id', hotelIds)
+
+  if (error) {
+    return {}
+  }
+
+  const countMap = {}
+  hotelIds.forEach((id) => {
+    countMap[id] = 0
+  })
+
+  ;(roomTypes || []).forEach((item) => {
+    const hotelId = item?.hotel_id
+    if (hotelId === undefined || hotelId === null) return
+    countMap[hotelId] = (countMap[hotelId] || 0) + 1
+  })
+
+  return countMap
+}
+
+const buildIdInFilter = (ids = []) => {
+  const normalized = ids
+    .map((id) => Number(id))
+    .filter((id) => Number.isFinite(id))
+  if (!normalized.length) return ''
+  return `(${normalized.join(',')})`
+}
+
+const getPendingDeleteHotelIds = async () => {
+  const { data, error } = await supabase
+    .from('requests')
+    .select('hotel_id')
+    .eq('type', 'hotel_delete')
+    .eq('status', 'pending')
+
+  if (error) {
+    return { ok: false, status: 500, message: '查询删除申请失败：' + error.message }
+  }
+
+  const ids = [...new Set((data || []).map((item) => item.hotel_id).filter((id) => Number.isFinite(Number(id))))]
+  return { ok: true, status: 200, data: ids }
+}
+
+const applyAdminHotelFilters = ({ query, status, keyword, city, excludeIds }) => {
+  const inFilter = buildIdInFilter(excludeIds)
+
+  if (inFilter) {
+    query = query.not('id', 'in', inFilter)
+  }
+
+  if (status && status !== 'all') {
+    query = query.eq('status', status)
+  }
+
+  if (city && city !== 'all') {
+    query = query.eq('city', city)
+  }
+
+  const normalizedKeyword = String(keyword || '').trim()
+  if (normalizedKeyword) {
+    const safeKeyword = normalizedKeyword.replace(/[(),]/g, ' ').replace(/\s+/g, ' ').trim()
+    if (safeKeyword) {
+      query = query.or(`name.ilike.%${safeKeyword}%,name_en.ilike.%${safeKeyword}%,address.ilike.%${safeKeyword}%`)
+    }
+  }
+
+  return query
+}
+
+const getAdminHotelStats = async ({ excludeIds = [] }) => {
+  const buildCountQuery = (status) => {
+    let query = supabase
+      .from('hotels')
+      .select('id', { count: 'exact', head: true })
+
+    const inFilter = buildIdInFilter(excludeIds)
+    if (inFilter) {
+      query = query.not('id', 'in', inFilter)
+    }
+
+    if (status) {
+      query = query.eq('status', status)
+    }
+
+    return query
+  }
+
+  const [totalRes, approvedRes, pendingRes, offlineRes] = await Promise.all([
+    buildCountQuery(''),
+    buildCountQuery('approved'),
+    buildCountQuery('pending'),
+    buildCountQuery('offline')
+  ])
+
+  const firstError = totalRes.error || approvedRes.error || pendingRes.error || offlineRes.error
+  if (firstError) {
+    return { ok: false, status: 500, message: '查询统计失败：' + firstError.message }
+  }
+
+  return {
+    ok: true,
+    status: 200,
+    data: {
+      total: totalRes.count || 0,
+      approved: approvedRes.count || 0,
+      pending: pendingRes.count || 0,
+      offline: offlineRes.count || 0
+    }
+  }
+}
+
 const getRoomTypeStatsByHotelIds = async (hotelIds) => {
   if (!hotelIds.length) {
     return { ok: true, status: 200, data: [] }
@@ -1054,56 +1171,136 @@ const applyPromotionsToRooms = async () => {
   return true
 }
 
-// 商户酒店列表
-const listMerchantHotels = async ({ merchantId, status }) => {
-  let query = supabase
-    .from('hotels')
-    .select('*')
-    .eq('merchant_id', merchantId)
-
-  if (status) {
+const applyMerchantHotelFilters = ({ query, status, keyword, city }) => {
+  if (status && status !== 'all') {
     query = query.eq('status', status)
   }
 
-  const { data: hotels, error } = await query
+  if (city && city !== 'all') {
+    query = query.eq('city', city)
+  }
 
+  const normalizedKeyword = String(keyword || '').trim()
+  if (normalizedKeyword) {
+    const safeKeyword = normalizedKeyword.replace(/[(),]/g, ' ').replace(/\s+/g, ' ').trim()
+    if (safeKeyword) {
+      query = query.or(`name.ilike.%${safeKeyword}%,name_en.ilike.%${safeKeyword}%,address.ilike.%${safeKeyword}%`)
+    }
+  }
+
+  return query
+}
+
+// 商户酒店列表
+const listMerchantHotels = async ({ merchantId, status, keyword, city, page, pageSize }) => {
+  const shouldPaginate = page !== undefined || pageSize !== undefined
+
+  if (!shouldPaginate) {
+    let query = supabase
+      .from('hotels')
+      .select('*')
+      .eq('merchant_id', merchantId)
+
+    query = applyMerchantHotelFilters({ query, status, keyword, city })
+    query = query.order('created_at', { ascending: false })
+
+    const { data: hotels, error } = await query
+
+    if (error) {
+      return { ok: false, status: 500, message: '查询失败：' + error.message }
+    }
+
+    const hotelIds = (hotels || []).map((h) => h.id)
+    const priceMap = await getLowestPrices(hotelIds)
+    const roomTypeMap = {}
+
+    if (hotelIds.length) {
+      const { data: roomTypes } = await supabase
+        .from('room_types')
+        .select('id, hotel_id, name, price, stock, is_active, discount_rate, discount_quota')
+        .in('hotel_id', hotelIds)
+
+      const roomTypeIds = (roomTypes || []).map((room) => room.id).filter((id) => Number.isFinite(Number(id)))
+      const usedResult = await getActiveOrderQtyMap({ roomTypeIds, asOfDate: new Date() })
+      if (!usedResult.ok) {
+        return { ok: false, status: 500, message: usedResult.message }
+      }
+
+      ;(roomTypes || []).forEach((room) => {
+        const used = usedResult.map.get(room.id) || 0
+        const enrichedRoom = { ...room, used_stock: used }
+        if (!roomTypeMap[room.hotel_id]) {
+          roomTypeMap[room.hotel_id] = []
+        }
+        roomTypeMap[room.hotel_id].push(enrichedRoom)
+      })
+    }
+
+    const enriched = (hotels || []).map((hotel) => ({
+      ...hotel,
+      lowestPrice: priceMap[hotel.id],
+      roomTypes: roomTypeMap[hotel.id] || []
+    }))
+
+    return { ok: true, status: 200, data: enriched }
+  }
+
+  const normalizedPage = Math.max(Number(page) || 1, 1)
+  const normalizedPageSize = Math.max(Number(pageSize) || 10, 1)
+  const from = (normalizedPage - 1) * normalizedPageSize
+  const to = from + normalizedPageSize - 1
+
+  let query = supabase
+    .from('hotels')
+    .select('*', { count: 'exact' })
+    .eq('merchant_id', merchantId)
+
+  query = applyMerchantHotelFilters({ query, status, keyword, city })
+  query = query
+    .order('created_at', { ascending: false })
+    .range(from, to)
+
+  const { data: hotels, error, count } = await query
   if (error) {
     return { ok: false, status: 500, message: '查询失败：' + error.message }
   }
 
-  const hotelIds = hotels.map((h) => h.id)
+  const hotelIds = (hotels || []).map((item) => item.id)
   const priceMap = await getLowestPrices(hotelIds)
-  const roomTypeMap = {}
+  const roomTypeCountMap = await getRoomTypeCountMap(hotelIds)
 
-  if (hotelIds.length) {
-    const { data: roomTypes } = await supabase
-      .from('room_types')
-      .select('id, hotel_id, name, price, stock, is_active, discount_rate, discount_quota')
-      .in('hotel_id', hotelIds)
-
-    const roomTypeIds = (roomTypes || []).map((room) => room.id).filter((id) => Number.isFinite(Number(id)))
-    const usedResult = await getActiveOrderQtyMap({ roomTypeIds, asOfDate: new Date() })
-    if (!usedResult.ok) {
-      return { ok: false, status: 500, message: usedResult.message }
-    }
-
-    ;(roomTypes || []).forEach((room) => {
-      const used = usedResult.map.get(room.id) || 0
-      const enrichedRoom = { ...room, used_stock: used }
-      if (!roomTypeMap[room.hotel_id]) {
-        roomTypeMap[room.hotel_id] = []
-      }
-      roomTypeMap[room.hotel_id].push(enrichedRoom)
-    })
-  }
-
-  const enriched = hotels.map((hotel) => ({
+  const enriched = (hotels || []).map((hotel) => ({
     ...hotel,
     lowestPrice: priceMap[hotel.id],
-    roomTypes: roomTypeMap[hotel.id] || []
+    roomTypeCount: roomTypeCountMap[hotel.id] || 0
   }))
 
-  return { ok: true, status: 200, data: enriched }
+  return {
+    ok: true,
+    status: 200,
+    data: {
+      page: normalizedPage,
+      pageSize: normalizedPageSize,
+      total: count || 0,
+      list: enriched
+    }
+  }
+}
+
+const listMerchantHotelCities = async ({ merchantId }) => {
+  const { data, error } = await supabase
+    .from('hotels')
+    .select('city')
+    .eq('merchant_id', merchantId)
+
+  if (error) {
+    return { ok: false, status: 500, message: '查询城市列表失败：' + error.message }
+  }
+
+  const cities = [...new Set((data || []).map((item) => String(item?.city || '').trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'zh-CN'))
+
+  return { ok: true, status: 200, data: cities }
 }
 
 // 商户酒店详情
@@ -1152,49 +1349,108 @@ const getMerchantHotel = async ({ merchantId, hotelId }) => {
 }
 
 // 管理员酒店列表
-const listAdminHotels = async ({ status }) => {
-  let query = supabase.from('hotels').select('*')
+const listAdminHotels = async ({ status, keyword, city, page, pageSize }) => {
+  const shouldPaginate = page !== undefined || pageSize !== undefined
 
-  if (status) {
-    query = query.eq('status', status)
+  const pendingDeleteResult = await getPendingDeleteHotelIds()
+  if (!pendingDeleteResult.ok) {
+    return pendingDeleteResult
+  }
+  const excludeIds = pendingDeleteResult.data || []
+
+  if (!shouldPaginate) {
+    let query = supabase.from('hotels').select('*')
+    query = applyAdminHotelFilters({ query, status, keyword, city, excludeIds })
+    query = query.order('created_at', { ascending: false })
+
+    const { data: hotels, error } = await query
+    if (error) {
+      return { ok: false, status: 500, message: '查询失败：' + error.message }
+    }
+
+    const hotelIds = (hotels || []).map((h) => h.id)
+    const priceMap = await getLowestPrices(hotelIds)
+    const roomTypeCountMap = await getRoomTypeCountMap(hotelIds)
+
+    const enriched = (hotels || []).map((hotel) => ({
+      ...hotel,
+      lowestPrice: priceMap[hotel.id],
+      roomTypeCount: roomTypeCountMap[hotel.id] || 0
+    }))
+
+    return { ok: true, status: 200, data: enriched }
   }
 
-  const { data: hotels, error } = await query
+  const normalizedPage = Math.max(Number(page) || 1, 1)
+  const normalizedPageSize = Math.max(Number(pageSize) || 10, 1)
+  const from = (normalizedPage - 1) * normalizedPageSize
+  const to = from + normalizedPageSize - 1
 
+  let query = supabase
+    .from('hotels')
+    .select('*', { count: 'exact' })
+
+  query = applyAdminHotelFilters({ query, status, keyword, city, excludeIds })
+  query = query
+    .order('created_at', { ascending: false })
+    .range(from, to)
+
+  const { data: hotels, error, count } = await query
   if (error) {
     return { ok: false, status: 500, message: '查询失败：' + error.message }
   }
 
-  const hotelIds = hotels.map((h) => h.id)
-  let filteredHotels = hotels
-
-  if (hotelIds.length) {
-    const { data: deleteRequests, error: deleteError } = await supabase
-      .from('requests')
-      .select('hotel_id, status')
-      .eq('type', 'hotel_delete')
-      .in('status', ['pending'])
-      .in('hotel_id', hotelIds)
-
-    if (deleteError) {
-      return { ok: false, status: 500, message: '查询删除申请失败：' + deleteError.message }
-    }
-
-    if (deleteRequests && deleteRequests.length > 0) {
-      const excludeIds = new Set(deleteRequests.map((req) => req.hotel_id).filter(Boolean))
-      filteredHotels = hotels.filter((hotel) => !excludeIds.has(hotel.id))
-    }
+  const hotelIds = (hotels || []).map((h) => h.id)
+  const priceMap = await getLowestPrices(hotelIds)
+  const roomTypeCountMap = await getRoomTypeCountMap(hotelIds)
+  const statsResult = await getAdminHotelStats({ excludeIds })
+  if (!statsResult.ok) {
+    return statsResult
   }
 
-  const filteredHotelIds = filteredHotels.map((h) => h.id)
-  const priceMap = await getLowestPrices(filteredHotelIds)
-
-  const enriched = filteredHotels.map((hotel) => ({
+  const enriched = (hotels || []).map((hotel) => ({
     ...hotel,
-    lowestPrice: priceMap[hotel.id]
+    lowestPrice: priceMap[hotel.id],
+    roomTypeCount: roomTypeCountMap[hotel.id] || 0
   }))
 
-  return { ok: true, status: 200, data: enriched }
+  return {
+    ok: true,
+    status: 200,
+    data: {
+      page: normalizedPage,
+      pageSize: normalizedPageSize,
+      total: count || 0,
+      list: enriched,
+      stats: statsResult.data
+    }
+  }
+}
+
+const listAdminHotelCities = async () => {
+  const pendingDeleteResult = await getPendingDeleteHotelIds()
+  if (!pendingDeleteResult.ok) {
+    return pendingDeleteResult
+  }
+
+  let query = supabase
+    .from('hotels')
+    .select('id, city')
+
+  const inFilter = buildIdInFilter(pendingDeleteResult.data || [])
+  if (inFilter) {
+    query = query.not('id', 'in', inFilter)
+  }
+
+  const { data, error } = await query
+  if (error) {
+    return { ok: false, status: 500, message: '查询城市列表失败：' + error.message }
+  }
+
+  const cities = [...new Set((data || []).map((item) => String(item?.city || '').trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'zh-CN'))
+
+  return { ok: true, status: 200, data: cities }
 }
 
 // 更新酒店状态
@@ -1842,8 +2098,10 @@ module.exports = {
   createHotel,
   updateHotel,
   listMerchantHotels,
+  listMerchantHotelCities,
   getMerchantHotel,
   listAdminHotels,
+  listAdminHotelCities,
   getAdminHotelDetail,
   updateHotelStatus,
   updateMerchantHotelStatus,

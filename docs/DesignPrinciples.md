@@ -122,6 +122,7 @@ label={index === 0 ? "标签名" : undefined}
 |------|------|------|
 | GlassCard | GlassUI.jsx | 玻璃风格卡片 |
 | glassMessage | GlassUI.jsx | 玻璃风格消息提示 |
+| TableFilterBar | TableFilterBar.jsx | 列表搜索/筛选/重置/刷新工具条 |
 
 ### 6.2 使用示例
 ```jsx
@@ -142,8 +143,23 @@ message.success('成功')
 - 间距：`gutter={24}`
 
 ### 7.2 表格
-- 使用分页：`pagination={{ pageSize: 8 }}`
+- 长列表默认使用服务端分页：`pagination.current/pageSize/total` 由接口返回驱动
+- 搜索和筛选默认走服务端参数，不在页面内对全量数据做二次过滤
 - 无分页场景：`pagination={false}`
+
+### 7.3 长列表性能规范（Admin）
+- 查询约定：
+  - 分页：`page/pageSize`
+  - 筛选：`keyword/status/city/type/hotelId`（按页面选用）
+- 状态联动：
+  - 搜索词变化后回到第一页（防抖触发）
+  - 任何筛选项变化后回到第一页
+  - 刷新操作仅重拉当前分页与筛选条件下的数据
+- 复用约定：
+  - 页面优先复用 `useRemoteTableQuery` 处理查询状态
+  - 页面优先复用 `TableFilterBar` 组织筛选区结构
+- 兼容约定：
+  - 服务端接口需保持“无分页参数兼容旧结构，有分页参数返回分页结构”
 
 ## 8. API 请求规范
 
@@ -228,6 +244,7 @@ const { t } = useTranslation()
 - 管理员酒店详情页对齐商户端功能（Tabs、房型总览、订单展示与统计）
 - 扩展管理员 API 端点以支持无商户 ID 限制的数据访问
 - 统一使用 GlassUI 组件保持视觉一致性
+- 管理端长列表统一切换到服务端分页/筛选，沉淀 `useRemoteTableQuery + TableFilterBar` 复用范式
 
 ## 13. 禁止事项
 

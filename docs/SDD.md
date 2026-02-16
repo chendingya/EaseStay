@@ -16,6 +16,11 @@
   - 模板型 key（金额/计数/日期）必须带占位符
 - 跨页面一致性：同一业务实体（房型、优惠）在商户详情、管理员详情、审核页保持同构展示。
 - 表格多语言韧性：`Actions` 列采用动态宽度估算，并使用横向滚动兜底。
+- Admin 长列表性能约束：
+  - 列表页默认使用服务端分页与服务端筛选
+  - 搜索输入使用防抖，筛选变化后回到第一页
+  - 统一复用 `useRemoteTableQuery` 与 `TableFilterBar`
+  - 接口保持“旧结构兼容 + 分页结构升级”双模式输出
 
 ## 1.2 移动端组件规范
 - 透明玻璃按钮 GlassButton：用于预订房型、退出登录、取消订单、确认使用、取消收藏
@@ -212,8 +217,13 @@
 
 ### 4.3 商户酒店管理（PC 端 - 商户）
 #### GET /api/merchant/hotels
-Query：status（可选）
-响应：酒店列表
+Query：`status`、`keyword`、`city`（可选），`page`、`pageSize`（分页模式可选）
+响应：
+- 未传 `page/pageSize`：酒店数组（兼容旧调用）
+- 传 `page/pageSize`：`{ page, pageSize, total, list }`
+
+#### GET /api/merchant/hotels/cities
+响应：商户名下城市列表（去重后的字符串数组）
 
 #### POST /api/merchant/hotels
 请求：
@@ -309,8 +319,13 @@ Query：page, pageSize
 
 ### 4.4 管理员酒店管理（PC 端 - 管理员）
 #### GET /api/admin/hotels
-Query：status（可选）
-响应：酒店列表
+Query：`status`、`keyword`、`city`（可选），`page`、`pageSize`（分页模式可选）
+响应：
+- 未传 `page/pageSize`：酒店数组（兼容旧调用）
+- 传 `page/pageSize`：`{ page, pageSize, total, list, stats }`
+
+#### GET /api/admin/hotels/cities
+响应：平台酒店城市列表（去重后的字符串数组）
 
 #### PATCH /api/admin/hotels/:id/status
 请求：
@@ -492,8 +507,10 @@ Query：status、type（可选）
 响应：申请列表
 
 #### GET /api/admin/requests
-Query：type、status、hotelId（可选）
-响应：待审核申请列表（含商户和酒店信息）
+Query：`type`、`status`、`hotelId`（可选），`page`、`pageSize`（分页模式可选）
+响应：
+- 未传 `page/pageSize`：申请数组（含商户和酒店信息）
+- 传 `page/pageSize`：`{ page, pageSize, total, list }`
 
 #### PUT /api/admin/requests/:id/review
 请求：approve/reject 与驳回原因
@@ -581,7 +598,10 @@ Query：page、pageSize、status（可选）
 响应：订单状态更新为 `finished`
 
 #### GET /api/user/merchants
-响应：商户列表（管理员）
+Query：`keyword`（可选），`page`、`pageSize`（分页模式可选）
+响应：
+- 未传 `page/pageSize`：商户数组（兼容旧调用）
+- 传 `page/pageSize`：`{ page, pageSize, total, list }`
 
 #### GET /api/user/merchants/:id
 响应：商户详情（管理员）
@@ -598,6 +618,7 @@ Query：page、pageSize、status（可选）
 - 支付：移动端通过 /api/user/orders/:id/pay 执行模拟支付，成功后订单转为 confirmed
 - 收藏：移动端收藏使用本地存储持久化，支持单条取消与批量清空
 - 通知中心：使用 /api/notifications 系列接口
+- 管理端长列表：统一支持 `page/pageSize + keyword/status/city/...`，并兼容无分页参数的旧数组返回
 
 ## 6. 预设数据配置
 ### 8.1 预设设施标签
@@ -640,24 +661,24 @@ Query：page、pageSize、status（可选）
 - 提供批量折扣与批量房型操作入口
 
 ### 9.3 商户酒店管理
-- Hotels：搜索筛选、状态标签、批量导入
+- Hotels：远程分页 + 远程搜索筛选（`status/city/keyword`）、状态标签、批量导入
 - HotelEdit：地图选址、图片上传、设施/房型/优惠编辑与申请提交
 - HotelDetail：商户侧酒店详情与房型/设施信息展示
 
 ### 9.4 管理员酒店管理
-- AdminHotels：全量酒店管理列表与统计卡片
+- AdminHotels：远程分页 + 远程搜索筛选（`status/city/keyword`）与统计卡片
 - AdminHotelDetail：管理员侧酒店详情与上下架/审核动作入口
-- Audit / AuditDetail：审核列表与酒店审核详情，支持通过/驳回/下线/恢复
+- Audit / AuditDetail：审核列表（远程分页 + 状态筛选）与酒店审核详情，支持通过/驳回/下线/恢复
 
 ### 9.5 申请审核
-- RequestAudit：按类型/酒店过滤待审申请，支持通过/拒绝与原因记录
+- RequestAudit：按类型/酒店过滤待审申请，支持远程分页、通过/拒绝与原因记录
 
 ### 9.6 消息中心
 - Messages：消息列表、未读筛选、标记已读/全部已读
 
 ### 9.7 账户与商户管理
 - Account：账户信息与修改密码
-- Merchants / MerchantDetail：商户列表、详情、重置密码与酒店统计
+- Merchants / MerchantDetail：商户列表（远程分页 + 关键词搜索）、详情、重置密码与酒店统计
 
 ## 8. 服务端模块实现（server）
 ### 10.1 入口与路由组织

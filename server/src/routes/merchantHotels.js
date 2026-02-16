@@ -3,6 +3,7 @@ const {
   create,
   update,
   list,
+  cities,
   detail,
   updateStatus,
   roomTypeStats,
@@ -31,11 +32,45 @@ const router = express.Router()
  *         required: false
  *         schema:
  *           type: string
+ *       - name: keyword
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: string
+ *       - name: city
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: string
+ *       - name: page
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: number
+ *       - name: pageSize
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: number
  *     responses:
  *       200:
  *         description: ok
  */
 router.get('/', list)
+/**
+ * @openapi
+ * /api/merchant/hotels/cities:
+ *   get:
+ *     tags:
+ *       - Merchant
+ *     summary: 商户酒店城市列表
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: ok
+ */
+router.get('/cities', cities)
 
 /**
  * @openapi

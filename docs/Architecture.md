@@ -51,6 +51,22 @@
     - 结合 `scroll.x=max-content` 提供极端场景兜底
 - 目标：避免中英切换后按钮挤压、截断、溢出。
 
+### 3.7 Admin 长列表远程查询子架构（2026-02）
+- 列表查询范式统一为“服务端分页 + 服务端筛选”：
+    - 分页参数：`page/pageSize`
+    - 筛选参数：`keyword/status/city/type/hotelId`（按业务域使用）
+- 前端复用层：
+    - `useRemoteTableQuery`：统一搜索防抖、分页态与翻页逻辑
+    - `TableFilterBar`：统一搜索框、下拉筛选、重置与刷新入口
+- 后端兼容策略：
+    - 未传 `page/pageSize` 返回旧数组结构（兼容历史调用）
+    - 传入 `page/pageSize` 返回 `{ page, pageSize, total, list }`
+- 已落地接口：
+    - `GET /api/admin/hotels`、`GET /api/merchant/hotels`
+    - `GET /api/admin/requests`
+    - `GET /api/user/merchants`
+    - 城市选项接口：`GET /api/admin/hotels/cities`、`GET /api/merchant/hotels/cities`
+
 ## 4. Mermaid 架构示意
 ```mermaid
 graph TD
@@ -95,6 +111,6 @@ graph TD
 
 ## 5. 非功能性要求
 - 安全：JWT 认证、角色鉴权、敏感操作校验
-- 性能：路由级代码分割、词典按需加载、分页与增量渲染
+- 性能：路由级代码分割、词典按需加载、服务端分页与筛选、分页与增量渲染
 - 可维护：业务域分层（路由、服务、词典、检查脚本）
 - 可扩展：新增语言只需补 `{lng}/{namespace}.json` 并接入 loader

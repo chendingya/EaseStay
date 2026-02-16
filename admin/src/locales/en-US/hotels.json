@@ -12,7 +12,8 @@
     "filter": {
       "searchPlaceholder": "Search hotel name",
       "allStatus": "All Status",
-      "allCities": "All Cities"
+      "allCities": "All Cities",
+      "reset": "Reset"
     },
     "columns": {
       "name": "Hotel Name",

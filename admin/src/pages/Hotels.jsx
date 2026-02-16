@@ -1,11 +1,12 @@
-import { Card, Table, Tag, Space, Typography, Input, Select, Modal, Upload, Alert, Row, Col, Popconfirm } from 'antd'
+import { Card, Table, Tag, Space, Typography, Modal, Upload, Alert, Popconfirm, Input } from 'antd'
 import { useCallback, useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SearchOutlined, UploadOutlined, DownloadOutlined, InboxOutlined, StopOutlined, CheckCircleOutlined } from '@ant-design/icons'
-import { GlassButton, glassMessage as message } from '../components'
+import { UploadOutlined, DownloadOutlined, InboxOutlined, StopOutlined, CheckCircleOutlined } from '@ant-design/icons'
+import { GlassButton, TableFilterBar, glassMessage as message } from '../components'
 import { api } from '../services'
 import { useTranslation } from 'react-i18next'
 import { estimateActionColumnWidth } from '../utils/tableWidth'
+import { useRemoteTableQuery } from '../hooks/useRemoteTableQuery'
 
 const getTemplateFields = (t) => [
   { field: 'name', label: t('hotels.template.name'), required: true, example: t('hotels.template.example.name') },
@@ -99,11 +100,23 @@ export default function Hotels() {
   const [hotels, setHotels] = useState([])
   const [loading, setLoading] = useState(false)
   const role = localStorage.getItem('role')
-  
-  // 搜索相关
-  const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [cityFilter, setCityFilter] = useState('all')
+  const [cityOptions, setCityOptions] = useState([{ value: 'all', label: t('hotels.filter.allCities') }])
+  const {
+    searchInput,
+    setSearchInput,
+    keyword,
+    page,
+    setPage,
+    pageSize,
+    total,
+    setTotal,
+    handlePageChange,
+    resetKeyword
+  } = useRemoteTableQuery({
+    initialPageSize: 8
+  })
   
   // 导入相关
   const [importModalOpen, setImportModalOpen] = useState(false)
@@ -116,42 +129,51 @@ export default function Hotels() {
   const [deleting, setDeleting] = useState(false)
   const templateFields = useMemo(() => getTemplateFields(t), [t])
 
+  const fetchCityOptions = useCallback(async () => {
+    try {
+      const data = await api.get('/api/merchant/hotels/cities')
+      const cities = Array.isArray(data) ? data : []
+      setCityOptions([
+        { value: 'all', label: t('hotels.filter.allCities') },
+        ...cities.map((city) => ({ value: city, label: city }))
+      ])
+    } catch (error) {
+      console.error(error)
+      setCityOptions([{ value: 'all', label: t('hotels.filter.allCities') }])
+    }
+  }, [t])
+
   const fetchHotels = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await api.get('/api/merchant/hotels')
-      setHotels(data)
+      const params = new URLSearchParams()
+      params.append('page', String(page))
+      params.append('pageSize', String(pageSize))
+      if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter)
+      if (cityFilter && cityFilter !== 'all') params.append('city', cityFilter)
+      if (keyword) params.append('keyword', keyword)
+
+      const data = await api.get(`/api/merchant/hotels?${params.toString()}`)
+      const list = Array.isArray(data?.list) ? data.list : (Array.isArray(data) ? data : [])
+      const nextTotal = Array.isArray(data?.list)
+        ? (Number(data?.total) || 0)
+        : list.length
+      setHotels(list)
+      setTotal(nextTotal)
     } catch (error) {
       console.error(error)
       message.error(t('hotels.fetchError'))
     } finally {
       setLoading(false)
     }
-  }, [t])
+  }, [cityFilter, keyword, page, pageSize, setTotal, statusFilter, t])
 
   useEffect(() => {
     if (role === 'merchant') {
       fetchHotels()
+      fetchCityOptions()
     }
-  }, [role, fetchHotels])
-
-  // 获取城市列表
-  const cityOptions = useMemo(() => {
-    const cities = [...new Set(hotels.map(h => h.city).filter(Boolean))]
-    return [{ value: 'all', label: t('hotels.filter.allCities') }, ...cities.map(c => ({ value: c, label: c }))]
-  }, [hotels, t])
-
-  // 筛选后的数据
-  const filteredHotels = useMemo(() => {
-    return hotels.filter(hotel => {
-      const matchSearch = !searchText || 
-        hotel.name?.toLowerCase().includes(searchText.toLowerCase()) ||
-        hotel.name_en?.toLowerCase().includes(searchText.toLowerCase())
-      const matchStatus = statusFilter === 'all' || hotel.status === statusFilter
-      const matchCity = cityFilter === 'all' || hotel.city === cityFilter
-      return matchSearch && matchStatus && matchCity
-    })
-  }, [hotels, searchText, statusFilter, cityFilter])
+  }, [fetchCityOptions, fetchHotels, role])
 
   // 商户更新酒店状态
   const handleUpdateStatus = async (hotelId, action) => {
@@ -265,13 +287,30 @@ export default function Hotels() {
     }
   }
 
-  const exportHotels = () => {
-    if (filteredHotels.length === 0) {
+  const exportHotels = async () => {
+    const headers = templateFields.map(f => f.field).join(',')
+    let exportSource = hotels
+    if (total > hotels.length) {
+      const params = new URLSearchParams()
+      params.append('page', '1')
+      params.append('pageSize', String(Math.max(total, 200)))
+      if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter)
+      if (cityFilter && cityFilter !== 'all') params.append('city', cityFilter)
+      if (keyword) params.append('keyword', keyword)
+      try {
+        const data = await api.get(`/api/merchant/hotels?${params.toString()}`)
+        exportSource = Array.isArray(data?.list) ? data.list : exportSource
+      } catch (error) {
+        console.error(error)
+      }
+    }
+
+    if (!Array.isArray(exportSource) || exportSource.length === 0) {
       message.warning(t('hotels.export.empty'))
       return
     }
-    const headers = templateFields.map(f => f.field).join(',')
-    const rows = filteredHotels.map((hotel) => {
+
+    const rows = exportSource.map((hotel) => {
       return templateFields.map((field) => {
         const value = hotel[field.field]
         const normalized = Array.isArray(value) ? value.join('|') : (value ?? '')
@@ -297,7 +336,7 @@ export default function Hotels() {
   }
 
   const actionColumnWidth = useMemo(() => {
-    const actionRows = filteredHotels.map((record) => {
+    const actionRows = hotels.map((record) => {
       const labels = [t('common.edit'), t('common.delete')]
       if (record.status === 'approved') {
         labels.unshift(t('common.view'), t('hotels.action.offline'))
@@ -311,7 +350,28 @@ export default function Hotels() {
       minColumnWidth: 220,
       maxColumnWidth: 520
     })
-  }, [filteredHotels, t])
+  }, [hotels, t])
+
+  const handleStatusChange = (value) => {
+    setStatusFilter(value)
+    setPage(1)
+  }
+
+  const handleCityChange = (value) => {
+    setCityFilter(value)
+    setPage(1)
+  }
+
+  const handleResetFilters = () => {
+    resetKeyword()
+    setStatusFilter('all')
+    setCityFilter('all')
+    setPage(1)
+  }
+
+  const handleRefresh = async () => {
+    await Promise.all([fetchHotels(), fetchCityOptions()])
+  }
 
   const columns = [
     { title: t('hotels.columns.name'), dataIndex: 'name', width: 180, ellipsis: true },
@@ -383,51 +443,51 @@ export default function Hotels() {
       }
     >
       {/* 搜索筛选区 */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={8}>
-          <Input
-            placeholder={t('hotels.filter.searchPlaceholder')}
-            prefix={<SearchOutlined style={{ color: '#bbb' }} />}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            allowClear
-          />
-        </Col>
-        <Col span={4}>
-          <Select
-            style={{ width: '100%' }}
-            value={statusFilter}
-            onChange={setStatusFilter}
-            options={[
+      <TableFilterBar
+        searchPlaceholder={t('hotels.filter.searchPlaceholder')}
+        searchValue={searchInput}
+        onSearchChange={setSearchInput}
+        filterItems={[
+          {
+            key: 'status',
+            value: statusFilter,
+            onChange: handleStatusChange,
+            options: [
               { value: 'all', label: t('hotels.filter.allStatus') },
               { value: 'pending', label: t('status.pending') },
               { value: 'approved', label: t('status.approved') },
               { value: 'rejected', label: t('status.rejected') },
-              { value: 'offline', label: t('status.offline') },
-            ]}
-          />
-        </Col>
-        <Col span={4}>
-          <Select
-            style={{ width: '100%' }}
-            value={cityFilter}
-            onChange={setCityFilter}
-            options={cityOptions}
-          />
-        </Col>
-        <Col span={8} style={{ textAlign: 'right' }}>
-          <Typography.Text type="secondary">
-            {t('hotels.total', { count: filteredHotels.length })}
-          </Typography.Text>
-        </Col>
-      </Row>
+              { value: 'offline', label: t('status.offline') }
+            ]
+          },
+          {
+            key: 'city',
+            value: cityFilter,
+            onChange: handleCityChange,
+            options: cityOptions
+          }
+        ]}
+        summaryNode={<Typography.Text type="secondary">{t('hotels.total', { count: total })}</Typography.Text>}
+        onReset={handleResetFilters}
+        onRefresh={handleRefresh}
+        refreshLoading={loading}
+        resetText={t('hotels.filter.reset')}
+        refreshText={t('common.refresh')}
+      />
 
       <Table
         columns={columns}
-        dataSource={filteredHotels}
+        dataSource={hotels}
         rowKey="id"
         loading={loading}
-        pagination={{ pageSize: 8 }}
+        pagination={{
+          current: page,
+          pageSize,
+          total,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          onChange: handlePageChange
+        }}
         size="middle"
         scroll={{ x: 'max-content' }}
       />

@@ -2,31 +2,54 @@ import { Card, Table, Space, Typography, Tag, Modal, Form, Input } from 'antd'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { UserOutlined, ShopOutlined, EyeOutlined, KeyOutlined } from '@ant-design/icons'
-import { GlassButton, glassMessage as message } from '../components'
+import { GlassButton, TableFilterBar, glassMessage as message } from '../components'
 import { api } from '../services'
 import { useTranslation } from 'react-i18next'
+import { useRemoteTableQuery } from '../hooks/useRemoteTableQuery'
 
 export default function Merchants() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [loading, setLoading] = useState(false)
   const [merchants, setMerchants] = useState([])
+  const [total, setTotal] = useState(0)
   const [resetModal, setResetModal] = useState(null)
   const [form] = Form.useForm()
   const [resetting, setResetting] = useState(false)
+  const {
+    searchInput,
+    setSearchInput,
+    keyword,
+    page,
+    pageSize,
+    handlePageChange,
+    resetKeyword
+  } = useRemoteTableQuery({
+    initialPageSize: 10
+  })
 
   const fetchMerchants = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await api.get('/api/user/merchants')
-      setMerchants(data)
+      const params = new URLSearchParams()
+      params.append('page', String(page))
+      params.append('pageSize', String(pageSize))
+      if (keyword) params.append('keyword', keyword)
+
+      const data = await api.get(`/api/user/merchants?${params.toString()}`)
+      const list = Array.isArray(data?.list) ? data.list : (Array.isArray(data) ? data : [])
+      const nextTotal = Array.isArray(data?.list)
+        ? (Number(data?.total) || 0)
+        : list.length
+      setMerchants(list)
+      setTotal(nextTotal)
     } catch (error) {
       console.error(error)
       message.error(t('merchants.fetchError'))
     } finally {
       setLoading(false)
     }
-  }, [t])
+  }, [keyword, page, pageSize, t])
 
   const handleResetPassword = async () => {
     try {
@@ -53,6 +76,10 @@ export default function Merchants() {
   useEffect(() => {
     fetchMerchants()
   }, [fetchMerchants])
+
+  const handleRefresh = async () => {
+    await fetchMerchants()
+  }
 
   const columns = [
     {
@@ -113,16 +140,33 @@ export default function Merchants() {
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 24 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography.Title level={4} style={{ margin: 0 }}>{t('merchants.title')}</Typography.Title>
-        <Typography.Text type="secondary">{t('merchants.total', { count: merchants.length })}</Typography.Text>
+        <Typography.Text type="secondary">{t('merchants.total', { count: total })}</Typography.Text>
       </div>
 
       <Card>
+        <TableFilterBar
+          searchPlaceholder={t('merchants.filter.searchPlaceholder')}
+          searchValue={searchInput}
+          onSearchChange={setSearchInput}
+          onReset={resetKeyword}
+          onRefresh={handleRefresh}
+          refreshLoading={loading}
+          resetText={t('merchants.filter.reset')}
+          refreshText={t('common.refresh')}
+        />
         <Table
           columns={columns}
           dataSource={merchants}
           rowKey="id"
           loading={loading}
-          pagination={{ pageSize: 10 }}
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            onChange: handlePageChange
+          }}
         />
       </Card>
 

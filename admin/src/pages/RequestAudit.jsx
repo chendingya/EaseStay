@@ -18,6 +18,9 @@ export default function RequestAudit() {
   const [loading, setLoading] = useState(false)
   const [requests, setRequests] = useState([])
   const [activeTab, setActiveTab] = useState('all')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [total, setTotal] = useState(0)
   const [rejecting, setRejecting] = useState(null)
   const [rejectForm] = Form.useForm()
   const [detailModal, setDetailModal] = useState(null)
@@ -28,19 +31,42 @@ export default function RequestAudit() {
       const params = new URLSearchParams()
       if (type && type !== 'all') params.append('type', type)
       if (hotelIdFilter) params.append('hotelId', hotelIdFilter)
+      params.append('page', String(page))
+      params.append('pageSize', String(pageSize))
       const query = params.toString() ? `?${params.toString()}` : ''
       const data = await api.get(`/api/admin/requests${query}`)
-      setRequests(data)
+      const list = Array.isArray(data?.list) ? data.list : (Array.isArray(data) ? data : [])
+      const nextTotal = Array.isArray(data?.list)
+        ? (Number(data?.total) || 0)
+        : list.length
+      setRequests(list)
+      setTotal(nextTotal)
     } catch (error) {
       console.error(error)
     } finally {
       setLoading(false)
     }
-  }, [hotelIdFilter])
+  }, [hotelIdFilter, page, pageSize])
 
   useEffect(() => {
     fetchRequests(activeTab)
   }, [activeTab, fetchRequests])
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab)
+    setPage(1)
+  }
+
+  const handlePageChange = (nextPage, nextPageSize) => {
+    const normalizedPage = Math.max(Number(nextPage) || 1, 1)
+    const normalizedPageSize = Math.max(Number(nextPageSize) || 10, 1)
+    if (normalizedPageSize !== pageSize) {
+      setPageSize(normalizedPageSize)
+      setPage(1)
+      return
+    }
+    setPage(normalizedPage)
+  }
 
   const handleReview = async (id, action, rejectReason) => {
     setLoading(true)
@@ -236,7 +262,7 @@ export default function RequestAudit() {
       <Card>
         <Tabs 
           activeKey={activeTab} 
-          onChange={setActiveTab}
+          onChange={handleTabChange}
           items={tabItems}
           style={{ marginBottom: 16 }}
         />
@@ -245,7 +271,14 @@ export default function RequestAudit() {
           dataSource={requests}
           rowKey="id"
           loading={loading}
-          pagination={{ pageSize: 10 }}
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            onChange: handlePageChange
+          }}
           locale={{ emptyText: <Empty description={t('requestAudit.empty')} /> }}
         />
       </Card>

@@ -40,9 +40,9 @@ const getMerchantRequests = async (req, res) => {
 
 // 管理员获取待审核申请
 const getPendingRequests = async (req, res) => {
-  const { type, status, hotelId } = req.query
+  const { type, status, hotelId, page, pageSize } = req.query
 
-  const result = await requestService.getPendingRequests({ type, status, hotelId })
+  const result = await requestService.getPendingRequests({ type, status, hotelId, page, pageSize })
 
   if (!result.ok) {
     return res.status(result.status).json({ message: result.message })

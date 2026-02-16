@@ -11,6 +11,10 @@
       "username": "用户名"
     },
     "fetchError": "获取商户列表失败",
+    "filter": {
+      "searchPlaceholder": "搜索用户名",
+      "reset": "重置"
+    },
     "hotelCountValue": "共 {{count}} 家",
     "resetPassword": {
       "confirm": "确认密码",

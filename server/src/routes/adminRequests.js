@@ -16,6 +16,16 @@ const requestController = require('../controllers/requestController')
  *         schema:
  *           type: string
  *           enum: [facility, room_type, promotion, hotel_delete]
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: pageSize
+ *         required: false
+ *         schema:
+ *           type: number
  *     responses:
  *       200:
  *         description: 待审核申请列表

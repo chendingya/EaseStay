@@ -150,17 +150,17 @@ export default function MerchantDetail() {
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic title={t('merchantDetail.stats.approved')} value={stats.approved} valueStyle={{ color: '#52c41a' }} suffix={t('merchantDetail.stats.suffix')} />
+            <Statistic title={t('merchantDetail.stats.approved')} value={stats.approved} styles={{ content: { color: '#52c41a' } }} suffix={t('merchantDetail.stats.suffix')} />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic title={t('merchantDetail.stats.pending')} value={stats.pending} valueStyle={{ color: '#faad14' }} suffix={t('merchantDetail.stats.suffix')} />
+            <Statistic title={t('merchantDetail.stats.pending')} value={stats.pending} styles={{ content: { color: '#faad14' } }} suffix={t('merchantDetail.stats.suffix')} />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic title={t('merchantDetail.stats.offline')} value={stats.offline} valueStyle={{ color: '#999' }} suffix={t('merchantDetail.stats.suffix')} />
+            <Statistic title={t('merchantDetail.stats.offline')} value={stats.offline} styles={{ content: { color: '#999' } }} suffix={t('merchantDetail.stats.suffix')} />
           </Card>
         </Col>
       </Row>

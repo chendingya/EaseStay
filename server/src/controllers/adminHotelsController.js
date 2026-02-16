@@ -1,5 +1,6 @@
 const {
   listAdminHotels,
+  listAdminHotelCities,
   updateHotelStatus,
   getAdminHotelDetail,
   getRoomTypeStatsByHotelIds,
@@ -11,7 +12,26 @@ const {
 } = require('../services/hotelService')
 
 const list = async (req, res) => {
-  const result = await listAdminHotels({ status: req.query.status })
+  const result = await listAdminHotels({
+    status: req.query.status,
+    keyword: req.query.keyword,
+    city: req.query.city,
+    page: req.query.page,
+    pageSize: req.query.pageSize
+  })
+  if (!result.ok) {
+    res.status(result.status).json({ message: result.message })
+    return
+  }
+  res.status(result.status).json(result.data)
+}
+
+const cities = async (req, res) => {
+  const result = await listAdminHotelCities()
+  if (!result.ok) {
+    res.status(result.status).json({ message: result.message })
+    return
+  }
   res.status(result.status).json(result.data)
 }
 
@@ -143,6 +163,7 @@ const orderStats = async (req, res) => {
 
 module.exports = {
   list,
+  cities,
   getDetail,
   updateStatus,
   offline,

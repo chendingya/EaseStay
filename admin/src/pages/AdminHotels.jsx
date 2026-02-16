@@ -1,65 +1,95 @@
-import { Card, Table, Tag, Space, Typography, Input, Select, Row, Col, Statistic } from 'antd'
+import { Card, Table, Tag, Space, Typography, Row, Col, Statistic } from 'antd'
 import { useCallback, useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SearchOutlined, ShopOutlined, StarFilled, EnvironmentOutlined } from '@ant-design/icons'
-import { GlassButton } from '../components'
+import { ShopOutlined, StarFilled, EnvironmentOutlined } from '@ant-design/icons'
+import { GlassButton, TableFilterBar } from '../components'
 import { api } from '../services'
 import { useTranslation } from 'react-i18next'
 import { estimateActionColumnWidth } from '../utils/tableWidth'
+import { useRemoteTableQuery } from '../hooks/useRemoteTableQuery'
 
 export default function AdminHotels() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [hotels, setHotels] = useState([])
   const [loading, setLoading] = useState(false)
-  
-  // 搜索筛选
-  const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [cityFilter, setCityFilter] = useState('all')
+  const [cityOptions, setCityOptions] = useState([{ value: 'all', label: t('adminHotels.filter.allCities') }])
+  const {
+    searchInput,
+    setSearchInput,
+    keyword,
+    page,
+    setPage,
+    pageSize,
+    total,
+    setTotal,
+    handlePageChange,
+    resetKeyword
+  } = useRemoteTableQuery({
+    initialPageSize: 10
+  })
+  const [stats, setStats] = useState({
+    total: 0,
+    approved: 0,
+    pending: 0,
+    offline: 0
+  })
+
+  const fetchCityOptions = useCallback(async () => {
+    try {
+      const data = await api.get('/api/admin/hotels/cities')
+      const cities = Array.isArray(data) ? data : []
+      setCityOptions([
+        { value: 'all', label: t('adminHotels.filter.allCities') },
+        ...cities.map((city) => ({ value: city, label: city }))
+      ])
+    } catch (error) {
+      console.error(error)
+      setCityOptions([{ value: 'all', label: t('adminHotels.filter.allCities') }])
+    }
+  }, [t])
 
   const fetchHotels = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await api.get('/api/admin/hotels')
-      setHotels(data)
+      const params = new URLSearchParams()
+      params.append('page', String(page))
+      params.append('pageSize', String(pageSize))
+      if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter)
+      if (cityFilter && cityFilter !== 'all') params.append('city', cityFilter)
+      if (keyword) params.append('keyword', keyword)
+
+      const data = await api.get(`/api/admin/hotels?${params.toString()}`)
+      const list = Array.isArray(data?.list) ? data.list : []
+      const nextTotal = Number(data?.total) || 0
+      const nextStats = data?.stats
+
+      setHotels(list)
+      setTotal(nextTotal)
+      if (nextStats && typeof nextStats === 'object') {
+        setStats({
+          total: Number(nextStats.total) || 0,
+          approved: Number(nextStats.approved) || 0,
+          pending: Number(nextStats.pending) || 0,
+          offline: Number(nextStats.offline) || 0
+        })
+      }
     } catch (error) {
       console.error(error)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [cityFilter, keyword, page, pageSize, setTotal, statusFilter])
+
+  useEffect(() => {
+    fetchCityOptions()
+  }, [fetchCityOptions])
 
   useEffect(() => {
     fetchHotels()
   }, [fetchHotels])
-
-  // 获取城市列表
-  const cityOptions = useMemo(() => {
-    const cities = [...new Set(hotels.map(h => h.city).filter(Boolean))]
-    return [{ value: 'all', label: t('adminHotels.filter.allCities') }, ...cities.map(c => ({ value: c, label: c }))]
-  }, [hotels, t])
-
-  // 筛选后的数据
-  const filteredHotels = useMemo(() => {
-    return hotels.filter(hotel => {
-      const matchSearch = !searchText || 
-        hotel.name?.toLowerCase().includes(searchText.toLowerCase()) ||
-        hotel.name_en?.toLowerCase().includes(searchText.toLowerCase()) ||
-        hotel.address?.toLowerCase().includes(searchText.toLowerCase())
-      const matchStatus = statusFilter === 'all' || hotel.status === statusFilter
-      const matchCity = cityFilter === 'all' || hotel.city === cityFilter
-      return matchSearch && matchStatus && matchCity
-    })
-  }, [hotels, searchText, statusFilter, cityFilter])
-
-  // 统计数据
-  const stats = useMemo(() => ({
-    total: hotels.length,
-    approved: hotels.filter(h => h.status === 'approved').length,
-    pending: hotels.filter(h => h.status === 'pending').length,
-    offline: hotels.filter(h => h.status === 'offline').length
-  }), [hotels])
 
   const statusMap = {
     pending: { color: 'orange', label: t('status.pending') },
@@ -69,7 +99,7 @@ export default function AdminHotels() {
   }
 
   const actionColumnWidth = useMemo(() => {
-    const actionRows = filteredHotels.map((record) => {
+    const actionRows = hotels.map((record) => {
       const labels = [t('common.view')]
       if (record.status === 'pending') {
         labels.push(t('common.audit'))
@@ -80,7 +110,7 @@ export default function AdminHotels() {
       minColumnWidth: 140,
       maxColumnWidth: 320
     })
-  }, [filteredHotels, t])
+  }, [hotels, t])
 
   const columns = [
     { 
@@ -112,9 +142,12 @@ export default function AdminHotels() {
     },
     { 
       title: t('adminHotels.columns.roomTypes'), 
-      dataIndex: 'roomTypes',
+      dataIndex: 'roomTypeCount',
       width: 80,
-      render: (v) => Array.isArray(v) ? v.length : 0
+      render: (v, record) => {
+        if (Number.isFinite(Number(v))) return Number(v)
+        return Array.isArray(record?.roomTypes) ? record.roomTypes.length : 0
+      }
     },
     { title: t('adminHotels.columns.openingTime'), dataIndex: 'opening_time', width: 100 },
     {
@@ -145,6 +178,27 @@ export default function AdminHotels() {
     }
   ]
 
+  const handleStatusChange = (value) => {
+    setStatusFilter(value)
+    setPage(1)
+  }
+
+  const handleCityChange = (value) => {
+    setCityFilter(value)
+    setPage(1)
+  }
+
+  const handleResetFilters = () => {
+    resetKeyword()
+    setStatusFilter('all')
+    setCityFilter('all')
+    setPage(1)
+  }
+
+  const handleRefresh = async () => {
+    await Promise.all([fetchHotels(), fetchCityOptions()])
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 24 }}>
       <Typography.Title level={4} style={{ margin: 0 }}>
@@ -160,77 +214,67 @@ export default function AdminHotels() {
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic title={t('adminHotels.stats.approved')} value={stats.approved} valueStyle={{ color: '#52c41a' }} suffix={t('adminHotels.stats.suffixHotel')} />
+            <Statistic title={t('adminHotels.stats.approved')} value={stats.approved} styles={{ content: { color: '#52c41a' } }} suffix={t('adminHotels.stats.suffixHotel')} />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic title={t('adminHotels.stats.pending')} value={stats.pending} valueStyle={{ color: '#faad14' }} suffix={t('adminHotels.stats.suffixHotel')} />
+            <Statistic title={t('adminHotels.stats.pending')} value={stats.pending} styles={{ content: { color: '#faad14' } }} suffix={t('adminHotels.stats.suffixHotel')} />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic title={t('adminHotels.stats.offline')} value={stats.offline} valueStyle={{ color: '#999' }} suffix={t('adminHotels.stats.suffixHotel')} />
+            <Statistic title={t('adminHotels.stats.offline')} value={stats.offline} styles={{ content: { color: '#999' } }} suffix={t('adminHotels.stats.suffixHotel')} />
           </Card>
         </Col>
       </Row>
 
       {/* 搜索筛选 */}
       <Card>
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={8}>
-            <Input
-              placeholder={t('adminHotels.filter.searchPlaceholder')}
-              prefix={<SearchOutlined style={{ color: '#bbb' }} />}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              allowClear
-            />
-          </Col>
-          <Col span={4}>
-            <Select
-              style={{ width: '100%' }}
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={[
+        <TableFilterBar
+          searchPlaceholder={t('adminHotels.filter.searchPlaceholder')}
+          searchValue={searchInput}
+          onSearchChange={setSearchInput}
+          filterItems={[
+            {
+              key: 'status',
+              value: statusFilter,
+              onChange: handleStatusChange,
+              options: [
                 { value: 'all', label: t('adminHotels.filter.allStatus') },
                 { value: 'pending', label: t('status.pending') },
                 { value: 'approved', label: t('status.approved') },
                 { value: 'rejected', label: t('status.rejected') },
                 { value: 'offline', label: t('status.offline') }
-              ]}
-            />
-          </Col>
-          <Col span={4}>
-            <Select
-              style={{ width: '100%' }}
-              value={cityFilter}
-              onChange={setCityFilter}
-              options={cityOptions}
-            />
-          </Col>
-          <Col span={8} style={{ textAlign: 'right' }}>
-            <Space>
-              <GlassButton onClick={() => { setSearchText(''); setStatusFilter('all'); setCityFilter('all') }}>
-                {t('adminHotels.filter.reset')}
-              </GlassButton>
-              <GlassButton type="primary" onClick={fetchHotels} loading={loading}>
-                {t('common.refresh')}
-              </GlassButton>
-            </Space>
-          </Col>
-        </Row>
+              ]
+            },
+            {
+              key: 'city',
+              value: cityFilter,
+              onChange: handleCityChange,
+              options: cityOptions
+            }
+          ]}
+          onReset={handleResetFilters}
+          onRefresh={handleRefresh}
+          refreshLoading={loading}
+          resetText={t('adminHotels.filter.reset')}
+          refreshText={t('common.refresh')}
+        />
 
         <Table 
           columns={columns} 
-          dataSource={filteredHotels} 
+          dataSource={hotels} 
           rowKey="id" 
           loading={loading}
           pagination={{ 
-            pageSize: 10,
+            current: page,
+            pageSize,
+            total,
             showTotal: (total) => t('adminHotels.pagination.total', { total }),
             showSizeChanger: true,
-            showQuickJumper: true
+            showQuickJumper: true,
+            onChange: handlePageChange
           }}
           scroll={{ x: 'max-content' }}
         />

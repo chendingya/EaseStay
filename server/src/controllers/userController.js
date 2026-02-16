@@ -477,37 +477,86 @@ async function clearFavorites(req, res) {
  */
 async function getMerchants(req, res) {
   try {
-    const { data: merchants, error } = await supabase
-      .from('users')
-      .select('id, username, role, created_at')
+    const shouldPaginate = req.query.page !== undefined || req.query.pageSize !== undefined
+    const normalizedPage = Math.max(Number(req.query.page) || 1, 1)
+    const normalizedPageSize = Math.max(Number(req.query.pageSize) || 10, 1)
+    const keyword = String(req.query.keyword || '').trim()
+
+    let query = shouldPaginate
+      ? supabase
+        .from('users')
+        .select('id, username, role, created_at', { count: 'exact' })
+      : supabase
+        .from('users')
+        .select('id, username, role, created_at')
+
+    query = query
       .eq('role', 'merchant')
       .order('created_at', { ascending: false })
+
+    if (keyword) {
+      query = query.ilike('username', `%${keyword}%`)
+    }
+
+    if (shouldPaginate) {
+      const from = (normalizedPage - 1) * normalizedPageSize
+      const to = from + normalizedPageSize - 1
+      query = query.range(from, to)
+    }
+
+    const { data: merchants, error, count } = await query
 
     if (error) {
       return res.status(500).json({ message: '获取商户列表失败' })
     }
 
-    // 获取每个商户的酒店数量
-    const merchantsWithStats = await Promise.all(
-      merchants.map(async (merchant) => {
-        const { count: hotelCount } = await supabase
-          .from('hotels')
-          .select('id', { count: 'exact', head: true })
-          .eq('merchant_id', merchant.id)
+    const merchantList = Array.isArray(merchants) ? merchants : []
+    const merchantIds = merchantList.map((merchant) => merchant.id)
+    const statsMap = {}
 
-        const { count: approvedCount } = await supabase
-          .from('hotels')
-          .select('id', { count: 'exact', head: true })
-          .eq('merchant_id', merchant.id)
-          .eq('status', 'approved')
+    merchantIds.forEach((id) => {
+      statsMap[id] = { hotelCount: 0, approvedCount: 0 }
+    })
 
-        return {
-          ...merchant,
-          hotelCount: hotelCount || 0,
-          approvedCount: approvedCount || 0
+    if (merchantIds.length) {
+      const { data: hotels, error: hotelError } = await supabase
+        .from('hotels')
+        .select('merchant_id, status')
+        .in('merchant_id', merchantIds)
+
+      if (hotelError) {
+        return res.status(500).json({ message: '获取商户列表失败' })
+      }
+
+      ;(hotels || []).forEach((hotel) => {
+        const merchantId = hotel?.merchant_id
+        if (!statsMap[merchantId]) {
+          statsMap[merchantId] = { hotelCount: 0, approvedCount: 0 }
+        }
+        statsMap[merchantId].hotelCount += 1
+        if (hotel?.status === 'approved') {
+          statsMap[merchantId].approvedCount += 1
         }
       })
-    )
+    }
+
+    const merchantsWithStats = merchantList.map((merchant) => {
+      const stats = statsMap[merchant.id] || { hotelCount: 0, approvedCount: 0 }
+      return {
+        ...merchant,
+        hotelCount: stats.hotelCount,
+        approvedCount: stats.approvedCount
+      }
+    })
+
+    if (shouldPaginate) {
+      return res.json({
+        page: normalizedPage,
+        pageSize: normalizedPageSize,
+        total: count || 0,
+        list: merchantsWithStats
+      })
+    }
 
     res.json(merchantsWithStats)
   } catch (err) {

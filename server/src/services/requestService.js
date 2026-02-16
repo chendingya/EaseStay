@@ -101,15 +101,26 @@ const getMerchantRequests = async ({ merchantId, status, type }) => {
 }
 
 // 获取所有申请（管理员） - 默认只获取 pending，可通过 status 参数筛选，可通过 hotelId 过滤
-const getPendingRequests = async ({ type, status, hotelId }) => {
-  let query = supabase
-    .from('requests')
-    .select(`
-      *,
-      users:merchant_id (username),
-      hotels:hotel_id (name)
-    `)
-    .order('created_at', { ascending: false })
+const getPendingRequests = async ({ type, status, hotelId, page, pageSize }) => {
+  const shouldPaginate = page !== undefined || pageSize !== undefined
+
+  let query = shouldPaginate
+    ? supabase
+      .from('requests')
+      .select(`
+        *,
+        users:merchant_id (username),
+        hotels:hotel_id (name)
+      `, { count: 'exact' })
+    : supabase
+      .from('requests')
+      .select(`
+        *,
+        users:merchant_id (username),
+        hotels:hotel_id (name)
+      `)
+
+  query = query.order('created_at', { ascending: false })
 
   // 默认只获取 pending 状态，如果传入 status=all 则获取全部
   if (status && status !== 'all') {
@@ -121,10 +132,33 @@ const getPendingRequests = async ({ type, status, hotelId }) => {
   if (type) query = query.eq('type', type)
   if (hotelId) query = query.eq('hotel_id', hotelId)
 
-  const { data, error } = await query
+  if (shouldPaginate) {
+    const normalizedPage = Math.max(Number(page) || 1, 1)
+    const normalizedPageSize = Math.max(Number(pageSize) || 10, 1)
+    const from = (normalizedPage - 1) * normalizedPageSize
+    const to = from + normalizedPageSize - 1
+    query = query.range(from, to)
+  }
+
+  const { data, error, count } = await query
 
   if (error) {
     return { ok: false, status: 500, message: '获取待审核申请失败' }
+  }
+
+  if (shouldPaginate) {
+    const normalizedPage = Math.max(Number(page) || 1, 1)
+    const normalizedPageSize = Math.max(Number(pageSize) || 10, 1)
+    return {
+      ok: true,
+      status: 200,
+      data: {
+        page: normalizedPage,
+        pageSize: normalizedPageSize,
+        total: count || 0,
+        list: data || []
+      }
+    }
   }
 
   return { ok: true, data: data || [] }

@@ -2,6 +2,7 @@ const {
   createHotel,
   updateHotel,
   listMerchantHotels,
+  listMerchantHotelCities,
   getMerchantHotel,
   updateMerchantHotelStatus,
   getRoomTypeStatsByHotelIds,
@@ -42,8 +43,25 @@ const update = async (req, res) => {
 const list = async (req, res) => {
   const result = await listMerchantHotels({
     merchantId: req.user.id,
-    status: req.query.status
+    status: req.query.status,
+    keyword: req.query.keyword,
+    city: req.query.city,
+    page: req.query.page,
+    pageSize: req.query.pageSize
   })
+  if (!result.ok) {
+    res.status(result.status).json({ message: result.message })
+    return
+  }
+  res.status(result.status).json(result.data)
+}
+
+const cities = async (req, res) => {
+  const result = await listMerchantHotelCities({ merchantId: req.user.id })
+  if (!result.ok) {
+    res.status(result.status).json({ message: result.message })
+    return
+  }
   res.status(result.status).json(result.data)
 }
 
@@ -169,6 +187,7 @@ module.exports = {
   create,
   update,
   list,
+  cities,
   detail,
   updateStatus,
   roomTypeStats,

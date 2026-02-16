@@ -1,5 +1,5 @@
 const express = require('express')
-const { list, getDetail, updateStatus, offline, restore, roomTypeStats, batchDiscount, batchRoom, roomOverview, orders, orderStats } = require('../controllers/adminHotelsController')
+const { list, cities, getDetail, updateStatus, offline, restore, roomTypeStats, batchDiscount, batchRoom, roomOverview, orders, orderStats } = require('../controllers/adminHotelsController')
 
 const router = express.Router()
 
@@ -18,11 +18,45 @@ const router = express.Router()
  *         required: false
  *         schema:
  *           type: string
+ *       - name: keyword
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: string
+ *       - name: city
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: string
+ *       - name: page
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: number
+ *       - name: pageSize
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: number
  *     responses:
  *       200:
  *         description: ok
  */
 router.get('/', list)
+/**
+ * @openapi
+ * /api/admin/hotels/cities:
+ *   get:
+ *     tags:
+ *       - Admin
+ *     summary: 管理员酒店城市列表
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: ok
+ */
+router.get('/cities', cities)
 router.get('/room-type-stats', roomTypeStats)
 router.post('/batch-discount', batchDiscount)
 router.post('/batch-room', batchRoom)

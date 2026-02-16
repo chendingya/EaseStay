@@ -11,6 +11,10 @@
       "username": "Username"
     },
     "fetchError": "Failed to load merchants",
+    "filter": {
+      "searchPlaceholder": "Search username",
+      "reset": "Reset"
+    },
     "hotelCountValue": "{{count}} hotels",
     "resetPassword": {
       "confirm": "Confirm Password",

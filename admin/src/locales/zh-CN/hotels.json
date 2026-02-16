@@ -12,7 +12,8 @@
     "filter": {
       "searchPlaceholder": "搜索酒店名称",
       "allStatus": "全部状态",
-      "allCities": "全部城市"
+      "allCities": "全部城市",
+      "reset": "重置"
     },
     "columns": {
       "name": "酒店名称",
