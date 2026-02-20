@@ -35,25 +35,6 @@ const getRoomMeta = (room) => {
   return meta.length > 0 ? meta.join(' · ') : '以酒店实际安排为准'
 }
 
-const getFinalPrice = (room) => {
-  const price = Number(room?.price) || 0
-  const discount = Number(room?.discount_rate) || 0
-  const quota = Number(room?.discount_quota) || 0
-  if (quota <= 0 || discount === 0) return Math.round(price * 100) / 100
-  if (discount > 0 && discount <= 10) return Math.round(price * (discount / 10) * 100) / 100
-  if (discount < 0) return Math.round(Math.max(0, price + discount) * 100) / 100
-  return Math.round(price * 100) / 100
-}
-
-const getDiscountLabel = (room) => {
-  const discount = Number(room?.discount_rate) || 0
-  const quota = Number(room?.discount_quota) || 0
-  if (quota <= 0 || discount === 0) return ''
-  if (discount < 0) return `减¥${Math.abs(discount)}`
-  if (discount > 0 && discount <= 10) return `${discount}折`
-  return ''
-}
-
 export default function RoomDetail() {
   const router = useRouter()
   const hotelId = router?.params?.hotelId
@@ -82,7 +63,10 @@ export default function RoomDetail() {
     }
     setLoading(true)
     try {
-      const data = await api.get(`/api/hotels/${hotelId}`)
+      const query = new URLSearchParams()
+      if (checkIn) query.append('checkIn', checkIn)
+      if (checkOut) query.append('checkOut', checkOut)
+      const data = await api.get(`/api/hotels/${hotelId}${query.toString() ? `?${query.toString()}` : ''}`)
       const rooms = Array.isArray(data?.roomTypes) && data.roomTypes.length > 0
         ? data.roomTypes
         : (Array.isArray(data?.room_types) ? data.room_types : [])
@@ -99,7 +83,7 @@ export default function RoomDetail() {
 
   useEffect(() => {
     fetchRoomDetail()
-  }, [hotelId, roomId])
+  }, [hotelId, roomId, checkIn, checkOut])
 
   useEffect(() => {
     setBannerImageError({})
@@ -194,9 +178,12 @@ export default function RoomDetail() {
   const images = roomImages.length > 0
     ? roomImages
     : [room?.image || hotel?.cover_image || null].filter(Boolean)
-  const finalPrice = getFinalPrice(room)
-  const discountLabel = getDiscountLabel(room)
-  const hasDiscount = Boolean(discountLabel)
+  const finalPrice = Number(room?.display_price)
+  const basePrice = Number(room?.base_price)
+  const hasPrice = Number.isFinite(finalPrice)
+  const discountLabel = room?.room_discount_label || ''
+  const hasRoomDiscount = Boolean(room?.has_room_discount)
+  const activePromotions = Array.isArray(room?.effective_promotions) ? room.effective_promotions : []
   const tags = [
     room?.breakfast || room?.breakfast_included ? '含早' : '',
     room?.cancelable ? '免费取消' : '',
@@ -281,13 +268,13 @@ export default function RoomDetail() {
             <Text className='room-detail-card-title'>价格与优惠</Text>
             <View className='room-detail-row'>
               <Text className='room-detail-label'>到手价</Text>
-              <Text className='room-detail-price'>¥{finalPrice}</Text>
+              <Text className='room-detail-price'>{hasPrice ? `¥${finalPrice}` : '待报价'}</Text>
             </View>
             <View className='room-detail-row'>
               <Text className='room-detail-label'>门市价</Text>
-              <Text className='room-detail-value'>¥{Number(room?.price) || 0}</Text>
+              <Text className='room-detail-value'>{Number.isFinite(basePrice) ? `¥${basePrice}` : '--'}</Text>
             </View>
-            {hasDiscount ? (
+            {hasRoomDiscount ? (
               <>
                 <View className='room-detail-row'>
                   <Text className='room-detail-label'>优惠力度</Text>
@@ -298,11 +285,22 @@ export default function RoomDetail() {
                   <Text className='room-detail-value room-detail-period'>{formatPeriodLabel(room?.discount_periods)}</Text>
                 </View>
               </>
-            ) : (
+            ) : null}
+            {activePromotions.length > 0 ? (
+              <View className='room-detail-row'>
+                <Text className='room-detail-label'>酒店活动</Text>
+                <Text className='room-detail-value room-detail-period'>
+                  {activePromotions.map((promo) => promo?.title || promo?.type || '活动优惠').filter(Boolean).join('、')}
+                </Text>
+              </View>
+            ) : null}
+            {!hasRoomDiscount && activePromotions.length === 0 ? (
               <View className='room-detail-row'>
                 <Text className='room-detail-label'>优惠信息</Text>
                 <Text className='room-detail-value'>当前无活动优惠</Text>
               </View>
+            ) : (
+              null
             )}
           </View>
 
@@ -335,7 +333,7 @@ export default function RoomDetail() {
       </ScrollView>
 
       <BookingBottomBar
-        price={finalPrice}
+        price={hasPrice ? finalPrice : undefined}
         priceSuffix='每晚'
         loading={booking}
         actionClassName='room-detail-book-btn'

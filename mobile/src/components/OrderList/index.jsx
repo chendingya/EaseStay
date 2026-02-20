@@ -312,7 +312,6 @@ export const createListByType = ({
             booking={bookingRoomId !== undefined && bookingRoomId !== null && String(bookingRoomId) === String(room?.id)}
             onBook={() => (onBook || onPay) && (onBook || onPay)(room)}
             onOpen={() => onOpen && onOpen(room)}
-            priceResolver={rest.roomPriceResolver}
             metaResolver={rest.roomMetaResolver}
           />
         )}

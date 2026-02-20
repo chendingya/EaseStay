@@ -50,7 +50,7 @@ export default function Detail() {
 
   useEffect(() => {
     fetchHotelDetail()
-  }, [id])
+  }, [id, checkIn, checkOut])
 
   useEffect(() => {
     const loadFavoriteStatus = async () => {
@@ -80,7 +80,10 @@ export default function Detail() {
   const fetchHotelDetail = async () => {
     try {
       setLoading(true)
-      const data = await api.get(`/api/hotels/${id}`)
+      const query = new URLSearchParams()
+      if (checkIn) query.append('checkIn', checkIn)
+      if (checkOut) query.append('checkOut', checkOut)
+      const data = await api.get(`/api/hotels/${id}${query.toString() ? `?${query.toString()}` : ''}`)
       if (data) {
         setHotel(data)
       }
@@ -153,7 +156,7 @@ export default function Detail() {
       const { collected: nextCollected } = await toggleFavoriteHotel({
         ...hotel,
         id,
-        lowestPrice: minRoomPrice
+        lowestPrice: hasMinRoomPrice ? minRoomPrice : null
       })
       setCollected(nextCollected)
       Taro.showToast({ title: nextCollected ? '收藏成功' : '已取消收藏', icon: 'success' })
@@ -204,28 +207,17 @@ export default function Detail() {
       ? hotel.room_types
       : [] // 移除默认假数据，没有就是没有
 
-
-  const calculateFinalPrice = (room) => {
-    const price = Number(room.price) || 0
-    const discount = Number(room.discount_rate) || 0
-    const quota = Number(room.discount_quota) || 0
-    let finalPrice = price
-    
-    if (quota > 0) {
-      if (discount > 0 && discount <= 10) {
-        finalPrice = price * (discount / 10)
-      } else if (discount < 0) {
-        finalPrice = Math.max(0, price + discount)
-      }
-    }
-    return Math.round(finalPrice * 100) / 100
-  }
-
   const roomTypes = [...rawRoomTypes].sort((a, b) => {
-    return calculateFinalPrice(a) - calculateFinalPrice(b)
+    const priceA = Number(a?.display_price)
+    const priceB = Number(b?.display_price)
+    if (!Number.isFinite(priceA) && !Number.isFinite(priceB)) return 0
+    if (!Number.isFinite(priceA)) return 1
+    if (!Number.isFinite(priceB)) return -1
+    return priceA - priceB
   })
-  
-  const minRoomPrice = roomTypes.length ? calculateFinalPrice(roomTypes[0]) : null
+
+  const minRoomPrice = Number(hotel?.lowestPrice)
+  const hasMinRoomPrice = Number.isFinite(minRoomPrice)
 
   const nights = () => {
     if (!checkIn || !checkOut) return 1
@@ -405,7 +397,6 @@ export default function Detail() {
             containerClassName: 'room-list-container',
             listClassName: 'room-list',
             bookingRoomId,
-            roomPriceResolver: calculateFinalPrice,
             roomMetaResolver: getRoomMeta,
             onBook: handleBook,
             onOpen: handleOpenRoomDetail
@@ -498,7 +489,7 @@ export default function Detail() {
         price={minRoomPrice}
         priceSuffix='起'
         emptyText='暂无房型可订'
-        showAction={Boolean(minRoomPrice)}
+        showAction={hasMinRoomPrice}
         loading={isBooking}
         actionClassName='main-book-btn'
         onAction={() => {

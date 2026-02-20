@@ -6,7 +6,10 @@ const list = async (req, res) => {
 }
 
 const detail = async (req, res) => {
-  const result = await getPublicHotel({ hotelId: Number(req.params.id) })
+  const result = await getPublicHotel({
+    hotelId: Number(req.params.id),
+    query: req.query
+  })
   if (!result.ok) {
     res.status(result.status).json({ message: result.message })
     return

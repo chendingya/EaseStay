@@ -20,37 +20,11 @@ const getDefaultMeta = (room) => {
   return meta.length > 0 ? meta.join(' · ') : '以酒店实际安排为准'
 }
 
-const getFinalPrice = (room) => {
-  const price = Number(room?.price) || 0
-  const discount = Number(room?.discount_rate) || 0
-  const quota = Number(room?.discount_quota) || 0
-  if (quota <= 0 || discount === 0) {
-    return Math.round(price * 100) / 100
-  }
-  if (discount > 0 && discount <= 10) {
-    return Math.round(price * (discount / 10) * 100) / 100
-  }
-  if (discount < 0) {
-    return Math.round(Math.max(0, price + discount) * 100) / 100
-  }
-  return Math.round(price * 100) / 100
-}
-
-const getDiscountLabel = (room) => {
-  const discount = Number(room?.discount_rate) || 0
-  const quota = Number(room?.discount_quota) || 0
-  if (quota <= 0 || discount === 0) return ''
-  if (discount < 0) return `减¥${Math.abs(discount)}`
-  if (discount > 0 && discount <= 10) return `${discount}折`
-  return ''
-}
-
 function RoomTypeCard({
   room,
   onBook,
   onOpen,
   booking = false,
-  priceResolver,
   metaResolver
 }) {
   const imageSrc = (Array.isArray(room?.images) && room.images[0]) || room?.image || ''
@@ -67,15 +41,11 @@ function RoomTypeCard({
     return getDefaultMeta(room)
   }, [metaResolver, room])
 
-  const finalPrice = useMemo(() => {
-    const val = typeof priceResolver === 'function' ? priceResolver(room) : getFinalPrice(room)
-    const num = Number(val)
-    if (!Number.isFinite(num)) return 0
-    return Math.round(num * 100) / 100
-  }, [priceResolver, room])
-
-  const discountLabel = getDiscountLabel(room)
-  const hasDiscount = Boolean(discountLabel)
+  const finalPrice = Number(room?.display_price)
+  const basePrice = Number(room?.base_price)
+  const hasPrice = Number.isFinite(finalPrice)
+  const hasDiscount = hasPrice && Number.isFinite(basePrice) && finalPrice < basePrice
+  const discountLabel = room?.room_discount_label || ''
   const tags = [
     room?.breakfast || room?.breakfast_included ? '含早' : '',
     room?.cancelable ? '免费取消' : '',
@@ -116,14 +86,18 @@ function RoomTypeCard({
 
       <View className='room-type-card-side'>
         <View className='room-type-card-price-wrap'>
-          <View className='room-type-card-price'>
-            <Text className='room-type-card-price-symbol'>¥</Text>
-            <Text className='room-type-card-price-value'>{finalPrice}</Text>
-          </View>
+          {hasPrice ? (
+            <View className='room-type-card-price'>
+              <Text className='room-type-card-price-symbol'>¥</Text>
+              <Text className='room-type-card-price-value'>{finalPrice}</Text>
+            </View>
+          ) : (
+            <Text className='room-type-card-origin'>待报价</Text>
+          )}
           {hasDiscount ? (
             <>
-              <Text className='room-type-card-origin'>¥{Number(room?.price) || 0}</Text>
-              <Text className='room-type-card-discount'>{discountLabel}</Text>
+              <Text className='room-type-card-origin'>¥{basePrice}</Text>
+              {discountLabel ? <Text className='room-type-card-discount'>{discountLabel}</Text> : null}
             </>
           ) : null}
         </View>
