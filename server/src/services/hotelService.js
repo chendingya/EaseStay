@@ -78,6 +78,39 @@ const { calculateRoomPrice } = require('./pricingService')
 const normalizeArray = (value) => (Array.isArray(value) ? value : [])
 const normalizeNumber = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0)
 const generateOrderNo = () => `YS${Date.now()}${Math.floor(Math.random() * 900000 + 100000)}`
+const normalizeText = (value) => String(value || '').trim().toLowerCase()
+const parseCsvList = (value) => String(value || '')
+  .split(',')
+  .map((item) => item.trim())
+  .filter(Boolean)
+const normalizeFacilities = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || '').trim()).filter(Boolean)
+  }
+  if (typeof value === 'string') {
+    const raw = value.trim()
+    if (!raw) return []
+    if ((raw.startsWith('[') && raw.endsWith(']')) || (raw.startsWith('{') && raw.endsWith('}'))) {
+      try {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => String(item || '').trim()).filter(Boolean)
+        }
+      } catch (error) {}
+    }
+    return parseCsvList(raw)
+  }
+  return []
+}
+const matchesAllTags = (facilities, tags = []) => {
+  const normalizedTags = normalizeArray(tags).map(normalizeText).filter(Boolean)
+  if (!normalizedTags.length) return true
+  const normalizedFacilities = normalizeFacilities(facilities).map(normalizeText).filter(Boolean)
+  if (!normalizedFacilities.length) return false
+  return normalizedTags.every((tag) => normalizedFacilities.some((facility) => (
+    facility === tag || facility.includes(tag) || tag.includes(facility)
+  )))
+}
 
 const filterHotelIdsByMerchant = async ({ hotelIds, merchantId }) => {
   if (!merchantId) {
@@ -1527,6 +1560,7 @@ const listPublicHotels = async ({ query }) => {
   const normalizedPage = Math.max(Number(page) || 1, 1)
   const normalizedPageSize = Math.max(Number(pageSize) || 10, 1)
   const offset = (normalizedPage - 1) * normalizedPageSize
+  const tagList = parseCsvList(tags)
   const minPriceValue = Number(minPrice)
   const maxPriceValue = Number(maxPrice)
   const hasMinPrice = minPrice !== undefined && minPrice !== null && String(minPrice).trim() !== '' && Number.isFinite(minPriceValue)
@@ -1616,21 +1650,6 @@ const listPublicHotels = async ({ query }) => {
     }
   }
 
-  if (tags) {
-    const tagList = String(tags)
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean)
-    if (tagList.length > 0) {
-      // Supabase contains operator for array column needs array format
-      // facilities is jsonb array or text array
-      // If facilities is jsonb: .contains('facilities', JSON.stringify(tagList))
-      // If facilities is text[]: .contains('facilities', tagList)
-      // Assuming it's JSONB array of strings based on usage
-      dbQuery = dbQuery.contains('facilities', tagList)
-    }
-  }
-
   // --- 智能排序逻辑 ---
   if (keyword) {
     // 策略：获取所有候选酒店（按城市/价格过滤后），在内存中进行相关性评分
@@ -1667,15 +1686,17 @@ const listPublicHotels = async ({ query }) => {
     }
 
     // 计算评分
-    let scored = candidates.map(h => {
+    const candidateList = (candidates || []).filter((hotel) => matchesAllTags(hotel?.facilities, tagList))
+    const keywordText = String(keyword || '')
+    let scored = candidateList.map(h => {
       let score = 0
-      const name = h.name || ''
-      const address = h.address || ''
+      const name = String(h?.name || '')
+      const address = String(h?.address || '')
       
       // 1. 文本相关性
-      if (name === keyword) score += 100
-      else if (name.includes(keyword)) score += 60
-      else if (address.includes(keyword)) score += 40
+      if (name === keywordText) score += 100
+      else if (name.includes(keywordText)) score += 60
+      else if (address.includes(keywordText)) score += 40
       
       // 2. 位置相关性 (Priority 1: Keyword Location)
       if (targetLocation && h.latitude && h.longitude) {
@@ -1695,10 +1716,13 @@ const listPublicHotels = async ({ query }) => {
     // 过滤掉相关性太低的结果
     if (filterCity) {
         scored = scored.filter(h => {
+            const hotelName = String(h?.name || '')
+            const hotelAddress = String(h?.address || '')
+            const hotelNameEn = String(h?.name_en || '')
             // 如果 keyword 在名字/地址/设施里
-            const textMatch = h.name.includes(keyword) || h.address.includes(keyword) || 
-                              (h.name_en && h.name_en.includes(keyword)) ||
-                              (h.facilities && JSON.stringify(h.facilities).includes(keyword))
+            const textMatch = hotelName.includes(keywordText) || hotelAddress.includes(keywordText) || 
+                              hotelNameEn.includes(keywordText) ||
+                              (h.facilities && JSON.stringify(h.facilities).includes(keywordText))
             // 或者有位置加分
             const locMatch = h._score > 0
             return textMatch || locMatch
@@ -1739,10 +1763,11 @@ const listPublicHotels = async ({ query }) => {
       return { ok: false, status: 500, message: '查询失败：' + error.message }
     }
 
-    const hotelIds = (hotels || []).map((hotel) => hotel.id)
+    const filteredHotels = (hotels || []).filter((hotel) => matchesAllTags(hotel?.facilities, tagList))
+    const hotelIds = filteredHotels.map((hotel) => hotel.id)
     const priceMap = await getLowestPrices(hotelIds, pricingContext)
 
-    let enriched = (hotels || []).map((hotel) => ({
+    let enriched = filteredHotels.map((hotel) => ({
       ...hotel,
       lowestPrice: priceMap[hotel.id]
     })).filter((hotel) => inFinalPriceRange(hotel.lowestPrice))
@@ -1759,6 +1784,47 @@ const listPublicHotels = async ({ query }) => {
 
     const total = enriched.length
     const list = enriched.slice(offset, offset + normalizedPageSize)
+    return {
+      ok: true,
+      status: 200,
+      data: {
+        page: normalizedPage,
+        pageSize: normalizedPageSize,
+        total,
+        list
+      }
+    }
+  }
+
+  if (tagList.length > 0) {
+    const { data: hotels, error } = await dbQuery
+
+    if (error) {
+      return { ok: false, status: 500, message: '查询失败：' + error.message }
+    }
+
+    const filteredHotels = (hotels || []).filter((hotel) => matchesAllTags(hotel?.facilities, tagList))
+    const hotelIds = filteredHotels.map((hotel) => hotel.id)
+    const priceMap = await getLowestPrices(hotelIds, pricingContext)
+
+    let enriched = filteredHotels.map((hotel) => ({
+      ...hotel,
+      lowestPrice: priceMap[hotel.id]
+    }))
+
+    if (sort === 'price_asc') {
+      enriched.sort((a, b) => (a.lowestPrice || 0) - (b.lowestPrice || 0))
+    } else if (sort === 'price_desc') {
+      enriched.sort((a, b) => (b.lowestPrice || 0) - (a.lowestPrice || 0))
+    } else if (sort === 'star' || sort === 'score_desc') {
+      enriched.sort((a, b) => (b.star_rating || 0) - (a.star_rating || 0))
+    } else if (sort === 'recommend') {
+      enriched.sort((a, b) => (b.star_rating || 0) - (a.star_rating || 0) || (a.lowestPrice || 0) - (b.lowestPrice || 0))
+    }
+
+    const total = enriched.length
+    const list = enriched.slice(offset, offset + normalizedPageSize)
+
     return {
       ok: true,
       status: 200,
