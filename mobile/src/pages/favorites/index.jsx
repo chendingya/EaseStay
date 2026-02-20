@@ -6,14 +6,8 @@ import { DeleteOutline } from 'antd-mobile-icons'
 import PageTopBar from '../../components/PageTopBar'
 import { createListByType } from '../../components/OrderList'
 import { clearFavoriteHotels, getFavoriteHotels, removeFavoriteHotel } from '../../services/favorites'
+import { resolveDateRange } from '../../utils/dateRange'
 import './index.css'
-
-const formatDate = (date) => {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
 
 export default function Favorites() {
   const [list, setList] = useState([])
@@ -39,10 +33,14 @@ export default function Favorites() {
   })
 
   const openHotel = (id) => {
-    const today = new Date()
-    const checkIn = formatDate(today)
-    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000)
-    const checkOut = formatDate(tomorrow)
+    const SEARCH_STORAGE_KEY = 'hotel_search_params'
+    const storedParams = Taro.getStorageSync(SEARCH_STORAGE_KEY) || {}
+    const range = resolveDateRange({
+      checkIn: storedParams.checkIn,
+      checkOut: storedParams.checkOut
+    })
+    const checkIn = range.checkIn
+    const checkOut = range.checkOut
     Taro.navigateTo({
       url: `/pages/detail/index?id=${id}&checkIn=${checkIn}&checkOut=${checkOut}`
     })

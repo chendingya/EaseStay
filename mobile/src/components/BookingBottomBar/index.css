@@ -1,0 +1,55 @@
+.booking-bottom-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 64px;
+  z-index: 120;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.9);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.booking-bottom-bar-left {
+  display: flex;
+  align-items: center;
+}
+
+.booking-bottom-bar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.booking-bottom-bar-price {
+  display: flex;
+  align-items: baseline;
+}
+
+.booking-bottom-bar-price-prefix {
+  font-size: 12px;
+  color: #f5222d;
+}
+
+.booking-bottom-bar-price-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #f5222d;
+  line-height: 1;
+}
+
+.booking-bottom-bar-price-suffix {
+  margin-left: 2px;
+  font-size: 12px;
+  color: #8f9aac;
+}
+
+.booking-bottom-bar-empty {
+  font-size: 12px;
+  color: #8f9aac;
+}

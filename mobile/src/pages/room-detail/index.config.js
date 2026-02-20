@@ -1,0 +1,3 @@
+export default {
+  navigationBarTitleText: '房型详情'
+}

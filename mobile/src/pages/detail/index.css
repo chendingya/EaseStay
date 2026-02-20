@@ -211,6 +211,7 @@
 .checkin-section {
   margin: 12px;
   padding: 14px 16px;
+  cursor: pointer;
 }
 
 .checkin-dates {
@@ -249,106 +250,35 @@
   border-radius: 12px;
 }
 
-/* 房型列表 */
-.room-section {
-  padding: 12px;
-}
-
-.room-card {
-  display: flex;
-  padding: 14px;
-  margin-bottom: 10px;
-}
-
-.room-img-wrap {
-  width: 80px;
+.checkin-icon {
+  font-size: 18px;
+  color: #1677ff;
+  margin-left: 8px;
   flex-shrink: 0;
 }
 
-.room-img {
-  width: 80px;
-  height: 80px;
-  border-radius: 8px;
+/* 房型列表 */
+.room-section {
+/*  */  padding: 12px;
 }
 
-.room-img-placeholder {
-  width: 80px;
-  height: 80px;
-  background: linear-gradient(135deg, #e6f4ff 0%, #bae0ff 100%);
-  border-radius: 8px;
+.room-list-container {
+  height: auto;
 }
 
-.room-info {
-  flex: 1;
-  padding: 0 12px;
+.room-list-container .list-scroll {
+  height: auto;
 }
 
-.room-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: #333;
+.room-list {
+  gap: 10px;
 }
 
-.room-tags {
-  display: flex;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-.room-tag {
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.room-tag.green {
-  color: #52c41a;
-  background: rgba(82, 196, 26, 0.1);
-}
-
-.room-tag.blue {
-  color: #1677ff;
-  background: rgba(22, 119, 255, 0.1);
-}
-
-.room-detail {
-  margin-top: 8px;
-}
-
-.room-size {
-  font-size: 12px;
-  color: #999;
-}
-
-.room-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  justify-content: space-between;
-}
-
-.room-price {
-  display: flex;
-  align-items: baseline;
-}
-
-.book-btn {
-  background: linear-gradient(135deg, #1677ff, #4096ff);
-  padding: 6px 16px;
-  border-radius: 16px;
-  transition: transform 0.18s ease, opacity 0.18s ease;
-}
-
-.book-btn.loading {
-  opacity: 0.75;
-  transform: scale(0.98);
-  pointer-events: none;
-}
-
-.book-text {
-  color: #fff;
-  font-size: 13px;
-  font-weight: 500;
+.room-list-container .list-empty {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
 }
 
 /* 设施服务 */
@@ -447,22 +377,6 @@
   height: 140px;
 }
 
-/* 底部预订栏 */
-.bottom-bar {
-  position: fixed;
-  bottom: 58px;
-  left: 0;
-  right: 0;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  border-radius: 0;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-  z-index: 100;
-}
-
 .bottom-left {
   display: flex;
   gap: 20px;
@@ -482,34 +396,6 @@
   font-size: 11px;
   color: #666;
   margin-top: 2px;
-}
-
-.bottom-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.price-info {
-  display: flex;
-  align-items: baseline;
-}
-
-.price-from {
-  font-size: 12px;
-  color: #f5222d;
-}
-
-.price-value {
-  font-size: 22px;
-  font-weight: 700;
-  color: #f5222d;
-}
-
-.price-suffix {
-  font-size: 12px;
-  color: #999;
-  margin-left: 2px;
 }
 
 .main-book-btn {
@@ -532,13 +418,3 @@
 }
 
 /* 价格数字 */
-.price-symbol {
-  font-size: 12px;
-  color: #f5222d;
-}
-
-.price-num {
-  font-size: 18px;
-  font-weight: 700;
-  color: #f5222d;
-}

@@ -7,6 +7,7 @@ import { api } from '../../services/request'
 import { createListByType } from '../../components/OrderList'
 import PageTopBar from '../../components/PageTopBar'
 import { cityData } from '../../utils/cityData'
+import { formatDate, parseLocalDate, resolveDateRange } from '../../utils/dateRange'
 import './index.css'
 
 export default function List() {
@@ -26,26 +27,15 @@ export default function List() {
     }
   }
 
-  const formatDate = (date) => {
-    if (!date || Number.isNaN(date.getTime())) return ''
-    const y = date.getFullYear()
-    const m = String(date.getMonth() + 1).padStart(2, '0')
-    const d = String(date.getDate()).padStart(2, '0')
-    return `${y}-${m}-${d}`
-  }
-
-  const getDefaultDates = () => {
-    const today = new Date()
-    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000)
-    return { checkIn: formatDate(today), checkOut: formatDate(tomorrow) }
-  }
-
-  const defaultDates = getDefaultDates()
+  const initialDateRange = resolveDateRange({
+    checkIn: paramsRef.current.checkIn || storedParams.checkIn,
+    checkOut: paramsRef.current.checkOut || storedParams.checkOut
+  })
   const hasKeywordParam = Object.prototype.hasOwnProperty.call(paramsRef.current, 'keyword')
   const [city, setCity] = useState(() => safeDecode(paramsRef.current.city) || storedParams.city || '')
   const [keyword, setKeyword] = useState(() => (hasKeywordParam ? safeDecode(paramsRef.current.keyword) : (storedParams.keyword || '')))
-  const [checkIn, setCheckIn] = useState(() => paramsRef.current.checkIn || storedParams.checkIn || defaultDates.checkIn)
-  const [checkOut, setCheckOut] = useState(() => paramsRef.current.checkOut || storedParams.checkOut || defaultDates.checkOut)
+  const [checkIn, setCheckIn] = useState(() => initialDateRange.checkIn)
+  const [checkOut, setCheckOut] = useState(() => initialDateRange.checkOut)
   const [minPrice, setMinPrice] = useState(() => paramsRef.current.minPrice || storedParams.minPrice || '')
   const [maxPrice, setMaxPrice] = useState(() => paramsRef.current.maxPrice || storedParams.maxPrice || '')
   const [userLat, setUserLat] = useState(() => paramsRef.current.userLat || storedParams.userLat || '')
@@ -204,7 +194,10 @@ export default function List() {
 
   const nights = (() => {
     if (!checkIn || !checkOut) return 1
-    const diff = (new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24)
+    const checkInDate = parseLocalDate(checkIn)
+    const checkOutDate = parseLocalDate(checkOut)
+    if (!checkInDate || !checkOutDate) return 1
+    const diff = (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)
     if (!Number.isFinite(diff) || diff <= 0) return 1
     return Math.round(diff)
   })()
@@ -461,7 +454,7 @@ export default function List() {
         visible={calendarVisible}
         onClose={() => setCalendarVisible(false)}
         onConfirm={handleDateConfirm}
-        defaultValue={[new Date(checkIn), new Date(checkOut)]}
+        defaultValue={[parseLocalDate(checkIn), parseLocalDate(checkOut)]}
       />
 
       <Popup
