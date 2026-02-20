@@ -1,10 +1,9 @@
 import { View, Image, Text, Map } from '@tarojs/components'
-import Taro from '@tarojs/taro'
-import { useEffect, useState } from 'react'
+import Taro, { useReachBottom } from '@tarojs/taro'
+import { useEffect, useRef, useState } from 'react'
 import { Swiper, Button, Card, SearchBar, Tag, Space, Toast, CalendarPicker, Picker, Popup, Cascader, Slider } from 'antd-mobile'
 import { SearchOutline, CalendarOutline, EnvironmentOutline } from 'antd-mobile-icons'
 import { api } from '../../services/request'
-import HotelCard from '../../components/HotelCard'
 import { cityData } from '../../utils/cityData'
 import './index.css'
 
@@ -54,6 +53,16 @@ export default function Index() {
   const [selectedPrice, setSelectedPrice] = useState(() => storedParams.selectedPrice ?? null) // null, '0-150', '150-300', ...
   const [priceRange, setPriceRange] = useState([0, 2100]) // For slider state
   const [hotHotels, setHotHotels] = useState([])
+  const [hotLoading, setHotLoading] = useState(false)
+  const [hotHasMore, setHotHasMore] = useState(true)
+  const [hotPage, setHotPage] = useState(1)
+  const hotPageSize = 6
+  const hotLoadingRef = useRef(false)
+  const hotHasMoreRef = useRef(true)
+  const hotPageRef = useRef(1)
+  const hotFallbackImageHeight = 140
+  const [hotCardWidth, setHotCardWidth] = useState(0)
+  const [hotImageRatios, setHotImageRatios] = useState({})
   const [latitude, setLatitude] = useState(() => Number(storedParams.userLat) || 31.2304) // Default Shanghai
   const [longitude, setLongitude] = useState(() => Number(storedParams.userLng) || 121.4737)
   const [mapVisible, setMapVisible] = useState(false)
@@ -63,9 +72,14 @@ export default function Index() {
   const [cityPickerVisible, setCityPickerVisible] = useState(false)
   const [locationCity, setLocationCity] = useState('') // Store GPS location city separately
   // const [cityList, setCityList] = useState([]) // Deprecated in favor of static cityData for hierarchy
+  const hotColumns = hotHotels.reduce((cols, hotel, index) => {
+    const next = cols
+    next[index % 2].push(hotel)
+    return next
+  }, [[], []])
 
   useEffect(() => {
-    fetchHotHotels()
+    fetchHotHotels(1)
     fetchQuickTags()
     // fetchCities() // No longer needed
   }, [])
@@ -100,6 +114,65 @@ export default function Index() {
       }
     }
   }, [filterVisible])
+
+  useEffect(() => {
+    hotLoadingRef.current = hotLoading
+  }, [hotLoading])
+
+  useEffect(() => {
+    hotHasMoreRef.current = hotHasMore
+  }, [hotHasMore])
+
+  useEffect(() => {
+    hotPageRef.current = hotPage
+  }, [hotPage])
+
+  useEffect(() => {
+    if (!hotHotels.length) return
+    const updateWidth = () => {
+      Taro.nextTick(() => {
+        const query = Taro.createSelectorQuery()
+        query.select('.hot-column').boundingClientRect((rect) => {
+          if (rect?.width && rect.width !== hotCardWidth) {
+            setHotCardWidth(rect.width)
+          }
+        }).exec()
+      })
+    }
+    const resizeHandler = () => {
+      updateWidth()
+    }
+    updateWidth()
+    if (Taro.onWindowResize) {
+      Taro.onWindowResize(resizeHandler)
+    }
+    return () => {
+      if (Taro.offWindowResize) {
+        Taro.offWindowResize(resizeHandler)
+      }
+    }
+  }, [hotHotels.length, hotCardWidth])
+
+  const resolveHotImageHeight = (id) => {
+    if (!hotCardWidth) return hotFallbackImageHeight
+    const ratio = hotImageRatios[id]
+    if (ratio) return Math.round(hotCardWidth * ratio)
+    return hotFallbackImageHeight
+  }
+
+  const handleHotImageLoad = (id) => (e) => {
+    const width = e?.detail?.width
+    const height = e?.detail?.height
+    if (!width || !height) return
+    const ratio = height / width
+    setHotImageRatios(prev => (prev[id] === ratio ? prev : { ...prev, [id]: ratio }))
+  }
+
+  const handleHotImageError = (id) => () => {
+    if (!hotCardWidth) return
+    const ratio = hotFallbackImageHeight / hotCardWidth
+    setHotImageRatios(prev => (prev[id] === ratio ? prev : { ...prev, [id]: ratio }))
+  }
 
   const handlePriceConfirm = () => {
     const [min, max] = priceRange
@@ -273,13 +346,24 @@ export default function Index() {
   // 日期选择逻辑待接入 antd-mobile Calendar 组件
   // 目前先保留点击交互，后续集成
 
-  const fetchHotHotels = async () => {
+  const fetchHotHotels = async (nextPage = 1) => {
+    if (hotLoadingRef.current) return
+    setHotLoading(true)
     try {
-      const data = await api.get('/api/hotels?pageSize=4')
+      const data = await api.get(`/api/hotels?page=${nextPage}&pageSize=${hotPageSize}`)
       if (data && data.list) {
-        setHotHotels(data.list)
+        setHotHotels(prev => (nextPage === 1 ? data.list : [...prev, ...data.list]))
+        const nextHasMore = data.list.length >= hotPageSize
+        setHotHasMore(nextHasMore)
+        setHotPage(nextPage)
+      } else {
+        setHotHasMore(false)
       }
-    } catch (err) {}
+    } catch (err) {
+      setHotHasMore(false)
+    } finally {
+      setHotLoading(false)
+    }
   }
 
   const handleLocation = () => {
@@ -394,6 +478,11 @@ export default function Index() {
       setCalendarVisible(false)
     }
   }
+
+  useReachBottom(() => {
+    if (hotLoadingRef.current || !hotHasMoreRef.current) return
+    fetchHotHotels(hotPageRef.current + 1)
+  })
 
   const nights = () => {
     if (!checkIn || !checkOut) return 1
@@ -558,17 +647,71 @@ export default function Index() {
 
       {/* 热门酒店 */}
       {hotHotels.length > 0 && (
-        <View style={{ padding: '20px 16px' }}>
-          <View style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 12 }}>热门推荐</View>
-          <Space direction="vertical" block>
-            {hotHotels.map(hotel => (
-              <HotelCard 
-                key={hotel.id} 
-                hotel={hotel} 
-                onClick={() => handleHotelClick(hotel.id)} 
-              />
+        <View className="hot-section">
+          <View className="hot-title">热门推荐</View>
+          <View className="hot-waterfall">
+            {hotColumns.map((column, columnIndex) => (
+              <View key={`hot-col-${columnIndex}`} className="hot-column">
+                {column.map((hotel) => {
+                  const imageSrc = (Array.isArray(hotel.images) && hotel.images[0]) || hotel.cover_image || ''
+                  const hotelName = hotel?.name || hotel?.name_en || `酒店 #${hotel?.id ?? '--'}`
+                  const starCount = Math.max(0, Math.min(5, Number(hotel?.star_rating) || 0))
+                  const lowestPrice = hotel?.lowestPrice
+
+                  return (
+                    <View
+                      key={hotel.id}
+                      className="hot-card"
+                      onClick={() => handleHotelClick(hotel.id)}
+                    >
+                      {imageSrc ? (
+                        <Image
+                          className="hot-card-image"
+                          src={imageSrc}
+                          mode="widthFix"
+                          style={{ height: `${resolveHotImageHeight(hotel.id)}px` }}
+                          onLoad={handleHotImageLoad(hotel.id)}
+                          onError={handleHotImageError(hotel.id)}
+                        />
+                      ) : (
+                        <View className="hot-card-image-placeholder">
+                          <Text className="hot-card-image-placeholder-text">暂无图片</Text>
+                        </View>
+                      )}
+                      <View className="hot-card-body">
+                        <View className="hot-card-name-row">
+                          <Text className="hot-card-name">{hotelName}</Text>
+                          {starCount > 0 ? (
+                            <View className="hot-card-stars">
+                              {Array.from({ length: starCount }).map((_, idx) => (
+                                <Text key={`${hotel.id}-star-${idx}`} className="hot-card-star">★</Text>
+                              ))}
+                            </View>
+                          ) : null}
+                        </View>
+                        <View className="hot-card-price">
+                          {lowestPrice ? (
+                            <>
+                              <Text className="hot-card-price-symbol">¥</Text>
+                              <Text className="hot-card-price-value">{lowestPrice}</Text>
+                              <Text className="hot-card-price-suffix">起</Text>
+                            </>
+                          ) : (
+                            <Text className="hot-card-price-empty">暂无房型</Text>
+                          )}
+                        </View>
+                      </View>
+                    </View>
+                  )
+                })}
+              </View>
             ))}
-          </Space>
+          </View>
+          <View className="hot-load">
+            <Text className="hot-load-text">
+              {hotLoading ? '正在加载更多酒店...' : (hotHasMore ? '上拉加载更多酒店' : '已全部加载完成')}
+            </Text>
+          </View>
         </View>
       )}
 
