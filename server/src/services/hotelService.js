@@ -195,6 +195,36 @@ const getLowestPrices = async (hotelIds, pricingOptions = {}) => {
   return priceMap
 }
 
+const enrichRoomTypesWithPricing = ({
+  roomTypes = [],
+  promotions = [],
+  pricingContext = {},
+  usedStockMap = new Map(),
+  orderRoomSet = null
+} = {}) => {
+  return normalizeArray(roomTypes).map((room) => {
+    const pricing = calculateRoomPrice({
+      room,
+      promotions: normalizeArray(promotions),
+      ...pricingContext
+    })
+    const enriched = {
+      ...room,
+      used_stock: usedStockMap.get(room.id) || 0,
+      display_price: pricing.finalPrice,
+      base_price: pricing.basePrice,
+      promotion_price: pricing.promotionAdjustedPrice,
+      has_room_discount: pricing.hasRoomDiscount,
+      room_discount_label: pricing.roomDiscountLabel,
+      effective_promotions: pricing.effectivePromotions
+    }
+    if (orderRoomSet instanceof Set) {
+      enriched.has_orders = orderRoomSet.has(room.id)
+    }
+    return enriched
+  }).sort((a, b) => normalizeNumber(a.display_price) - normalizeNumber(b.display_price))
+}
+
 const getRoomTypeCountMap = async (hotelIds) => {
   if (!hotelIds.length) return {}
 
@@ -1342,11 +1372,13 @@ const getMerchantHotel = async ({ merchantId, hotelId }) => {
     return { ok: false, status: 500, message: '查询房型订单失败：' + orderRows.error.message }
   }
   const orderRoomSet = new Set((orderRows.data || []).map((row) => row.room_type_id))
-  const enrichedRoomTypes = (roomTypes || []).map((room) => ({
-    ...room,
-    has_orders: orderRoomSet.has(room.id),
-    used_stock: usedResult.map.get(room.id) || 0
-  }))
+  const enrichedRoomTypes = enrichRoomTypesWithPricing({
+    roomTypes,
+    promotions: hotel?.promotions,
+    pricingContext: { asOfDate: new Date() },
+    usedStockMap: usedResult.map,
+    orderRoomSet
+  })
 
   return { ok: true, status: 200, data: { ...hotel, roomTypes: enrichedRoomTypes } }
 }
@@ -2133,10 +2165,12 @@ const getAdminHotelDetail = async ({ hotelId }) => {
   if (!usedResult.ok) {
     return { ok: false, status: 500, message: usedResult.message }
   }
-  const enrichedRoomTypes = (roomTypes || []).map((room) => ({
-    ...room,
-    used_stock: usedResult.map.get(room.id) || 0
-  }))
+  const enrichedRoomTypes = enrichRoomTypesWithPricing({
+    roomTypes,
+    promotions: hotel?.promotions,
+    pricingContext: { asOfDate: new Date() },
+    usedStockMap: usedResult.map
+  })
 
   return { ok: true, status: 200, data: { ...hotel, roomTypes: enrichedRoomTypes } }
 }
