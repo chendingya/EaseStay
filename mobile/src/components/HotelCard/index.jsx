@@ -15,6 +15,8 @@ export default function HotelCard({ hotel, onClick, badgeText, extraMetaItems = 
     openingYear ? `${openingYear}年开业` : '',
     ...extraMetaItems
   ].filter(Boolean)
+  const displayPrice = Number(hotel?.lowestPrice)
+  const hasPrice = Number.isFinite(displayPrice)
 
   useEffect(() => {
     setImageFailed(false)
@@ -68,10 +70,10 @@ export default function HotelCard({ hotel, onClick, badgeText, extraMetaItems = 
           ) : null}
           <View className="hotel-card-bottom">
             <View className="hotel-card-price">
-              {hotel.lowestPrice ? (
+              {hasPrice ? (
                 <>
                   <Text className="hotel-card-price-symbol">¥</Text>
-                  <Text className="hotel-card-price-value">{hotel.lowestPrice}</Text>
+                  <Text className="hotel-card-price-value">{displayPrice}</Text>
                   <Text className="hotel-card-price-suffix"> 起</Text>
                 </>
               ) : (

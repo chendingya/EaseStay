@@ -3,6 +3,7 @@ import { View, Text, ScrollView } from '@tarojs/components'
 import { Empty, SwipeAction } from 'antd-mobile'
 import OrderCard from '../OrderCard'
 import HotelCard from '../HotelCard'
+import RoomTypeCard from '../RoomTypeCard'
 import './index.css'
 
 const getOrderKey = (order, index) => {
@@ -56,7 +57,8 @@ function ListContainer({
   loadTipText,
   containerClassName,
   scrollClassName,
-  listClassName
+  listClassName,
+  embedded = false
 }) {
   const isH5 = typeof window !== 'undefined' && typeof document !== 'undefined'
   const startYRef = useRef(0)
@@ -67,7 +69,7 @@ function ListContainer({
   const isInitialLoading = loading && data.length === 0 && !refreshing
   const showBottomSkeleton = loading && data.length > 0 && hasMore
   const shouldShowEmpty = showEmpty && !loading && !refreshing && data.length === 0
-  const enablePull = !!onRefresh || !!onPulling || !!onPullEnd
+  const enablePull = !embedded && (!!onRefresh || !!onPulling || !!onPullEnd)
   const safePullDistance = Math.max(Number(pullDistance) || 0, 0)
   const progress = pullThreshold > 0 ? Math.min(safePullDistance / pullThreshold, 1) : 0
   const visible = enablePull && (refreshing || safePullDistance > 0)
@@ -117,35 +119,8 @@ function ListContainer({
     onPullEnd && onPullEnd()
   }
 
-  return (
-    <View className={`list-container${containerClassName ? ` ${containerClassName}` : ''}`}>
-      <ScrollView
-        className={`list-scroll${scrollClassName ? ` ${scrollClassName}` : ''}`}
-        scrollY
-        enhanced
-        showScrollbar={false}
-        lowerThreshold={120}
-        onScrollToLower={() => {
-          if (hasMore && !loading && onLoadMore) {
-            onLoadMore()
-          }
-        }}
-        onScroll={(event) => {
-          const nextTop = Number(event?.detail?.scrollTop) || 0
-          scrollTopRef.current = nextTop
-          onScrollChange && onScrollChange(nextTop)
-        }}
-        refresherEnabled={enablePull}
-        refresherThreshold={72}
-        refresherTriggered={refreshing}
-        onRefresherRefresh={() => onRefresh && onRefresh()}
-        onRefresherPulling={onPulling}
-        onRefresherRestore={onPullEnd}
-        onRefresherAbort={onPullEnd}
-        onTouchStart={enablePull ? handleTouchStart : undefined}
-        onTouchMove={enablePull ? handleTouchMove : undefined}
-        onTouchEnd={enablePull ? handleTouchEnd : undefined}
-      >
+  const content = (
+    <>
         {enablePull ? (
           <View
             className={`list-pull ${visible ? 'visible' : ''} ${refreshing ? 'loading' : ''} ${progress >= 1 ? 'ready' : ''}`}
@@ -206,7 +181,46 @@ function ListContainer({
             {footer}
           </View>
         ) : null}
-      </ScrollView>
+    </>
+  )
+
+  return (
+    <View className={`list-container${embedded ? ' list-container-embedded' : ''}${containerClassName ? ` ${containerClassName}` : ''}`}>
+      {embedded ? (
+        <View className={`list-scroll list-scroll-embedded${scrollClassName ? ` ${scrollClassName}` : ''}`}>
+          {content}
+        </View>
+      ) : (
+        <ScrollView
+          className={`list-scroll${scrollClassName ? ` ${scrollClassName}` : ''}`}
+          scrollY
+          enhanced
+          showScrollbar={false}
+          lowerThreshold={120}
+          onScrollToLower={() => {
+            if (hasMore && !loading && onLoadMore) {
+              onLoadMore()
+            }
+          }}
+          onScroll={(event) => {
+            const nextTop = Number(event?.detail?.scrollTop) || 0
+            scrollTopRef.current = nextTop
+            onScrollChange && onScrollChange(nextTop)
+          }}
+          refresherEnabled={enablePull}
+          refresherThreshold={72}
+          refresherTriggered={refreshing}
+          onRefresherRefresh={() => onRefresh && onRefresh()}
+          onRefresherPulling={onPulling}
+          onRefresherRestore={onPullEnd}
+          onRefresherAbort={onPullEnd}
+          onTouchStart={enablePull ? handleTouchStart : undefined}
+          onTouchMove={enablePull ? handleTouchMove : undefined}
+          onTouchEnd={enablePull ? handleTouchEnd : undefined}
+        >
+          {content}
+        </ScrollView>
+      )}
     </View>
   )
 }
@@ -216,6 +230,7 @@ export const createListByType = ({
   items,
   onOpen,
   onRemove,
+  onBook,
   onPay,
   onDetail,
   enableSwipe = true,
@@ -278,6 +293,28 @@ export const createListByType = ({
             </SwipeAction>
           ) : cardNode
         }}
+        {...rest}
+      />
+    )
+  }
+
+  if (type === 'room') {
+    const bookingRoomId = rest.bookingRoomId
+    return (
+      <ListContainer
+        items={items}
+        showSummary={false}
+        emptyText={emptyText || '该酒店暂无上架房型'}
+        animate={animate}
+        renderItem={(room) => (
+          <RoomTypeCard
+            room={room}
+            booking={bookingRoomId !== undefined && bookingRoomId !== null && String(bookingRoomId) === String(room?.id)}
+            onBook={() => (onBook || onPay) && (onBook || onPay)(room)}
+            onOpen={() => onOpen && onOpen(room)}
+            metaResolver={rest.roomMetaResolver}
+          />
+        )}
         {...rest}
       />
     )

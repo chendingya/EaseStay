@@ -73,36 +73,43 @@ const {
   computeRoomAvailability,
   roundToTwo
 } = require('./roomAvailabilityService')
+const { calculateRoomPrice } = require('./pricingService')
 
 const normalizeArray = (value) => (Array.isArray(value) ? value : [])
 const normalizeNumber = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0)
 const generateOrderNo = () => `YS${Date.now()}${Math.floor(Math.random() * 900000 + 100000)}`
-
-const isEffectiveNow = (periods) => {
-  const ranges = normalizeArray(periods)
-  if (!ranges.length) return true
-  const now = new Date().getTime()
-  return ranges.some((r) => {
-    const s = r && r.start ? new Date(r.start).getTime() : null
-    const e = r && r.end ? new Date(r.end).getTime() : null
-    if (!s || !e) return false
-    return now >= s && now <= e
-  })
-}
-
-const applyPromotions = (basePrice, promotions) => {
-  let final = normalizeNumber(basePrice)
-  const list = normalizeArray(promotions).filter((p) => p && p.title)
-  const effective = list.filter((p) => isEffectiveNow(p.periods))
-  effective.forEach((p) => {
-    const val = normalizeNumber(p.value)
-    if (val > 0 && val <= 10) {
-      final = final * (val / 10)
-    } else if (val < 0) {
-      final = Math.max(0, final + val)
+const normalizeText = (value) => String(value || '').trim().toLowerCase()
+const parseCsvList = (value) => String(value || '')
+  .split(',')
+  .map((item) => item.trim())
+  .filter(Boolean)
+const normalizeFacilities = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || '').trim()).filter(Boolean)
+  }
+  if (typeof value === 'string') {
+    const raw = value.trim()
+    if (!raw) return []
+    if ((raw.startsWith('[') && raw.endsWith(']')) || (raw.startsWith('{') && raw.endsWith('}'))) {
+      try {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => String(item || '').trim()).filter(Boolean)
+        }
+      } catch (error) {}
     }
-  })
-  return Math.round(final * 100) / 100
+    return parseCsvList(raw)
+  }
+  return []
+}
+const matchesAllTags = (facilities, tags = []) => {
+  const normalizedTags = normalizeArray(tags).map(normalizeText).filter(Boolean)
+  if (!normalizedTags.length) return true
+  const normalizedFacilities = normalizeFacilities(facilities).map(normalizeText).filter(Boolean)
+  if (!normalizedFacilities.length) return false
+  return normalizedTags.every((tag) => normalizedFacilities.some((facility) => (
+    facility === tag || facility.includes(tag) || tag.includes(facility)
+  )))
 }
 
 const filterHotelIdsByMerchant = async ({ hotelIds, merchantId }) => {
@@ -126,8 +133,9 @@ const filterHotelIdsByMerchant = async ({ hotelIds, merchantId }) => {
 }
 
 // 批量获取酒店最低价格
-const getLowestPrices = async (hotelIds) => {
+const getLowestPrices = async (hotelIds, pricingOptions = {}) => {
   if (!hotelIds.length) return {}
+  const { checkIn, checkOut } = pricingOptions
 
   const { data: roomTypes } = await supabase
     .from('room_types')
@@ -152,7 +160,11 @@ const getLowestPrices = async (hotelIds) => {
   let usedMap = new Map()
   if (roomTypes && roomTypes.length) {
     const roomTypeIds = roomTypes.map((room) => room.id).filter((id) => Number.isFinite(Number(id)))
-    const usedResult = await getActiveOrderQtyMap({ roomTypeIds, asOfDate: new Date() })
+    const usedResult = await getActiveOrderQtyMap(
+      checkIn && checkOut
+        ? { roomTypeIds, checkIn, checkOut }
+        : { roomTypeIds, asOfDate: new Date() }
+    )
     if (usedResult.ok) {
       usedMap = usedResult.map
     }
@@ -165,23 +177,14 @@ const getLowestPrices = async (hotelIds) => {
       const used = usedMap.get(room.id) || 0
       const available = computeRoomAvailability({ stock, used, isActive: active }).available
       if (available <= 0) return
-      const base = Number(room.price) || 0
       const promos = hotelPromoMap[room.hotel_id] || []
-      let finalPrice = applyPromotions(base, promos)
-      const discount = Number(room.discount_rate) || 0
-      const quota = Number(room.discount_quota) || 0
-      const hasDiscount = quota > 0 && ((discount > 0 && discount <= 10) || discount < 0) && isEffectiveNow(room.discount_periods)
-
-      if (hasDiscount) {
-        if (discount > 0 && discount <= 10) {
-          finalPrice = finalPrice * (discount / 10)
-        } else if (discount < 0) {
-          finalPrice = Math.max(0, finalPrice + discount)
-        }
-      }
-
-      // 保留两位小数
-      finalPrice = Math.round(finalPrice * 100) / 100
+      const { finalPrice } = calculateRoomPrice({
+        room,
+        promotions: promos,
+        checkIn,
+        checkOut,
+        asOfDate: new Date()
+      })
 
       if (priceMap[room.hotel_id] === null || finalPrice < priceMap[room.hotel_id]) {
         priceMap[room.hotel_id] = finalPrice
@@ -190,6 +193,36 @@ const getLowestPrices = async (hotelIds) => {
   }
 
   return priceMap
+}
+
+const enrichRoomTypesWithPricing = ({
+  roomTypes = [],
+  promotions = [],
+  pricingContext = {},
+  usedStockMap = new Map(),
+  orderRoomSet = null
+} = {}) => {
+  return normalizeArray(roomTypes).map((room) => {
+    const pricing = calculateRoomPrice({
+      room,
+      promotions: normalizeArray(promotions),
+      ...pricingContext
+    })
+    const enriched = {
+      ...room,
+      used_stock: usedStockMap.get(room.id) || 0,
+      display_price: pricing.finalPrice,
+      base_price: pricing.basePrice,
+      promotion_price: pricing.promotionAdjustedPrice,
+      has_room_discount: pricing.hasRoomDiscount,
+      room_discount_label: pricing.roomDiscountLabel,
+      effective_promotions: pricing.effectivePromotions
+    }
+    if (orderRoomSet instanceof Set) {
+      enriched.has_orders = orderRoomSet.has(room.id)
+    }
+    return enriched
+  }).sort((a, b) => normalizeNumber(a.display_price) - normalizeNumber(b.display_price))
 }
 
 const getRoomTypeCountMap = async (hotelIds) => {
@@ -1339,11 +1372,13 @@ const getMerchantHotel = async ({ merchantId, hotelId }) => {
     return { ok: false, status: 500, message: '查询房型订单失败：' + orderRows.error.message }
   }
   const orderRoomSet = new Set((orderRows.data || []).map((row) => row.room_type_id))
-  const enrichedRoomTypes = (roomTypes || []).map((room) => ({
-    ...room,
-    has_orders: orderRoomSet.has(room.id),
-    used_stock: usedResult.map.get(room.id) || 0
-  }))
+  const enrichedRoomTypes = enrichRoomTypesWithPricing({
+    roomTypes,
+    promotions: hotel?.promotions,
+    pricingContext: { asOfDate: new Date() },
+    usedStockMap: usedResult.map,
+    orderRoomSet
+  })
 
   return { ok: true, status: 200, data: { ...hotel, roomTypes: enrichedRoomTypes } }
 }
@@ -1552,40 +1587,29 @@ const listPublicHotels = async ({ query }) => {
     page = 1,
     pageSize = 10
   } = query || {}
+  const pricingContext = { checkIn, checkOut }
 
   const normalizedPage = Math.max(Number(page) || 1, 1)
   const normalizedPageSize = Math.max(Number(pageSize) || 10, 1)
   const offset = (normalizedPage - 1) * normalizedPageSize
-
-  // 1. 如果有价格筛选，先找出符合价格范围的酒店 ID
-  let priceFilteredIds = null
-  if (minPrice || maxPrice) {
-    let priceQuery = supabase.from('room_types').select('hotel_id').eq('is_active', true)
-    
-    if (minPrice) {
-      priceQuery = priceQuery.gte('price', Number(minPrice))
-    }
-    if (maxPrice) {
-      priceQuery = priceQuery.lte('price', Number(maxPrice))
-    }
-    
-    const { data: rooms, error: priceError } = await priceQuery
-    if (!priceError && rooms) {
-      priceFilteredIds = [...new Set(rooms.map(r => r.hotel_id))]
-    }
+  const tagList = parseCsvList(tags)
+  const minPriceValue = Number(minPrice)
+  const maxPriceValue = Number(maxPrice)
+  const hasMinPrice = minPrice !== undefined && minPrice !== null && String(minPrice).trim() !== '' && Number.isFinite(minPriceValue)
+  const hasMaxPrice = maxPrice !== undefined && maxPrice !== null && String(maxPrice).trim() !== '' && Number.isFinite(maxPriceValue)
+  const needFinalPriceFilter = hasMinPrice || hasMaxPrice
+  const inFinalPriceRange = (value) => {
+    const num = Number(value)
+    if (!Number.isFinite(num)) return false
+    if (hasMinPrice && num < minPriceValue) return false
+    if (hasMaxPrice && num > maxPriceValue) return false
+    return true
   }
 
   let dbQuery = supabase
     .from('hotels')
     .select('*', { count: 'exact' })
     .eq('status', 'approved')
-
-  if (priceFilteredIds !== null) {
-    if (priceFilteredIds.length === 0) {
-      return { ok: true, status: 200, data: { page: normalizedPage, pageSize: normalizedPageSize, total: 0, list: [] } }
-    }
-    dbQuery = dbQuery.in('id', priceFilteredIds)
-  }
 
   // --- 智能城市切换逻辑 ---
   let filterCity = city
@@ -1658,21 +1682,6 @@ const listPublicHotels = async ({ query }) => {
     }
   }
 
-  if (tags) {
-    const tagList = String(tags)
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean)
-    if (tagList.length > 0) {
-      // Supabase contains operator for array column needs array format
-      // facilities is jsonb array or text array
-      // If facilities is jsonb: .contains('facilities', JSON.stringify(tagList))
-      // If facilities is text[]: .contains('facilities', tagList)
-      // Assuming it's JSONB array of strings based on usage
-      dbQuery = dbQuery.contains('facilities', tagList)
-    }
-  }
-
   // --- 智能排序逻辑 ---
   if (keyword) {
     // 策略：获取所有候选酒店（按城市/价格过滤后），在内存中进行相关性评分
@@ -1709,15 +1718,17 @@ const listPublicHotels = async ({ query }) => {
     }
 
     // 计算评分
-    let scored = candidates.map(h => {
+    const candidateList = (candidates || []).filter((hotel) => matchesAllTags(hotel?.facilities, tagList))
+    const keywordText = String(keyword || '')
+    let scored = candidateList.map(h => {
       let score = 0
-      const name = h.name || ''
-      const address = h.address || ''
+      const name = String(h?.name || '')
+      const address = String(h?.address || '')
       
       // 1. 文本相关性
-      if (name === keyword) score += 100
-      else if (name.includes(keyword)) score += 60
-      else if (address.includes(keyword)) score += 40
+      if (name === keywordText) score += 100
+      else if (name.includes(keywordText)) score += 60
+      else if (address.includes(keywordText)) score += 40
       
       // 2. 位置相关性 (Priority 1: Keyword Location)
       if (targetLocation && h.latitude && h.longitude) {
@@ -1737,30 +1748,33 @@ const listPublicHotels = async ({ query }) => {
     // 过滤掉相关性太低的结果
     if (filterCity) {
         scored = scored.filter(h => {
+            const hotelName = String(h?.name || '')
+            const hotelAddress = String(h?.address || '')
+            const hotelNameEn = String(h?.name_en || '')
             // 如果 keyword 在名字/地址/设施里
-            const textMatch = h.name.includes(keyword) || h.address.includes(keyword) || 
-                              (h.name_en && h.name_en.includes(keyword)) ||
-                              (h.facilities && JSON.stringify(h.facilities).includes(keyword))
+            const textMatch = hotelName.includes(keywordText) || hotelAddress.includes(keywordText) || 
+                              hotelNameEn.includes(keywordText) ||
+                              (h.facilities && JSON.stringify(h.facilities).includes(keywordText))
             // 或者有位置加分
             const locMatch = h._score > 0
             return textMatch || locMatch
         })
     }
 
-    // 排序
-    scored.sort((a, b) => b._score - a._score)
+    const scoredHotelIds = scored.map((hotel) => hotel.id)
+    const priceMap = await getLowestPrices(scoredHotelIds, pricingContext)
 
-    // 手动分页
-    const total = scored.length
-    const pageData = scored.slice(offset, offset + normalizedPageSize)
-    
-    const hotelIds = pageData.map((h) => h.id)
-    const priceMap = await getLowestPrices(hotelIds)
-
-    const enriched = pageData.map((hotel) => ({
+    let enriched = scored.map((hotel) => ({
       ...hotel,
       lowestPrice: priceMap[hotel.id]
     }))
+    if (needFinalPriceFilter) {
+      enriched = enriched.filter((hotel) => inFinalPriceRange(hotel.lowestPrice))
+    }
+    enriched.sort((a, b) => b._score - a._score)
+
+    const total = enriched.length
+    const pageData = enriched.slice(offset, offset + normalizedPageSize)
 
     return {
       ok: true,
@@ -1769,13 +1783,92 @@ const listPublicHotels = async ({ query }) => {
         page: normalizedPage,
         pageSize: normalizedPageSize,
         total: total,
-        list: enriched
+        list: pageData
       }
     }
   }
 
   // --- 原有逻辑 (无 Keyword) ---
-  
+  if (needFinalPriceFilter) {
+    const { data: hotels, error } = await dbQuery
+    if (error) {
+      return { ok: false, status: 500, message: '查询失败：' + error.message }
+    }
+
+    const filteredHotels = (hotels || []).filter((hotel) => matchesAllTags(hotel?.facilities, tagList))
+    const hotelIds = filteredHotels.map((hotel) => hotel.id)
+    const priceMap = await getLowestPrices(hotelIds, pricingContext)
+
+    let enriched = filteredHotels.map((hotel) => ({
+      ...hotel,
+      lowestPrice: priceMap[hotel.id]
+    })).filter((hotel) => inFinalPriceRange(hotel.lowestPrice))
+
+    if (sort === 'price_asc') {
+      enriched.sort((a, b) => (a.lowestPrice || 0) - (b.lowestPrice || 0))
+    } else if (sort === 'price_desc') {
+      enriched.sort((a, b) => (b.lowestPrice || 0) - (a.lowestPrice || 0))
+    } else if (sort === 'star' || sort === 'score_desc') {
+      enriched.sort((a, b) => (b.star_rating || 0) - (a.star_rating || 0))
+    } else if (sort === 'recommend') {
+      enriched.sort((a, b) => (b.star_rating || 0) - (a.star_rating || 0) || (a.lowestPrice || 0) - (b.lowestPrice || 0))
+    }
+
+    const total = enriched.length
+    const list = enriched.slice(offset, offset + normalizedPageSize)
+    return {
+      ok: true,
+      status: 200,
+      data: {
+        page: normalizedPage,
+        pageSize: normalizedPageSize,
+        total,
+        list
+      }
+    }
+  }
+
+  if (tagList.length > 0) {
+    const { data: hotels, error } = await dbQuery
+
+    if (error) {
+      return { ok: false, status: 500, message: '查询失败：' + error.message }
+    }
+
+    const filteredHotels = (hotels || []).filter((hotel) => matchesAllTags(hotel?.facilities, tagList))
+    const hotelIds = filteredHotels.map((hotel) => hotel.id)
+    const priceMap = await getLowestPrices(hotelIds, pricingContext)
+
+    let enriched = filteredHotels.map((hotel) => ({
+      ...hotel,
+      lowestPrice: priceMap[hotel.id]
+    }))
+
+    if (sort === 'price_asc') {
+      enriched.sort((a, b) => (a.lowestPrice || 0) - (b.lowestPrice || 0))
+    } else if (sort === 'price_desc') {
+      enriched.sort((a, b) => (b.lowestPrice || 0) - (a.lowestPrice || 0))
+    } else if (sort === 'star' || sort === 'score_desc') {
+      enriched.sort((a, b) => (b.star_rating || 0) - (a.star_rating || 0))
+    } else if (sort === 'recommend') {
+      enriched.sort((a, b) => (b.star_rating || 0) - (a.star_rating || 0) || (a.lowestPrice || 0) - (b.lowestPrice || 0))
+    }
+
+    const total = enriched.length
+    const list = enriched.slice(offset, offset + normalizedPageSize)
+
+    return {
+      ok: true,
+      status: 200,
+      data: {
+        page: normalizedPage,
+        pageSize: normalizedPageSize,
+        total,
+        list
+      }
+    }
+  }
+
   const { data: hotels, error, count } = await dbQuery.range(offset, offset + normalizedPageSize - 1)
 
   if (error) {
@@ -1783,7 +1876,7 @@ const listPublicHotels = async ({ query }) => {
   }
 
   const hotelIds = hotels.map((h) => h.id)
-  const priceMap = await getLowestPrices(hotelIds)
+  const priceMap = await getLowestPrices(hotelIds, pricingContext)
 
   let enriched = hotels.map((hotel) => ({
     ...hotel,
@@ -1814,7 +1907,10 @@ const listPublicHotels = async ({ query }) => {
 
 
 // 公开酒店详情
-const getPublicHotel = async ({ hotelId }) => {
+const getPublicHotel = async ({ hotelId, query }) => {
+  const checkIn = query?.checkIn
+  const checkOut = query?.checkOut
+  const pricingContext = { checkIn, checkOut, asOfDate: new Date() }
   const { data: hotel, error } = await supabase
     .from('hotels')
     .select('*')
@@ -1833,7 +1929,11 @@ const getPublicHotel = async ({ hotelId }) => {
     .order('price', { ascending: true })
 
   const roomTypeIds = (roomTypes || []).map((room) => room.id).filter((id) => Number.isFinite(Number(id)))
-  const usedResult = await getActiveOrderQtyMap({ roomTypeIds, asOfDate: new Date() })
+  const usedResult = await getActiveOrderQtyMap(
+    checkIn && checkOut
+      ? { roomTypeIds, checkIn, checkOut }
+      : { roomTypeIds, asOfDate: new Date() }
+  )
   if (!usedResult.ok) {
     return { ok: false, status: 500, message: usedResult.message }
   }
@@ -1846,7 +1946,34 @@ const getPublicHotel = async ({ hotelId }) => {
     return available > 0
   })
 
-  return { ok: true, status: 200, data: { ...hotel, roomTypes: availableRoomTypes } }
+  const pricedRoomTypes = availableRoomTypes.map((room) => {
+    const pricing = calculateRoomPrice({
+      room,
+      promotions: hotel.promotions,
+      ...pricingContext
+    })
+    return {
+      ...room,
+      display_price: pricing.finalPrice,
+      base_price: pricing.basePrice,
+      promotion_price: pricing.promotionAdjustedPrice,
+      has_room_discount: pricing.hasRoomDiscount,
+      room_discount_label: pricing.roomDiscountLabel,
+      effective_promotions: pricing.effectivePromotions
+    }
+  }).sort((a, b) => normalizeNumber(a.display_price) - normalizeNumber(b.display_price))
+
+  const lowestPrice = pricedRoomTypes.length > 0 ? normalizeNumber(pricedRoomTypes[0].display_price) : null
+
+  return {
+    ok: true,
+    status: 200,
+    data: {
+      ...hotel,
+      lowestPrice,
+      roomTypes: pricedRoomTypes
+    }
+  }
 }
 
 const createPublicOrder = async ({ hotelId, userId, payload }) => {
@@ -1873,7 +2000,7 @@ const createPublicOrder = async ({ hotelId, userId, payload }) => {
 
   const { data: hotel, error: hotelError } = await supabase
     .from('hotels')
-    .select('id, merchant_id, status, name, name_en')
+    .select('id, merchant_id, status, name, name_en, promotions')
     .eq('id', hotelId)
     .eq('status', 'approved')
     .single()
@@ -1936,17 +2063,17 @@ const createPublicOrder = async ({ hotelId, userId, payload }) => {
     return { ok: false, status: 400, message: '房型库存不足' }
   }
 
-  const pricePerNight = normalizeNumber(room.price)
-
-  // 计算批量折扣
-  const discountRate = Number(room.discount_rate) || 0
-  const discountQuota = Number(room.discount_quota) || 0
-  const discountPeriods = normalizeArray(room.discount_periods)
-  
-  // 折扣逻辑: 0 < rate <= 10 为折扣率(x折); rate < 0 为固定减免金额
-  const isPercentage = discountRate > 0 && discountRate <= 10
-  const isFixed = discountRate < 0
-  const hasDiscount = (isPercentage || isFixed) && discountQuota > 0 && isEffectiveNow(discountPeriods)
+  const pricing = calculateRoomPrice({
+    room,
+    promotions: hotel.promotions,
+    checkIn: checkInValue,
+    checkOut: checkOutValue,
+    asOfDate: new Date()
+  })
+  const pricePerNight = pricing.promotionAdjustedPrice
+  const discountedPricePerNight = pricing.finalPrice
+  const discountQuota = normalizeNumber(room.discount_quota)
+  const hasDiscount = pricing.hasRoomDiscount
 
   let totalPrice = 0
   let discountCount = 0
@@ -1955,20 +2082,15 @@ const createPublicOrder = async ({ hotelId, userId, payload }) => {
     // 只有配额内的数量享受折扣
     discountCount = Math.min(normalizedQuantity, discountQuota)
     const normalCount = normalizedQuantity - discountCount
-    
-    let discountedPricePerNight = pricePerNight
-    if (isPercentage) {
-      discountedPricePerNight = Math.round(pricePerNight * discountRate * 10) / 100
-    } else if (isFixed) {
-      discountedPricePerNight = Math.max(0, pricePerNight + discountRate) // discountRate 为负数
-    }
-    
     totalPrice = (discountedPricePerNight * discountCount + pricePerNight * normalCount) * nights
   } else {
     totalPrice = pricePerNight * normalizedQuantity * nights
   }
   
   totalPrice = Math.round(totalPrice * 100) / 100
+  const avgPricePerNight = normalizedQuantity > 0
+    ? Math.round((totalPrice / normalizedQuantity / nights) * 100) / 100
+    : pricePerNight
 
   const insertPayload = {
     hotel_id: hotelId,
@@ -1977,7 +2099,7 @@ const createPublicOrder = async ({ hotelId, userId, payload }) => {
     room_type_id: room.id,
     room_type_name: room.name,
     quantity: normalizedQuantity,
-    price_per_night: pricePerNight,
+    price_per_night: avgPricePerNight,
     nights,
     total_price: totalPrice,
     status: 'pending_payment',
@@ -2043,10 +2165,12 @@ const getAdminHotelDetail = async ({ hotelId }) => {
   if (!usedResult.ok) {
     return { ok: false, status: 500, message: usedResult.message }
   }
-  const enrichedRoomTypes = (roomTypes || []).map((room) => ({
-    ...room,
-    used_stock: usedResult.map.get(room.id) || 0
-  }))
+  const enrichedRoomTypes = enrichRoomTypesWithPricing({
+    roomTypes,
+    promotions: hotel?.promotions,
+    pricingContext: { asOfDate: new Date() },
+    usedStockMap: usedResult.map
+  })
 
   return { ok: true, status: 200, data: { ...hotel, roomTypes: enrichedRoomTypes } }
 }

@@ -3,6 +3,7 @@ export default {
     'pages/index/index',
     'pages/list/index',
     'pages/detail/index',
+    'pages/room-detail/index',
     'pages/login/index',
     'pages/register/index',
     'pages/account/index',

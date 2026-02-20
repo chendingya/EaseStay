@@ -5,6 +5,7 @@ import { Swiper, Button, Card, SearchBar, Tag, Space, Toast, CalendarPicker, Pic
 import { SearchOutline, CalendarOutline, EnvironmentOutline } from 'antd-mobile-icons'
 import { api } from '../../services/request'
 import { cityData } from '../../utils/cityData'
+import { formatDate, parseLocalDate, resolveDateRange } from '../../utils/dateRange'
 import './index.css'
 
 // 轮播 Banner 数据
@@ -17,35 +18,22 @@ const bannerList = [
 // 快捷标签 - remove hardcoded
 // const quickTags = ['亲子', '免费停车', '高评分', '近地铁', '含早餐', '海景房']
 
-const formatDate = (date) => {
-  if (!date || Number.isNaN(date.getTime())) return ''
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
-
 const AMAP_KEY = 'ddced92dcf9226be15b73e95708224f9' // 请替换为您的高德地图 Key
 
 export default function Index() {
   const SEARCH_STORAGE_KEY = 'hotel_search_params'
   const storedParams = Taro.getStorageSync(SEARCH_STORAGE_KEY) || {}
+  const initialDateRange = resolveDateRange({
+    checkIn: storedParams.checkIn,
+    checkOut: storedParams.checkOut
+  })
   const [city, setCity] = useState(() => storedParams.city || '上海')
   const [keyword, setKeyword] = useState(() => storedParams.keyword || '')
   const [quickTags, setQuickTags] = useState([]) // Load from backend
   
-  // Initialize with valid dates to prevent flash of empty/NaN content
-  const [checkIn, setCheckIn] = useState(() => {
-    if (storedParams.checkIn) return storedParams.checkIn
-    const d = new Date()
-    return formatDate(d)
-  })
-  const [checkOut, setCheckOut] = useState(() => {
-    if (storedParams.checkOut) return storedParams.checkOut
-    const d = new Date()
-    d.setDate(d.getDate() + 1)
-    return formatDate(d)
-  })
+  // 初始化时统一按本地时区修正，避免 YYYY-MM-DD 在非东八区被解析成前一天
+  const [checkIn, setCheckIn] = useState(() => initialDateRange.checkIn)
+  const [checkOut, setCheckOut] = useState(() => initialDateRange.checkOut)
 
   const [calendarVisible, setCalendarVisible] = useState(false)
   const [filterVisible, setFilterVisible] = useState(false)
@@ -336,13 +324,6 @@ export default function Index() {
       handleReverseGeocode(lng, lat)
   }
 
-  const addDays = (dateStr, days) => {
-    const base = new Date(dateStr)
-    if (Number.isNaN(base.getTime())) return dateStr
-    base.setDate(base.getDate() + days)
-    return formatDate(base)
-  }
-
   // 日期选择逻辑待接入 antd-mobile Calendar 组件
   // 目前先保留点击交互，后续集成
 
@@ -486,9 +467,9 @@ export default function Index() {
 
   const nights = () => {
     if (!checkIn || !checkOut) return 1
-    const d1 = new Date(checkIn)
-    const d2 = new Date(checkOut)
-    if (Number.isNaN(d1.getTime()) || Number.isNaN(d2.getTime())) return 1
+    const d1 = parseLocalDate(checkIn)
+    const d2 = parseLocalDate(checkOut)
+    if (!d1 || !d2) return 1
     const diff = (d2 - d1) / (1000 * 60 * 60 * 24)
     return Math.max(1, Math.round(diff))
   }
@@ -735,7 +716,7 @@ export default function Index() {
           visible={calendarVisible}
           onClose={() => setCalendarVisible(false)}
           onConfirm={handleDateConfirm}
-          defaultValue={[new Date(checkIn), new Date(checkOut)]}
+          defaultValue={[parseLocalDate(checkIn), parseLocalDate(checkOut)]}
         />
 
       {/* 星级筛选弹窗 */}

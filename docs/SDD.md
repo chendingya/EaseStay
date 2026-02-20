@@ -725,6 +725,12 @@ Query：`keyword`（可选），`page`、`pageSize`（分页模式可选）
 - `components/HotelCard`：酒店图文卡片（中英名、地址、星级/开业、收藏时间、价格）
 - 收藏存储：`services/favorites` 基于本地存储，支持单条取消收藏与批量清空
 
+### 11.4 酒店详情与房型详情
+- `pages/detail`：房型区改为复用 `createListByType({ type: 'room' })`，统一走列表容器与卡片渲染链路
+- `components/RoomTypeCard`：房型卡片（图片、标签、基础参数、优惠价/原价、查看详情、预订按钮）
+- `components/OrderList`：新增 `room` 类型与嵌入式渲染能力，支持在详情页滚动容器中展示房型列表
+- `pages/room-detail`：房型详情页（房型参数、优惠有效期、入住离店展示、直接下单跳转支付）
+
 ## 12. Admin 国际化实现细节（2026-02）
 ### 12.1 目录与资源组织
 - 语言目录：`admin/src/locales/zh-CN`、`admin/src/locales/en-US`

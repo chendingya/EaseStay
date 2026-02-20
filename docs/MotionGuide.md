@@ -65,6 +65,7 @@ function ListContainer({
 - 订单列表：渲染订单卡片
 - 收藏列表：渲染酒店卡片，并支持滑动取消收藏
 - 酒店列表：渲染酒店卡片
+- 房型列表：渲染房型卡片，支持查看房型详情与快捷预订
 
 示例结构：
 
@@ -94,6 +95,18 @@ function createListByType({ type, items, onOpen, onRemove, onPay, onDetail, enab
             </SwipeAction>
           ) : card
         }}
+        {...rest}
+      />
+    )
+  }
+
+  if (type === 'room') {
+    return (
+      <ListContainer
+        items={items}
+        renderItem={(room) => (
+          <RoomTypeCard room={room} onOpen={onOpen} onBook={onPay} />
+        )}
         {...rest}
       />
     )

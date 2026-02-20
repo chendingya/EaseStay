@@ -2,11 +2,14 @@ import { View, Text, Image, ScrollView, Swiper, SwiperItem } from '@tarojs/compo
 import { useRouter } from '@tarojs/taro'
 import Taro from '@tarojs/taro'
 import { useState, useEffect } from 'react'
+import { CalendarPicker } from 'antd-mobile'
 import { api } from '../../services/request'
 import { isFavoriteHotel, toggleFavoriteHotel } from '../../services/favorites'
 import PageTopBar from '../../components/PageTopBar'
-import GlassButton from '../../components/GlassButton'
-import { SendOutline, HeartOutline, HeartFill, MessageOutline } from 'antd-mobile-icons'
+import BookingBottomBar from '../../components/BookingBottomBar'
+import { createListByType } from '../../components/OrderList'
+import { formatDate, parseLocalDate, resolveDateRange } from '../../utils/dateRange'
+import { SendOutline, HeartOutline, HeartFill, MessageOutline, CalendarOutline } from 'antd-mobile-icons'
 import './index.css'
 
 // 默认设施
@@ -25,21 +28,17 @@ const formatPeriodLabel = (periods) => {
   }).filter(Boolean).join('，')
 }
 
-const isEffectiveNow = (periods) => {
-  const list = Array.isArray(periods) ? periods : []
-  if (!list.length) return true
-  const now = Date.now()
-  return list.some((p) => {
-    const start = p && p.start ? new Date(p.start).getTime() : null
-    const end = p && p.end ? new Date(p.end).getTime() : null
-    if (!start || !end) return false
-    return now >= start && now <= end
-  })
-}
-
 export default function Detail() {
   const router = useRouter()
-  const { id, checkIn, checkOut } = router.params
+  const { id } = router.params
+  const SEARCH_STORAGE_KEY = 'hotel_search_params'
+  const storedParams = Taro.getStorageSync(SEARCH_STORAGE_KEY) || {}
+  const initialDateRange = resolveDateRange({
+    checkIn: router?.params?.checkIn || storedParams.checkIn,
+    checkOut: router?.params?.checkOut || storedParams.checkOut
+  })
+  const [checkIn, setCheckIn] = useState(() => initialDateRange.checkIn)
+  const [checkOut, setCheckOut] = useState(() => initialDateRange.checkOut)
 
   const [hotel, setHotel] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -47,11 +46,11 @@ export default function Detail() {
   const [bookingRoomId, setBookingRoomId] = useState(null)
   const [collected, setCollected] = useState(false)
   const [bannerImageError, setBannerImageError] = useState({})
-  const [roomImageError, setRoomImageError] = useState({})
+  const [calendarVisible, setCalendarVisible] = useState(false)
 
   useEffect(() => {
     fetchHotelDetail()
-  }, [id])
+  }, [id, checkIn, checkOut])
 
   useEffect(() => {
     const loadFavoriteStatus = async () => {
@@ -67,13 +66,24 @@ export default function Detail() {
 
   useEffect(() => {
     setBannerImageError({})
-    setRoomImageError({})
   }, [id])
+
+  useEffect(() => {
+    const prev = Taro.getStorageSync(SEARCH_STORAGE_KEY) || {}
+    Taro.setStorageSync(SEARCH_STORAGE_KEY, {
+      ...prev,
+      checkIn,
+      checkOut
+    })
+  }, [checkIn, checkOut])
 
   const fetchHotelDetail = async () => {
     try {
       setLoading(true)
-      const data = await api.get(`/api/hotels/${id}`)
+      const query = new URLSearchParams()
+      if (checkIn) query.append('checkIn', checkIn)
+      if (checkOut) query.append('checkOut', checkOut)
+      const data = await api.get(`/api/hotels/${id}${query.toString() ? `?${query.toString()}` : ''}`)
       if (data) {
         setHotel(data)
       }
@@ -120,6 +130,17 @@ export default function Detail() {
     }
   }
 
+  const handleOpenRoomDetail = (room) => {
+    if (!room?.id) return
+    const query = [
+      `hotelId=${encodeURIComponent(String(id || ''))}`,
+      `roomId=${encodeURIComponent(String(room.id))}`,
+      `checkIn=${encodeURIComponent(String(checkIn || ''))}`,
+      `checkOut=${encodeURIComponent(String(checkOut || ''))}`
+    ].join('&')
+    Taro.navigateTo({ url: `/pages/room-detail/index?${query}` })
+  }
+
   const handleShare = () => {
     const sharePath = `/pages/detail/index?id=${id}&checkIn=${checkIn || ''}&checkOut=${checkOut || ''}`
     const shareText = `${hotel?.name || '易宿酒店'} ${sharePath}`
@@ -135,12 +156,20 @@ export default function Detail() {
       const { collected: nextCollected } = await toggleFavoriteHotel({
         ...hotel,
         id,
-        lowestPrice: minRoomPrice
+        lowestPrice: hasMinRoomPrice ? minRoomPrice : null
       })
       setCollected(nextCollected)
       Taro.showToast({ title: nextCollected ? '收藏成功' : '已取消收藏', icon: 'success' })
     } catch (error) {
       Taro.showToast({ title: '操作失败，请稍后重试', icon: 'none' })
+    }
+  }
+
+  const handleDateConfirm = (val) => {
+    if (val && val[0] && val[1]) {
+      setCheckIn(formatDate(val[0]))
+      setCheckOut(formatDate(val[1]))
+      setCalendarVisible(false)
     }
   }
 
@@ -178,32 +207,24 @@ export default function Detail() {
       ? hotel.room_types
       : [] // 移除默认假数据，没有就是没有
 
-
-  const calculateFinalPrice = (room) => {
-    const price = Number(room.price) || 0
-    const discount = Number(room.discount_rate) || 0
-    const quota = Number(room.discount_quota) || 0
-    let finalPrice = price
-    
-    if (quota > 0) {
-      if (discount > 0 && discount <= 10) {
-        finalPrice = price * (discount / 10)
-      } else if (discount < 0) {
-        finalPrice = Math.max(0, price + discount)
-      }
-    }
-    return Math.round(finalPrice * 100) / 100
-  }
-
   const roomTypes = [...rawRoomTypes].sort((a, b) => {
-    return calculateFinalPrice(a) - calculateFinalPrice(b)
+    const priceA = Number(a?.display_price)
+    const priceB = Number(b?.display_price)
+    if (!Number.isFinite(priceA) && !Number.isFinite(priceB)) return 0
+    if (!Number.isFinite(priceA)) return 1
+    if (!Number.isFinite(priceB)) return -1
+    return priceA - priceB
   })
-  
-  const minRoomPrice = roomTypes.length ? calculateFinalPrice(roomTypes[0]) : null
+
+  const minRoomPrice = Number(hotel?.lowestPrice)
+  const hasMinRoomPrice = Number.isFinite(minRoomPrice)
 
   const nights = () => {
     if (!checkIn || !checkOut) return 1
-    const diff = (new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24)
+    const checkInDate = parseLocalDate(checkIn)
+    const checkOutDate = parseLocalDate(checkOut)
+    if (!checkInDate || !checkOutDate) return 1
+    const diff = (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)
     return Math.max(1, diff)
   }
 
@@ -346,7 +367,7 @@ export default function Detail() {
         )}
 
         {/* 入住信息 */}
-        <View className="checkin-section glass-card">
+        <View className="checkin-section glass-card" onClick={() => setCalendarVisible(true)}>
           <View className="checkin-dates">
             <View className="date-item">
               <Text className="date-label">入住</Text>
@@ -359,92 +380,27 @@ export default function Detail() {
               <Text className="date-label">离店</Text>
               <Text className="date-value">{checkOut || '选择日期'}</Text>
             </View>
+            <CalendarOutline className='checkin-icon' />
           </View>
         </View>
 
         {/* 房型列表 */}
         <View className="room-section">
           <Text className="section-title">房型选择</Text>
-          {roomTypes.length === 0 ? (
-            <View className="empty-rooms glass-card" style={{ padding: '30px', textAlign: 'center' }}>
-              <Text style={{ color: '#999' }}>该酒店暂无上架房型</Text>
-            </View>
-          ) : (
-            roomTypes.map((room, roomIndex) => (
-            <View key={room.id} className="room-card glass-card">
-              <View className="room-img-wrap">
-                {(() => {
-                  const roomImageSrc = (Array.isArray(room.images) && room.images[0]) || room.image
-                  const roomKey = room.id ?? `room-${roomIndex}`
-                  if (roomImageSrc && !roomImageError[roomKey]) {
-                    return (
-                      <Image
-                        className="room-img"
-                        src={roomImageSrc}
-                        mode="aspectFill"
-                        onError={() => setRoomImageError((prev) => ({ ...prev, [roomKey]: true }))}
-                      />
-                    )
-                  }
-                  return <View className="room-img-placeholder"></View>
-                })()}
-              </View>
-              <View className="room-info">
-                <Text className="room-name">{room.name}</Text>
-                <View className="room-tags">
-                  {(room.breakfast || room.breakfast_included) && <Text className="room-tag green">含早</Text>}
-                  {room.cancelable && <Text className="room-tag blue">免费取消</Text>}
-                  {room.wifi && <Text className="room-tag blue">免费WiFi</Text>}
-                </View>
-                <View className="room-detail">
-                  <Text className="room-size">{getRoomMeta(room)}</Text>
-                </View>
-              </View>
-              <View className="room-right">
-                <View className="room-price">
-                  <Text className="price-symbol">¥</Text>
-                  <Text className="price-num">
-                    {calculateFinalPrice(room)}
-                  </Text>
-                  {(() => {
-                    const discount = Number(room.discount_rate) || 0
-                    const quota = Number(room.discount_quota) || 0
-                    if (discount !== 0 && quota > 0) {
-                      return (
-                        <Text className="original-price" style={{ textDecoration: 'line-through', color: '#999', fontSize: '12px', marginLeft: '4px' }}>
-                          ¥{room.price}
-                        </Text>
-                      )
-                    }
-                    return null
-                  })()}
-                </View>
-                {(() => {
-                  const discount = Number(room.discount_rate) || 0
-                  const quota = Number(room.discount_quota) || 0
-                  if (discount !== 0 && quota > 0) {
-                    const text = discount < 0 ? `减¥${Math.abs(discount)}` : `${discount}折`
-                    return (
-                      <View className="discount-tag-wrap" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' }}>
-                         <Text className="discount-tag" style={{ background: '#ff4d4f', color: '#fff', fontSize: '10px', padding: '0 4px', borderRadius: '4px' }}>{text}</Text>
-                      </View>
-                    )
-                  }
-                  return null
-                })()}
-                <View 
-                  className={`book-btn ${bookingRoomId === room.id ? 'loading' : ''}`}
-                  onClick={() => {
-                    if (bookingRoomId !== room.id) {
-                      handleBook(room)
-                    }
-                  }}
-                >
-                  {bookingRoomId === room.id ? '预订中' : '预订'}
-                </View>
-              </View>
-            </View>
-          )))}
+          {createListByType({
+            type: 'room',
+            items: roomTypes,
+            embedded: true,
+            animate: true,
+            footer: null,
+            emptyText: '该酒店暂无上架房型',
+            containerClassName: 'room-list-container',
+            listClassName: 'room-list',
+            bookingRoomId,
+            roomMetaResolver: getRoomMeta,
+            onBook: handleBook,
+            onOpen: handleOpenRoomDetail
+          })}
         </View>
 
         {/* 设施服务 */}
@@ -517,48 +473,39 @@ export default function Detail() {
         <View className="bottom-placeholder"></View>
       </ScrollView>
 
-      {/* 底部预订栏 */}
-      <View className="bottom-bar glass-card">
-        <View className="bottom-left">
-          <View className="bottom-action" onClick={handleCollect}>
-            {collected ? <HeartFill className="action-icon" /> : <HeartOutline className="action-icon" />}
-            <Text className="action-text">{collected ? '已收藏' : '收藏'}</Text>
-          </View>
-          <View className="bottom-action" onClick={() => Taro.showToast({ title: '客服咨询开发中', icon: 'none' })}>
-            <MessageOutline className="action-icon" />
-            <Text className="action-text">咨询</Text>
-          </View>
-        </View>
-        <View className="bottom-right">
-          {minRoomPrice ? (
-            <>
-              <View className="price-info">
-                <Text className="price-from">¥</Text>
-                <Text className="price-value">{minRoomPrice}</Text>
-                <Text className="price-suffix">起</Text>
-              </View>
-              <GlassButton
-                tone='primary'
-                fill='solid'
-                size='large'
-                loading={isBooking}
-                className='main-book-btn'
-                onClick={() => {
-                  if (!isBooking) {
-                    handleBook(roomTypes[0])
-                  }
-                }}
-              >
-                立即预订
-              </GlassButton>
-            </>
-          ) : (
-            <View className="price-info" style={{ width: '100%', justifyContent: 'flex-end' }}>
-              <Text className="price-suffix">暂无房型可订</Text>
+      <BookingBottomBar
+        leftContent={(
+          <View className='bottom-left'>
+            <View className='bottom-action' onClick={handleCollect}>
+              {collected ? <HeartFill className='action-icon' /> : <HeartOutline className='action-icon' />}
+              <Text className='action-text'>{collected ? '已收藏' : '收藏'}</Text>
             </View>
-          )}
-        </View>
-      </View>
+            <View className='bottom-action' onClick={() => Taro.showToast({ title: '客服咨询开发中', icon: 'none' })}>
+              <MessageOutline className='action-icon' />
+              <Text className='action-text'>咨询</Text>
+            </View>
+          </View>
+        )}
+        price={minRoomPrice}
+        priceSuffix='起'
+        emptyText='暂无房型可订'
+        showAction={hasMinRoomPrice}
+        loading={isBooking}
+        actionClassName='main-book-btn'
+        onAction={() => {
+          if (!isBooking && roomTypes.length > 0) {
+            handleBook(roomTypes[0])
+          }
+        }}
+      />
+
+      <CalendarPicker
+        selectionMode='range'
+        visible={calendarVisible}
+        onClose={() => setCalendarVisible(false)}
+        onConfirm={handleDateConfirm}
+        defaultValue={[parseLocalDate(checkIn), parseLocalDate(checkOut)]}
+      />
     </View>
   )
 }

@@ -1,0 +1,222 @@
+.room-detail-page {
+  min-height: 100vh;
+  background: #f5f7fb;
+}
+
+.room-detail-scroll {
+  height: 100vh;
+}
+
+.room-banner-section {
+  position: relative;
+  height: 280px;
+}
+
+.room-banner-swiper {
+  height: 280px;
+}
+
+.room-banner-image {
+  width: 100%;
+  height: 280px;
+}
+
+.room-banner-placeholder {
+  width: 100%;
+  height: 280px;
+  background: linear-gradient(145deg, #6286f0, #5d6ac8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.room-banner-placeholder-text {
+  color: #fff;
+  font-size: 16px;
+}
+
+.room-banner-count {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  font-size: 12px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
+  padding: 4px 10px;
+}
+
+.room-detail-content {
+  padding: 12px;
+}
+
+.room-detail-hero-card,
+.room-detail-date-card,
+.room-detail-card {
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.room-detail-hero-card {
+  margin: -24px 0 12px;
+  padding: 16px;
+  position: relative;
+  z-index: 10;
+}
+
+.room-detail-name {
+  display: block;
+  color: #1c2f4d;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.room-detail-hotel {
+  display: block;
+  margin-top: 6px;
+  color: #6f7f95;
+  font-size: 12px;
+}
+
+.room-detail-tags {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.room-detail-tag {
+  font-size: 10px;
+  color: #1a6dff;
+  background: rgba(26, 109, 255, 0.12);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.room-detail-date-card {
+  margin-top: 12px;
+  padding: 14px 16px;
+}
+
+.room-detail-date-row {
+  display: flex;
+  align-items: center;
+}
+
+.room-detail-date-item {
+  flex: 1;
+  text-align: center;
+}
+
+.room-detail-date-label {
+  display: block;
+  font-size: 12px;
+  color: #9aa6b2;
+}
+
+.room-detail-date-value {
+  display: block;
+  margin-top: 4px;
+  font-size: 15px;
+  color: #243347;
+  font-weight: 600;
+}
+
+.room-detail-date-mid {
+  padding: 0 10px;
+}
+
+.room-detail-date-nights {
+  font-size: 12px;
+  color: #1677ff;
+  background: rgba(22, 119, 255, 0.1);
+  border-radius: 12px;
+  padding: 4px 10px;
+}
+
+.room-detail-date-icon {
+  margin-left: 6px;
+  color: #5f738d;
+  font-size: 16px;
+}
+
+.room-detail-card {
+  margin-top: 12px;
+  padding: 14px;
+}
+
+.room-detail-card-title {
+  display: block;
+  font-size: 15px;
+  color: #2a3f5f;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.room-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #edf1f6;
+}
+
+.room-detail-row:last-child {
+  border-bottom: none;
+}
+
+.room-detail-label {
+  color: #7c8a9d;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.room-detail-value {
+  color: #243347;
+  font-size: 12px;
+  text-align: right;
+  line-height: 1.4;
+}
+
+.room-detail-period {
+  max-width: 66%;
+}
+
+.room-detail-price {
+  color: #f5222d;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.room-detail-discount {
+  color: #fff;
+  background: #ff4d4f;
+  border-radius: 6px;
+  font-size: 11px;
+  padding: 2px 8px;
+  line-height: 1;
+}
+
+.room-detail-bottom-space {
+  height: 92px;
+}
+
+.room-detail-book-btn {
+  min-width: 132px;
+}
+
+.room-detail-center {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.room-detail-tip {
+  color: #8a96a7;
+  font-size: 14px;
+}

@@ -169,40 +169,21 @@ export default function AuditDetail() {
     },
     { 
       title: t('auditDetail.room.price'), 
-      dataIndex: 'price', 
+      dataIndex: 'display_price', 
       key: 'price',
-      render: (price, record) => {
-        const basePrice = Number(price) || 0
-        const discountRate = Number(record.discount_rate) || 0
-        const discountQuota = Number(record.discount_quota) || 0
-        const discountEffective = discountQuota > 0 && ((discountRate > 0 && discountRate <= 10) || discountRate < 0) && isPeriodEffective(record.discount_periods)
-        const now = dayjs()
-        const effectivePromos = promotionList.filter(p => {
-          const periods = Array.isArray(p.periods) ? p.periods : []
-          if (!periods.length) return true
-          return periods.some(r => now.isAfter(dayjs(r.start)) && now.isBefore(dayjs(r.end)))
-        })
-        let discounted = basePrice
-        effectivePromos.forEach(p => {
-          const val = Number(p.value) || 0
-          if (val > 0 && val <= 10) {
-            discounted = discounted * (val / 10)
-          } else if (val < 0) {
-            discounted = Math.max(0, discounted + val)
-          }
-        })
-        if (discountEffective) {
-          if (discountRate > 0 && discountRate <= 10) {
-            discounted = discounted * (discountRate / 10)
-          } else if (discountRate < 0) {
-            discounted = Math.max(0, discounted + discountRate)
-          }
-        }
-        discounted = Math.round(discounted * 100) / 100
+      render: (_, record) => {
+        const basePrice = Number(record.base_price)
+        const currentPrice = Number(record.display_price)
+        const hasBasePrice = Number.isFinite(basePrice)
+        const hasCurrentPrice = Number.isFinite(currentPrice)
         return (
           <div>
-            <div style={{ color: '#999' }}>{t('auditDetail.room.basePrice', { value: basePrice })}</div>
-            <div style={{ color: '#f5222d', fontWeight: 600 }}>{t('auditDetail.room.currentPrice', { value: discounted })}</div>
+            <div style={{ color: '#999' }}>
+              {hasBasePrice ? t('auditDetail.room.basePrice', { value: basePrice }) : '-'}
+            </div>
+            <div style={{ color: '#f5222d', fontWeight: 600 }}>
+              {hasCurrentPrice ? t('auditDetail.room.currentPrice', { value: currentPrice }) : '-'}
+            </div>
           </div>
         )
       }
@@ -212,9 +193,9 @@ export default function AuditDetail() {
       key: 'discount',
       render: (_, record) => {
         const tags = []
-        const discountRate = Number(record.discount_rate) || 0
-        const discountQuota = Number(record.discount_quota) || 0
-        if (discountQuota > 0 && ((discountRate > 0 && discountRate <= 10) || discountRate < 0)) {
+        const discountRate = Number(record?.discount_rate) || 0
+        const discountQuota = Number(record?.discount_quota) || 0
+        if (record?.has_room_discount) {
           const period = formatPeriodLabel(record.discount_periods)
           tags.push(
             <Tag color="purple" key={`batch-${record.id || record.name}`}>
@@ -225,12 +206,7 @@ export default function AuditDetail() {
             </Tag>
           )
         }
-        const now = dayjs()
-        const effectivePromos = promotionList.filter(p => {
-          const periods = Array.isArray(p.periods) ? p.periods : []
-          if (!periods.length) return true
-          return periods.some(r => now.isAfter(dayjs(r.start)) && now.isBefore(dayjs(r.end)))
-        })
+        const effectivePromos = Array.isArray(record?.effective_promotions) ? record.effective_promotions : []
         effectivePromos.forEach((promo, index) => {
           tags.push(
             <Tag color="orange" key={`promo-${index}`}>

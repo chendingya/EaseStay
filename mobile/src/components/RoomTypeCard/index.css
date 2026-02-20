@@ -1,0 +1,143 @@
+.room-type-card {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid #e6edf5;
+  background: #fff;
+}
+
+.room-type-card-image {
+  width: 84px;
+  height: 84px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: #f3f7fd;
+}
+
+.room-type-card-image-placeholder {
+  background: linear-gradient(145deg, #edf3fb, #f8fbff);
+}
+
+.room-type-card-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.room-type-card-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1c2f4d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.room-type-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.room-type-card-tag {
+  font-size: 10px;
+  color: #1a6dff;
+  background: rgba(26, 109, 255, 0.12);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.room-type-card-meta {
+  font-size: 12px;
+  color: #8896a8;
+  line-height: 1.35;
+}
+
+.room-type-card-open {
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #1a6dff;
+}
+
+.room-type-card-open-text {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.room-type-card-open-icon {
+  font-size: 12px;
+}
+
+.room-type-card-side {
+  flex-shrink: 0;
+  width: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.room-type-card-price-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.room-type-card-price {
+  display: flex;
+  align-items: baseline;
+  color: #f5222d;
+}
+
+.room-type-card-price-symbol {
+  font-size: 12px;
+}
+
+.room-type-card-price-value {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.room-type-card-origin {
+  font-size: 11px;
+  color: #9aa6b2;
+  text-decoration: line-through;
+}
+
+.room-type-card-discount {
+  font-size: 10px;
+  color: #fff;
+  background: #ff4d4f;
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+
+.room-type-card-book-btn {
+  min-width: 68px;
+  height: 28px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #1677ff, #4096ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.16s ease, opacity 0.16s ease;
+}
+
+.room-type-card-book-btn.is-loading {
+  opacity: 0.76;
+  transform: scale(0.98);
+}
+
+.room-type-card-book-text {
+  font-size: 12px;
+  color: #fff;
+  font-weight: 600;
+}
