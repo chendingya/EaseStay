@@ -10,8 +10,8 @@ export default function HotelCard({ hotel, onClick, badgeText, extraMetaItems = 
   const facilities = Array.isArray(hotel.facilities) ? hotel.facilities.slice(0, 2) : []
   const hotelName = hotel?.name || hotel?.name_en || `酒店 #${hotel?.id ?? '--'}`
   const address = `${hotel?.city || ''} ${hotel?.address || ''}`.trim() || '地址信息待完善'
+  const starCount = Math.max(0, Math.min(5, Number(hotel?.star_rating) || 0))
   const metaItems = [
-    hotel?.star_rating ? `${hotel.star_rating}星级` : '暂无评级',
     openingYear ? `${openingYear}年开业` : '',
     ...extraMetaItems
   ].filter(Boolean)
@@ -46,9 +46,9 @@ export default function HotelCard({ hotel, onClick, badgeText, extraMetaItems = 
                 <Text className="hotel-card-badge-text">{badgeText}</Text>
               </View>
             ) : null}
-            {hotel?.star_rating ? (
+            {starCount > 0 ? (
               <View className="hotel-card-star">
-                <Text className="hotel-card-star-text">{hotel.star_rating}星</Text>
+                <Text className="hotel-card-star-text">{'★'.repeat(starCount)}</Text>
               </View>
             ) : null}
           </View>

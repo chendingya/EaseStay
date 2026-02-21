@@ -102,14 +102,37 @@ const normalizeFacilities = (value) => {
   }
   return []
 }
-const matchesAllTags = (facilities, tags = []) => {
+const getMatchedTagCount = (facilities, tags = []) => {
   const normalizedTags = normalizeArray(tags).map(normalizeText).filter(Boolean)
-  if (!normalizedTags.length) return true
+  if (!normalizedTags.length) return 0
   const normalizedFacilities = normalizeFacilities(facilities).map(normalizeText).filter(Boolean)
-  if (!normalizedFacilities.length) return false
-  return normalizedTags.every((tag) => normalizedFacilities.some((facility) => (
-    facility === tag || facility.includes(tag) || tag.includes(facility)
-  )))
+  if (!normalizedFacilities.length) return 0
+  return normalizedTags.reduce((count, tag) => {
+    const matched = normalizedFacilities.some((facility) => (
+      facility === tag || facility.includes(tag) || tag.includes(facility)
+    ))
+    return matched ? count + 1 : count
+  }, 0)
+}
+
+const applyTagAwareSort = (items, { sort, tagList }) => {
+  const hasTagSort = Array.isArray(tagList) && tagList.length > 0
+  items.sort((a, b) => {
+    if (hasTagSort) {
+      const tagDiff = (b._tagMatchCount || 0) - (a._tagMatchCount || 0)
+      if (tagDiff !== 0) return tagDiff
+    }
+    if (sort === 'price_asc') {
+      return (a.lowestPrice || 0) - (b.lowestPrice || 0)
+    }
+    if (sort === 'price_desc') {
+      return (b.lowestPrice || 0) - (a.lowestPrice || 0)
+    }
+    if (sort === 'star' || sort === 'score_desc') {
+      return (b.star_rating || 0) - (a.star_rating || 0)
+    }
+    return (b.star_rating || 0) - (a.star_rating || 0) || (a.lowestPrice || 0) - (b.lowestPrice || 0)
+  })
 }
 
 const filterHotelIdsByMerchant = async ({ hotelIds, merchantId }) => {
@@ -1718,7 +1741,10 @@ const listPublicHotels = async ({ query }) => {
     }
 
     // 计算评分
-    const candidateList = (candidates || []).filter((hotel) => matchesAllTags(hotel?.facilities, tagList))
+    const candidateList = (candidates || []).map((hotel) => ({
+      ...hotel,
+      _tagMatchCount: getMatchedTagCount(hotel?.facilities, tagList)
+    })).filter((hotel) => (tagList.length ? hotel._tagMatchCount > 0 : true))
     const keywordText = String(keyword || '')
     let scored = candidateList.map(h => {
       let score = 0
@@ -1771,10 +1797,18 @@ const listPublicHotels = async ({ query }) => {
     if (needFinalPriceFilter) {
       enriched = enriched.filter((hotel) => inFinalPriceRange(hotel.lowestPrice))
     }
-    enriched.sort((a, b) => b._score - a._score)
+    enriched.sort((a, b) => {
+      if (tagList.length) {
+        const tagDiff = (b._tagMatchCount || 0) - (a._tagMatchCount || 0)
+        if (tagDiff !== 0) return tagDiff
+      }
+      return (b._score || 0) - (a._score || 0)
+    })
 
     const total = enriched.length
-    const pageData = enriched.slice(offset, offset + normalizedPageSize)
+    const pageData = enriched
+      .slice(offset, offset + normalizedPageSize)
+      .map(({ _tagMatchCount, ...rest }) => rest)
 
     return {
       ok: true,
@@ -1795,7 +1829,10 @@ const listPublicHotels = async ({ query }) => {
       return { ok: false, status: 500, message: '查询失败：' + error.message }
     }
 
-    const filteredHotels = (hotels || []).filter((hotel) => matchesAllTags(hotel?.facilities, tagList))
+    const filteredHotels = (hotels || []).map((hotel) => ({
+      ...hotel,
+      _tagMatchCount: getMatchedTagCount(hotel?.facilities, tagList)
+    })).filter((hotel) => (tagList.length ? hotel._tagMatchCount > 0 : true))
     const hotelIds = filteredHotels.map((hotel) => hotel.id)
     const priceMap = await getLowestPrices(hotelIds, pricingContext)
 
@@ -1804,18 +1841,12 @@ const listPublicHotels = async ({ query }) => {
       lowestPrice: priceMap[hotel.id]
     })).filter((hotel) => inFinalPriceRange(hotel.lowestPrice))
 
-    if (sort === 'price_asc') {
-      enriched.sort((a, b) => (a.lowestPrice || 0) - (b.lowestPrice || 0))
-    } else if (sort === 'price_desc') {
-      enriched.sort((a, b) => (b.lowestPrice || 0) - (a.lowestPrice || 0))
-    } else if (sort === 'star' || sort === 'score_desc') {
-      enriched.sort((a, b) => (b.star_rating || 0) - (a.star_rating || 0))
-    } else if (sort === 'recommend') {
-      enriched.sort((a, b) => (b.star_rating || 0) - (a.star_rating || 0) || (a.lowestPrice || 0) - (b.lowestPrice || 0))
-    }
+    applyTagAwareSort(enriched, { sort, tagList })
 
     const total = enriched.length
-    const list = enriched.slice(offset, offset + normalizedPageSize)
+    const list = enriched
+      .slice(offset, offset + normalizedPageSize)
+      .map(({ _tagMatchCount, ...rest }) => rest)
     return {
       ok: true,
       status: 200,
@@ -1835,7 +1866,10 @@ const listPublicHotels = async ({ query }) => {
       return { ok: false, status: 500, message: '查询失败：' + error.message }
     }
 
-    const filteredHotels = (hotels || []).filter((hotel) => matchesAllTags(hotel?.facilities, tagList))
+    const filteredHotels = (hotels || []).map((hotel) => ({
+      ...hotel,
+      _tagMatchCount: getMatchedTagCount(hotel?.facilities, tagList)
+    })).filter((hotel) => (tagList.length ? hotel._tagMatchCount > 0 : true))
     const hotelIds = filteredHotels.map((hotel) => hotel.id)
     const priceMap = await getLowestPrices(hotelIds, pricingContext)
 
@@ -1844,18 +1878,12 @@ const listPublicHotels = async ({ query }) => {
       lowestPrice: priceMap[hotel.id]
     }))
 
-    if (sort === 'price_asc') {
-      enriched.sort((a, b) => (a.lowestPrice || 0) - (b.lowestPrice || 0))
-    } else if (sort === 'price_desc') {
-      enriched.sort((a, b) => (b.lowestPrice || 0) - (a.lowestPrice || 0))
-    } else if (sort === 'star' || sort === 'score_desc') {
-      enriched.sort((a, b) => (b.star_rating || 0) - (a.star_rating || 0))
-    } else if (sort === 'recommend') {
-      enriched.sort((a, b) => (b.star_rating || 0) - (a.star_rating || 0) || (a.lowestPrice || 0) - (b.lowestPrice || 0))
-    }
+    applyTagAwareSort(enriched, { sort, tagList })
 
     const total = enriched.length
-    const list = enriched.slice(offset, offset + normalizedPageSize)
+    const list = enriched
+      .slice(offset, offset + normalizedPageSize)
+      .map(({ _tagMatchCount, ...rest }) => rest)
 
     return {
       ok: true,

@@ -392,7 +392,7 @@ Query：hotelIds（以逗号分隔）
 ### 4.5 酒店查询（移动端）
 #### GET /api/hotels
 Query：
-city, keyword, sort, page, pageSize
+city, keyword, sort, tags, stars, minPrice, maxPrice, checkIn, checkOut, userLat, userLng, page, pageSize
 
 响应：
 ```json
@@ -414,6 +414,16 @@ city, keyword, sort, page, pageSize
   ]
 }
 ```
+
+#### 查询与排序逻辑
+- 基础过滤：仅返回状态为 approved 的酒店；支持 city、stars（多选逗号分隔）、tags（多选逗号分隔）。
+- 价格过滤：传入 minPrice/maxPrice 时，按最低可售价格区间过滤。
+- 关键词智能检索：当 keyword 存在时，先基于城市与地理编码定位候选范围，再按名称/地址/设施文本相关性与距离加权评分；分页返回前按评分排序。
+- 标签匹配：多选标签满足其一即可展示；命中标签数量越多排序越靠前。
+- 排序规则：
+  - keyword 存在：按“命中标签数量 → 相关性评分”排序，忽略 sort。
+  - keyword 不存在：先按命中标签数量排序，再按 sort 执行二级排序。
+  - recommend：星级高到低，其次最低价低到高；price_asc/price_desc 仅按最低价；star 按星级高到低。
 
 #### GET /api/hotels/:id
 响应：

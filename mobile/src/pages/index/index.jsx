@@ -420,7 +420,7 @@ export default function Index() {
   }
 
   const handleTagClick = (tag) => {
-    let url = `/pages/list/index?city=${encodeURIComponent(city)}&keyword=${encodeURIComponent(tag)}&checkIn=${checkIn}&checkOut=${checkOut}&userLat=${latitude}&userLng=${longitude}`
+    let url = `/pages/list/index?city=${encodeURIComponent(city)}&keyword=&tags=${encodeURIComponent(tag)}&checkIn=${checkIn}&checkOut=${checkOut}&userLat=${latitude}&userLng=${longitude}`
     if (selectedStar) {
       url += `&stars=${selectedStar}`
     }

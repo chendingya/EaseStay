@@ -409,12 +409,12 @@ export default function List() {
                 <View className="filter-section-title">星级</View>
                 <Checkbox.Group value={selectedStars} onChange={val => setSelectedStars(val)}>
                   <Space direction='vertical' block>
-                    <Checkbox value='0'>未评级</Checkbox>
-                    <Checkbox value='1'>一星级</Checkbox>
-                    <Checkbox value='2'>二星级</Checkbox>
-                    <Checkbox value='3'>三星级</Checkbox>
-                    <Checkbox value='4'>四星级</Checkbox>
-                    <Checkbox value='5'>五星级</Checkbox>
+                    <Checkbox value='0' className="square-checkbox">未评级</Checkbox>
+                    <Checkbox value='1' className="square-checkbox">一星级</Checkbox>
+                    <Checkbox value='2' className="square-checkbox">二星级</Checkbox>
+                    <Checkbox value='3' className="square-checkbox">三星级</Checkbox>
+                    <Checkbox value='4' className="square-checkbox">四星级</Checkbox>
+                    <Checkbox value='5' className="square-checkbox">五星级</Checkbox>
                   </Space>
                 </Checkbox.Group>
                 <Button 
