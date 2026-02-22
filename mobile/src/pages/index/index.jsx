@@ -61,6 +61,7 @@ export default function Index() {
   const [cityPickerVisible, setCityPickerVisible] = useState(false)
   const [locationCity, setLocationCity] = useState('') // Store GPS location city separately
   const amapInitRef = useRef({ rafId: null, active: false, tries: 0 })
+  const [deferNonCritical, setDeferNonCritical] = useState(false)
   // const [cityList, setCityList] = useState([]) // Deprecated in favor of static cityData for hierarchy
   const hotColumns = hotHotels.reduce((cols, hotel, index) => {
     const next = cols
@@ -69,10 +70,31 @@ export default function Index() {
   }, [[], []])
 
   useEffect(() => {
+    let idleId = null
+    let timeoutId = null
+    const schedule = () => {
+      if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+        idleId = window.requestIdleCallback(() => setDeferNonCritical(true))
+      } else {
+        timeoutId = setTimeout(() => setDeferNonCritical(true), 800)
+      }
+    }
+    schedule()
+    return () => {
+      if (idleId && typeof window !== 'undefined' && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleId)
+      }
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!deferNonCritical) return
     fetchHotHotels(1)
     fetchQuickTags()
-    // fetchCities() // No longer needed
-  }, [])
+  }, [deferNonCritical])
 
   useEffect(() => {
     Taro.setStorageSync(SEARCH_STORAGE_KEY, {
@@ -657,26 +679,27 @@ export default function Index() {
         </Button>
       </Card>
 
-      {/* 快捷标签 */}
-      <View style={{ padding: '20px 16px 0' }}>
-        <View style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 12 }}>快捷筛选</View>
-        <Space wrap>
-          {quickTags.map((tag, idx) => (
-            <Tag 
-              key={idx} 
-              fill="outline" 
-              color="primary"
-              onClick={() => handleTagClick(tag)}
-              style={{ padding: '6px 12px', borderRadius: 4, background: '#e6f7ff', border: 'none', color: '#0086F6' }}
-            >
-              {tag}
-            </Tag>
-          ))}
-        </Space>
-      </View>
+      {deferNonCritical && (
+        <View style={{ padding: '20px 16px 0' }}>
+          <View style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 12 }}>快捷筛选</View>
+          <Space wrap>
+            {quickTags.map((tag, idx) => (
+              <Tag 
+                key={idx} 
+                fill="outline" 
+                color="primary"
+                onClick={() => handleTagClick(tag)}
+                style={{ padding: '6px 12px', borderRadius: 4, background: '#e6f7ff', border: 'none', color: '#0086F6' }}
+              >
+                {tag}
+              </Tag>
+            ))}
+          </Space>
+        </View>
+      )}
 
       {/* 热门酒店 */}
-      {hotHotels.length > 0 && (
+      {deferNonCritical && hotHotels.length > 0 && (
         <View className="hot-section">
           <View className="hot-title">热门推荐</View>
           <View className="hot-waterfall">

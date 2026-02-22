@@ -150,6 +150,45 @@
   padding: 8px 0 12px;
 }
 
+.list-recommend-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 8px 0 14px;
+}
+
+.list-recommend-divider-line {
+  flex: 1;
+  height: 1px;
+  background: #e3e8f0;
+}
+
+.list-recommend-divider-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8a97a8;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid #e3e8f0;
+  background: #f5f7fb;
+}
+
+.list-match-empty {
+  padding: 12px 0 6px;
+}
+
+.list-recommend-loading {
+  display: flex;
+  justify-content: center;
+  padding: 6px 0 12px;
+}
+
+.list-recommend-loading-text {
+  font-size: 12px;
+  color: #8a97a8;
+}
+
 .list-search-popup {
   padding: 16px 16px 20px;
 }

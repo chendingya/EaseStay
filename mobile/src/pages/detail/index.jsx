@@ -233,6 +233,7 @@ export default function Detail() {
   const checkinPolicy = hotel.check_in_time || '14:00后'
   const checkoutPolicy = hotel.check_out_time || '12:00前'
   const childPolicy = hotel.child_policy || '欢迎儿童入住'
+  const starCount = Math.max(0, Math.min(5, Number(hotel?.star_rating) || 0))
 
   const getRoomMeta = (room) => {
     const meta = []
@@ -309,10 +310,11 @@ export default function Detail() {
         <View className="hotel-info glass-card">
           <View className="info-header">
             <Text className="hotel-name">{hotel.name}</Text>
-            <View className="hotel-star">
-              <Text className="star-icon">★</Text>
-              <Text className="star-text">{hotel.star_rating || 4}星</Text>
-            </View>
+            {starCount > 0 ? (
+              <View className="hotel-star">
+                <Text className="star-icon">{'★'.repeat(starCount)}</Text>
+              </View>
+            ) : null}
           </View>
           {hotel.name_en && <Text className="hotel-name-en">{hotel.name_en}</Text>}
           
