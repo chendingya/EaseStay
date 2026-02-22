@@ -1,11 +1,11 @@
 import { View, Image, Text, Map } from '@tarojs/components'
 import Taro, { useReachBottom } from '@tarojs/taro'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Swiper, Button, Card, SearchBar, Tag, Space, Toast, CalendarPicker, Picker, Popup, Cascader, Slider } from 'antd-mobile'
 import { SearchOutline, CalendarOutline, EnvironmentOutline } from 'antd-mobile-icons'
 import { api } from '../../services/request'
 import { cityData } from '../../utils/cityData'
-import { formatDate, parseLocalDate, resolveDateRange } from '../../utils/dateRange'
+import { formatDate, getCalendarBounds, parseLocalDate, resolveDateRange } from '../../utils/dateRange'
 import './index.css'
 
 // 轮播 Banner 数据
@@ -34,6 +34,7 @@ export default function Index() {
   // 初始化时统一按本地时区修正，避免 YYYY-MM-DD 在非东八区被解析成前一天
   const [checkIn, setCheckIn] = useState(() => initialDateRange.checkIn)
   const [checkOut, setCheckOut] = useState(() => initialDateRange.checkOut)
+  const calendarBounds = useMemo(() => getCalendarBounds(), [])
 
   const [calendarVisible, setCalendarVisible] = useState(false)
   const [filterVisible, setFilterVisible] = useState(false)
@@ -716,6 +717,8 @@ export default function Index() {
           visible={calendarVisible}
           onClose={() => setCalendarVisible(false)}
           onConfirm={handleDateConfirm}
+          min={calendarBounds.min}
+          max={calendarBounds.max}
           defaultValue={[parseLocalDate(checkIn), parseLocalDate(checkOut)]}
         />
 

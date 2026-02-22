@@ -72,3 +72,10 @@ export const resolveDateRange = ({ checkIn, checkOut } = {}, fallback = getToday
     checkOutDate: safeCheckOutDate
   }
 }
+
+export const getCalendarBounds = ({ monthsBefore = 12, monthsAfter = 12, anchorDate } = {}) => {
+  const anchor = parseLocalDate(anchorDate) || parseLocalDate(new Date()) || new Date()
+  const min = new Date(anchor.getFullYear(), anchor.getMonth() - Number(monthsBefore || 0), 1)
+  const max = new Date(anchor.getFullYear(), anchor.getMonth() + Number(monthsAfter || 0) + 1, 0)
+  return { min, max }
+}

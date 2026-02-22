@@ -1,13 +1,13 @@
 import { View, Text } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Dropdown, Radio, Checkbox, Button, Space, CalendarPicker, Popup, SearchBar, Cascader, Slider, Tag } from 'antd-mobile'
 import { SearchOutline, CalendarOutline } from 'antd-mobile-icons'
 import { api } from '../../services/request'
 import { createListByType } from '../../components/OrderList'
 import PageTopBar from '../../components/PageTopBar'
 import { cityData } from '../../utils/cityData'
-import { formatDate, parseLocalDate, resolveDateRange } from '../../utils/dateRange'
+import { formatDate, getCalendarBounds, parseLocalDate, resolveDateRange } from '../../utils/dateRange'
 import './index.css'
 
 export default function List() {
@@ -36,6 +36,7 @@ export default function List() {
   const [keyword, setKeyword] = useState(() => (hasKeywordParam ? safeDecode(paramsRef.current.keyword) : (storedParams.keyword || '')))
   const [checkIn, setCheckIn] = useState(() => initialDateRange.checkIn)
   const [checkOut, setCheckOut] = useState(() => initialDateRange.checkOut)
+  const calendarBounds = useMemo(() => getCalendarBounds(), [])
   const [minPrice, setMinPrice] = useState(() => paramsRef.current.minPrice || storedParams.minPrice || '')
   const [maxPrice, setMaxPrice] = useState(() => paramsRef.current.maxPrice || storedParams.maxPrice || '')
   const [userLat, setUserLat] = useState(() => paramsRef.current.userLat || storedParams.userLat || '')
@@ -454,6 +455,8 @@ export default function List() {
         visible={calendarVisible}
         onClose={() => setCalendarVisible(false)}
         onConfirm={handleDateConfirm}
+        min={calendarBounds.min}
+        max={calendarBounds.max}
         defaultValue={[parseLocalDate(checkIn), parseLocalDate(checkOut)]}
       />
 
