@@ -143,6 +143,15 @@ export async function loadNamespaces(namespaces = []) {
   await ensureNamespacesLoaded(activeLng, namespaces)
 }
 
+export function hasLoadedNamespaces(namespaces = []) {
+  const activeLng = normalizeLanguage(i18n.resolvedLanguage || i18n.language || fallbackLng)
+  const loaded = loadedNamespacesByLanguage.get(activeLng)
+  if (!loaded) return false
+
+  const targetNamespaces = new Set([...baseNamespaces, ...namespaces])
+  return Array.from(targetNamespaces).every((namespace) => loaded.has(namespace))
+}
+
 export async function initI18n() {
   if (!i18n.isInitialized) {
     await i18n

@@ -94,6 +94,7 @@ const [panelOpen, setPanelOpen] = useState(false)
 - 是否保持功能行为与文案一致。
 - 是否完成 `build + test`，并给出结果。
 - 是否补充可复用经验到文档。
+- 是否更新组件优化台账（见 `FrontendPerformanceChangeLog.md`）。
 
 ## 8. 常见反模式
 - 只写了 `lazy`，但重依赖仍在父组件 import。
@@ -106,3 +107,17 @@ const [panelOpen, setPanelOpen] = useState(false)
 - 将批量操作弹窗迁移到独立组件并懒加载。
 - 父组件仅保留 `batchModalType`，子组件承接表单与请求。
 - 目标是验证“交互边界拆分 + 状态下沉”的通用模式。
+
+## 10. 组件优化记录规范（每次改动必填）
+每次做前端性能优化时，必须在 `FrontendPerformanceChangeLog.md` 增加记录，最少包含以下字段：
+- 变更日期
+- 页面/模块
+- 组件或文件路径
+- 优化方法（如懒加载、按需请求、延迟渲染、资源精简）
+- 目标指标（如 FCP/LCP/TBT/Unused JS）
+- 验证结果（如 `npm run build`、`npm test`、Lighthouse 对比）
+
+记录原则：
+- 一次 PR 至少新增一条记录。
+- 组件级别优先，不只写“某页面优化”。
+- 方法描述要可复用，避免只写业务细节。

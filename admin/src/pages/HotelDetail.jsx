@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, Descriptions, Tag, Image, Space, Typography, Table, Spin, Row, Col, Tabs, Progress, Statistic, Modal, Form, InputNumber, Radio, DatePicker } from 'antd'
+import { Card, Carousel, Col, Descriptions, Image, Modal, Progress, Row, Space, Spin, Statistic, Tabs, Tag, Typography } from 'antd'
 import StarFilled from '@ant-design/icons/es/icons/StarFilled'
 import EnvironmentOutlined from '@ant-design/icons/es/icons/EnvironmentOutlined'
 import CalendarOutlined from '@ant-design/icons/es/icons/CalendarOutlined'
@@ -8,7 +8,10 @@ import { GlassButton, GanttTimeline, glassMessage as message } from '../componen
 import dayjs from 'dayjs'
 import { api } from '../services'
 import { useTranslation } from 'react-i18next'
-import { estimateActionColumnWidth } from '../utils/tableWidth'
+
+const RoomsTab = lazy(() => import('../components/hotel-detail/RoomsTab.jsx'))
+const OrdersTab = lazy(() => import('../components/hotel-detail/OrdersTab.jsx'))
+const DiscountModal = lazy(() => import('../components/hotel-detail/DiscountModal.jsx'))
 
 export default function HotelDetail() {
   const { id } = useParams()
@@ -21,14 +24,16 @@ export default function HotelDetail() {
   const [ordersTotal, setOrdersTotal] = useState(0)
   const [ordersPage, setOrdersPage] = useState(1)
   const [ordersLoading, setOrdersLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState('overview')
   const [discountModal, setDiscountModal] = useState(false)
   const [selectedRoom, setSelectedRoom] = useState(null)
   const [discountLoading, setDiscountLoading] = useState(false)
+  const [renderPromotionTimeline, setRenderPromotionTimeline] = useState(false)
 
   const fetchHotel = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await api.get(`/api/merchant/hotels/${id}?_t=${Date.now()}`)
+      const data = await api.get(`/api/merchant/hotels/${id}`)
       setHotel(data)
     } catch (error) {
       if (error?.response?.status) {
@@ -44,16 +49,46 @@ export default function HotelDetail() {
   }, [fetchHotel])
 
   useEffect(() => {
+    setActiveTab('overview')
+    setOrdersPage(1)
+    setOrders([])
+    setOrdersTotal(0)
+  }, [id])
+
+  useEffect(() => {
+    if (!hotel?.id) return
+
+    let canceled = false
     const fetchOverview = async () => {
       try {
         const data = await api.get(`/api/merchant/hotels/${id}/overview`)
-        setOverview(data)
-      } catch (error) {
-        console.error(t('hotelDetail.errors.overviewFailed'), error)
-        setOverview(null)
+        if (!canceled) setOverview(data)
+      } catch {
+        if (!canceled) setOverview(null)
       }
     }
 
+    if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      const idleId = window.requestIdleCallback(() => {
+        fetchOverview()
+      }, { timeout: 1500 })
+      return () => {
+        canceled = true
+        if (typeof window.cancelIdleCallback === 'function') {
+          window.cancelIdleCallback(idleId)
+        }
+      }
+    }
+
+    const timerId = setTimeout(fetchOverview, 300)
+    return () => {
+      canceled = true
+      clearTimeout(timerId)
+    }
+  }, [hotel?.id, id])
+
+  useEffect(() => {
+    if (activeTab !== 'orders') return
     const fetchOrders = async () => {
       setOrdersLoading(true)
       try {
@@ -62,15 +97,39 @@ export default function HotelDetail() {
         setOrders(data.list || [])
         setOrdersTotal(data.total || 0)
       } catch (error) {
-        console.error(t('hotelDetail.errors.ordersFailed'), error)
+        console.error(error)
       } finally {
         setOrdersLoading(false)
       }
     }
-
-    fetchOverview()
     fetchOrders()
-  }, [id, ordersPage, t])
+  }, [activeTab, id, ordersPage])
+
+  useEffect(() => {
+    const hasPromotions = Array.isArray(hotel?.promotions) && hotel.promotions.length > 0
+    if (!hasPromotions) {
+      setRenderPromotionTimeline(false)
+      return
+    }
+    let canceled = false
+    const showTimeline = () => {
+      if (!canceled) setRenderPromotionTimeline(true)
+    }
+    if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      const idleId = window.requestIdleCallback(showTimeline, { timeout: 1200 })
+      return () => {
+        canceled = true
+        if (typeof window.cancelIdleCallback === 'function') {
+          window.cancelIdleCallback(idleId)
+        }
+      }
+    }
+    const timer = setTimeout(showTimeline, 300)
+    return () => {
+      canceled = true
+      clearTimeout(timer)
+    }
+  }, [hotel?.promotions])
 
   if (loading) {
     return (
@@ -104,24 +163,6 @@ export default function HotelDetail() {
     if (val > 0) return t('hotelDetail.promo.discountRate', { value: val })
     return ''
   }
-  const getRoomImages = (room) => {
-    const candidates = [room?.images, room?.image_urls, room?.room_images]
-    for (const source of candidates) {
-      if (Array.isArray(source) && source.length > 0) {
-        return source.filter(Boolean)
-      }
-    }
-    return []
-  }
-
-  const roomActionColumnWidth = estimateActionColumnWidth(
-    [[t('hotelDetail.room.setDiscount'), t('hotelDetail.room.cancelDiscount')]],
-    {
-      minColumnWidth: 180,
-      maxColumnWidth: 380
-    }
-  )
-
   const openDiscountModal = (room) => {
     setSelectedRoom(room)
     setDiscountModal(true)
@@ -182,159 +223,6 @@ export default function HotelDetail() {
     })
   }
 
-  const roomColumns = [
-    { title: t('hotelDetail.room.name'), dataIndex: 'name', key: 'name' },
-    { title: t('hotelDetail.room.capacity'), dataIndex: 'capacity', key: 'capacity', width: 80, render: (v) => v ? t('hotelDetail.room.capacityValue', { value: v }) : '-' },
-    { title: t('hotelDetail.room.bedWidth'), dataIndex: 'bed_width', key: 'bed_width', width: 80, render: (v) => v ? t('hotelDetail.room.bedWidthValue', { value: v }) : '-' },
-    { title: t('hotelDetail.room.area'), dataIndex: 'area', key: 'area', width: 80, render: (v) => v ? t('hotelDetail.room.areaValue', { value: v }) : '-' },
-    { title: t('hotelDetail.room.ceiling'), dataIndex: 'ceiling_height', key: 'ceiling_height', width: 80, render: (v) => v ? t('hotelDetail.room.ceilingValue', { value: v }) : '-' },
-    {
-      title: t('hotelDetail.room.images'),
-      dataIndex: 'images',
-      key: 'images',
-      width: 180,
-      render: (_, record) => {
-        const images = getRoomImages(record)
-        if (!images.length) return <Typography.Text type="secondary">{t('hotelDetail.room.noImages')}</Typography.Text>
-        const preview = images.slice(0, 3)
-        return (
-          <Image.PreviewGroup>
-            <Space size={6} wrap>
-              {preview.map((url, idx) => (
-                <Image
-                  key={`${record.id || record.name}-img-${idx}`}
-                  src={url}
-                  width={44}
-                  height={32}
-                  style={{ objectFit: 'cover', borderRadius: 4 }}
-                />
-              ))}
-              {images.length > 3 && <Tag>{`+${images.length - 3}`}</Tag>}
-            </Space>
-          </Image.PreviewGroup>
-        )
-      }
-    },
-    {
-      title: t('hotelDetail.room.price'),
-      dataIndex: 'display_price',
-      key: 'price',
-      render: (_, record) => {
-        const basePrice = Number(record.base_price)
-        const currentPrice = Number(record.display_price)
-        const hasBasePrice = Number.isFinite(basePrice)
-        const hasCurrentPrice = Number.isFinite(currentPrice)
-
-        return (
-          <div>
-            <div style={{ color: '#999' }}>
-              {hasBasePrice ? t('hotelDetail.room.basePrice', { value: basePrice }) : '-'}
-            </div>
-            <div style={{ color: '#f5222d', fontWeight: 600 }}>
-              {hasCurrentPrice ? t('hotelDetail.room.currentPrice', { value: currentPrice }) : '-'}
-            </div>
-          </div>
-        )
-      }
-    },
-    {
-      title: t('hotelDetail.room.discount'),
-      key: 'discount',
-      render: (_, record) => {
-        const tags = []
-        const discountRate = Number(record?.discount_rate) || 0
-        const discountQuota = Number(record?.discount_quota) || 0
-        if (record?.has_room_discount) {
-          const period = formatPeriodLabel(record.discount_periods)
-          tags.push(
-            <Tag color="purple" key={`batch-${record.id || record.name}`}>
-              {discountRate > 0
-                ? t('hotelDetail.room.batchDiscountRate', { rate: discountRate, quota: discountQuota })
-                : t('hotelDetail.room.batchDiscountAmount', { value: Math.abs(discountRate), quota: discountQuota })}
-              {period ? ` · ${period}` : ''}
-            </Tag>
-          )
-        }
-        const effectivePromos = Array.isArray(record?.effective_promotions) ? record.effective_promotions : []
-        effectivePromos.forEach((promo, index) => {
-          tags.push(
-            <Tag color="blue" key={`promo-${record.id || record.name}-${index}`}>
-              {promo.title || promo.type || t('hotelDetail.promo.fallback')}
-            </Tag>
-          )
-        })
-        return tags.length ? <Space size={[4, 4]} wrap>{tags}</Space> : <Tag>{t('hotelDetail.room.noDiscount')}</Tag>
-      }
-    },
-    { title: t('hotelDetail.room.stock'), dataIndex: 'stock', key: 'stock' },
-    { title: t('hotelDetail.room.wifi'), dataIndex: 'wifi', key: 'wifi', width: 70, render: (v) => v === true ? t('hotelDetail.room.wifiYes') : v === false ? t('hotelDetail.room.wifiNo') : '-' },
-    { title: t('hotelDetail.room.breakfast'), dataIndex: 'breakfast_included', key: 'breakfast_included', width: 70, render: (v) => v === true ? t('hotelDetail.room.breakfastYes') : v === false ? t('hotelDetail.room.breakfastNo') : '-' },
-    {
-      title: t('hotelDetail.room.used'),
-      dataIndex: 'used_stock',
-      key: 'used_stock',
-      render: (value) => value || 0
-    },
-    {
-      title: t('hotelDetail.room.available'),
-      key: 'available',
-      render: (_, record) => {
-        const stock = Number(record.stock) || 0
-        const used = Number(record.used_stock) || 0
-        const active = record.is_active !== false
-        return active ? Math.max(stock - used, 0) : 0
-      }
-    },
-    {
-      title: t('hotelDetail.room.action'),
-      key: 'action',
-      width: roomActionColumnWidth,
-      render: (_, record) => {
-        const discountRate = Number(record.discount_rate) || 0
-        const discountQuota = Number(record.discount_quota) || 0
-        const hasDiscount = discountQuota > 0 && ((discountRate > 0 && discountRate <= 10) || discountRate < 0)
-        return (
-          <Space size={[4, 4]} wrap>
-            <GlassButton type="link" size="small" onClick={() => openDiscountModal(record)}>{t('hotelDetail.room.setDiscount')}</GlassButton>
-            <GlassButton type="link" size="small" danger disabled={!hasDiscount} onClick={() => handleCancelDiscount(record)}>{t('hotelDetail.room.cancelDiscount')}</GlassButton>
-          </Space>
-        )
-      }
-    }
-  ]
-
-  const orderColumns = [
-    { title: t('hotelDetail.order.id'), dataIndex: 'id', key: 'id', width: 90 },
-    { title: t('hotelDetail.order.roomType'), dataIndex: 'room_type_name', key: 'room_type_name' },
-    { title: t('hotelDetail.order.quantity'), dataIndex: 'quantity', key: 'quantity', width: 70 },
-    {
-      title: t('hotelDetail.order.price'),
-      dataIndex: 'price_per_night',
-      key: 'price_per_night',
-      render: (price) => <span style={{ color: '#f5222d' }}>¥{price}</span>
-    },
-    { title: t('hotelDetail.order.nights'), dataIndex: 'nights', key: 'nights', width: 70 },
-    {
-      title: t('hotelDetail.order.totalPrice'),
-      dataIndex: 'total_price',
-      key: 'total_price',
-      render: (price) => <span style={{ color: '#f5222d', fontWeight: 600 }}>¥{price}</span>
-    },
-    { title: t('hotelDetail.order.status'), dataIndex: 'status', key: 'status', width: 90 },
-    {
-      title: t('hotelDetail.order.checkIn'),
-      dataIndex: 'check_in',
-      key: 'check_in',
-      render: (value) => value || '-'
-    },
-    {
-      title: t('hotelDetail.order.createdAt'),
-      dataIndex: 'created_at',
-      key: 'created_at',
-      render: (value) => value ? new Date(value).toLocaleString() : '-'
-    }
-  ]
-
   const computedOverview = overview || (() => {
     const totals = (hotel.roomTypes || []).reduce(
       (acc, room) => {
@@ -383,14 +271,24 @@ export default function HotelDetail() {
       {/* 头部大图 */}
       {hotel.images && hotel.images.length > 0 && (
         <Card styles={{ body: { padding: 0 } }} style={{ marginBottom: 24, overflow: 'hidden' }}>
-          <Image
-            src={hotel.images[0]}
-            alt={hotel.name}
-            width="100%"
-            height={280}
-            style={{ objectFit: 'cover' }}
-            fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88P/BfwYACP4D/pHOlKYAAAAASUVORK5CYII="
-          />
+          <Image.PreviewGroup>
+            <Carousel autoplay={hotel.images.length > 1} dots={hotel.images.length > 1}>
+              {hotel.images.map((url, index) => (
+                <div key={`${url}-${index}`}>
+                  <Image
+                    src={url}
+                    alt={`${hotel.name}-${index + 1}`}
+                    width="100%"
+                    height={280}
+                    loading={index === 0 ? 'eager' : 'lazy'}
+                    decoding="async"
+                    style={{ objectFit: 'cover', display: 'block' }}
+                    fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88P/BfwYACP4D/pHOlKYAAAAASUVORK5CYII="
+                  />
+                </div>
+              ))}
+            </Carousel>
+          </Image.PreviewGroup>
         </Card>
       )}
 
@@ -414,6 +312,9 @@ export default function HotelDetail() {
           </Card>
 
           <Tabs
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            destroyOnHidden
             items={[
               {
                 key: 'overview',
@@ -461,74 +362,39 @@ export default function HotelDetail() {
               {
                 key: 'rooms',
                 label: t('hotelDetail.tabs.rooms'),
-                children: (
-                  <Card style={{ marginBottom: 24 }}>
-                    <Table
-                      columns={roomColumns}
-                      dataSource={hotel.roomTypes || []}
-                      rowKey="id"
-                      pagination={false}
-                      scroll={{ x: 'max-content' }}
-                      locale={{ emptyText: t('hotelDetail.emptyRooms') }}
-                    />
-                  </Card>
-                )
+                children:
+                  activeTab === 'rooms' ? (
+                    <Suspense fallback={<div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>}>
+                      <RoomsTab
+                        roomTypes={hotel.roomTypes || []}
+                        formatPeriodLabel={formatPeriodLabel}
+                        onOpenDiscount={openDiscountModal}
+                        onCancelDiscount={handleCancelDiscount}
+                      />
+                    </Suspense>
+                  ) : null
               },
               {
                 key: 'orders',
                 label: t('hotelDetail.tabs.orders'),
-                children: (
-                  <Card
-                    title={(
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>{t('hotelDetail.order.title')}</span>
-                        <GlassButton type="primary" onClick={() => navigate(`/hotels/${hotel.id}/stats`)}>
-                          {t('hotelDetail.order.stats')}
-                        </GlassButton>
-                      </div>
-                    )}
-                    style={{ marginBottom: 24 }}
-                  >
-                    <Table
-                      columns={orderColumns}
-                      dataSource={orders}
-                      rowKey="id"
-                      loading={ordersLoading}
-                      pagination={{
-                        current: ordersPage,
-                        pageSize: 8,
-                        total: ordersTotal,
-                        onChange: (page) => setOrdersPage(page)
-                      }}
-                      scroll={{ x: 'max-content' }}
-                      locale={{ emptyText: t('hotelDetail.emptyOrders') }}
-                    />
-                  </Card>
-                )
-              },
-              
+                children:
+                  activeTab === 'orders' ? (
+                    <Suspense fallback={<div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>}>
+                      <OrdersTab
+                        hotelId={hotel.id}
+                        orders={orders}
+                        loading={ordersLoading}
+                        page={ordersPage}
+                        total={ordersTotal}
+                        onPageChange={setOrdersPage}
+                        onViewStats={(hotelId) => navigate(`/hotels/${hotelId}/stats`)}
+                      />
+                    </Suspense>
+                  ) : null
+              }
             ]}
           />
 
-          {/* 图片展示 */}
-          {hotel.images && hotel.images.length > 1 && (
-            <Card title={t('hotelDetail.sections.images')}>
-              <Image.PreviewGroup>
-                <Space wrap>
-                  {hotel.images.slice(1).map((url, index) => (
-                    <Image
-                      key={index}
-                      src={url}
-                      alt={`${hotel.name}-${index + 1}`}
-                      width={150}
-                      height={100}
-                      style={{ objectFit: 'cover', borderRadius: 4 }}
-                    />
-                  ))}
-                </Space>
-              </Image.PreviewGroup>
-            </Card>
-          )}
         </Col>
 
         <Col span={8}>
@@ -563,7 +429,7 @@ export default function HotelDetail() {
                     )
                   })}
                 </Space>
-                {promotionList.length > 0 && (
+                {promotionList.length > 0 && renderPromotionTimeline && (
                   <div style={{ marginTop: 12 }}>
                     <GanttTimeline
                       items={promotionList}
@@ -612,121 +478,20 @@ export default function HotelDetail() {
           </Card>
         </Col>
       </Row>
-      <DiscountModal
-        open={discountModal}
-        selectedRoom={selectedRoom}
-        onClose={() => {
-          setDiscountModal(false)
-          setSelectedRoom(null)
-        }}
-        onSubmit={handleSetDiscount}
-        loading={discountLoading}
-      />
-    </>
-  )
-}
-
-function DiscountModal({ open, selectedRoom, onClose, onSubmit, loading }) {
-  const [form] = Form.useForm()
-  const { t } = useTranslation()
-  const formDiscountType = Form.useWatch('type', form) || 'rate'
-
-  useEffect(() => {
-    if (open) {
-      form.setFieldsValue({ quantity: 1, discount: 9, type: 'rate', amount: 50, periods: [] })
-    }
-  }, [open, form])
-
-  const handleClose = () => {
-    form.resetFields()
-    onClose()
-  }
-
-  const handleFinish = (values) => {
-    const payload = {
-      quantity: values.quantity,
-      discount: values.type === 'rate' ? values.discount : -Math.abs(values.amount),
-      periods: Array.isArray(values.periods) && values.periods.length === 2
-        ? [{ start: values.periods[0].toISOString(), end: values.periods[1].toISOString() }]
-        : []
-    }
-    onSubmit(payload)
-  }
-
-  return (
-    <Modal
-      title={selectedRoom ? t('hotelDetail.discount.titleWithRoom', { name: selectedRoom.name }) : t('hotelDetail.discount.title')}
-      open={open}
-      onCancel={handleClose}
-      footer={null}
-      destroyOnHidden
-    >
-      <Form form={form} layout="vertical" initialValues={{ quantity: 1, discount: 9, type: 'rate', amount: 50 }} onFinish={handleFinish}>
-        <Form.Item name="quantity" label={t('hotelDetail.discount.quantity')} rules={[{ required: true }]}>
-          <InputNumber
-            min={1}
-            style={{ width: 150 }}
-            formatter={(value) => t('hotelDetail.discount.quantityValue', { value })}
-            parser={(value) => value?.replace(/[^\d]/g, '')}
+      {discountModal && (
+        <Suspense fallback={null}>
+          <DiscountModal
+            open={discountModal}
+            selectedRoom={selectedRoom}
+            onClose={() => {
+              setDiscountModal(false)
+              setSelectedRoom(null)
+            }}
+            onSubmit={handleSetDiscount}
+            loading={discountLoading}
           />
-        </Form.Item>
-
-        <Form.Item name="type" label={t('hotelDetail.discount.type')} rules={[{ required: true }]}>
-          <Radio.Group>
-            <Radio value="rate">{t('hotelDetail.discount.typeRate')}</Radio>
-            <Radio value="amount">{t('hotelDetail.discount.typeAmount')}</Radio>
-          </Radio.Group>
-        </Form.Item>
-
-        {formDiscountType === 'rate' ? (
-          <Form.Item name="discount" label={t('hotelDetail.discount.rate')} rules={[{ required: true }]}>
-            <InputNumber
-              min={0.1}
-              max={10}
-              step={0.5}
-              style={{ width: 150 }}
-              formatter={(value) => t('hotelDetail.discount.rateValue', { value })}
-              parser={(value) => value?.replace(/[^\d.]/g, '')}
-            />
-          </Form.Item>
-        ) : (
-          <Form.Item 
-            name="amount" 
-            label={t('hotelDetail.discount.amount')} 
-            rules={[
-              { required: true },
-              {
-                validator: (_, value) => {
-                  if (selectedRoom && value > Number(selectedRoom.price)) {
-                    return Promise.reject(t('hotelDetail.discount.amountTooHigh'))
-                  }
-                  return Promise.resolve()
-                }
-              }
-            ]}
-          >
-            <InputNumber
-              min={1}
-              max={selectedRoom ? Number(selectedRoom.price) : undefined}
-              style={{ width: 150 }}
-              formatter={(value) => t('hotelDetail.discount.amountValue', { value })}
-              parser={(value) => value?.replace(/[^\d]/g, '')}
-            />
-          </Form.Item>
-        )}
-        <Form.Item name="periods" label={t('hotelDetail.discount.periods')}>
-          <DatePicker.RangePicker showTime style={{ width: 360 }} />
-        </Form.Item>
-
-        <Form.Item>
-          <Space>
-            <GlassButton type="primary" loading={loading} onClick={() => form.submit()}>
-              {t('common.confirm')}
-            </GlassButton>
-            <GlassButton onClick={handleClose}>{t('common.cancel')}</GlassButton>
-          </Space>
-        </Form.Item>
-      </Form>
-    </Modal>
+        </Suspense>
+      )}
+    </>
   )
 }
