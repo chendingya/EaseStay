@@ -21,3 +21,4 @@
 | 2026-02-22 | HotelDetail 数据请求 | `admin/src/pages/HotelDetail.jsx` | 去掉 `?_t=${Date.now()}` 防缓存参数；`/overview` 改为空闲时请求，移出首屏关键路径 | 降低详情页关键请求链压力与首屏等待 | `npm run build` 通过；`npm test` 通过 |
 | 2026-02-22 | HotelDetail 图片体验回归修复 | `admin/src/pages/HotelDetail.jsx` | 恢复顶部 `Carousel` 与 `Image.PreviewGroup`，恢复图片放大与预览内切换；非首图继续 `loading="lazy"` 以控制首屏开销 | 修复“无轮播/不可放大”的功能回归，并尽量不牺牲首屏性能 | `npm run build` 通过；`npm test` 通过 |
 | 2026-02-22 | HotelDetail 图片区精简 | `admin/src/pages/HotelDetail.jsx` | 删除底部重复酒店图片卡片，仅保留顶部轮播作为唯一图片入口 | 减少重复 DOM 与重复图片解码开销，进一步压缩详情页渲染负担 | `npm run build` 通过 |
+| 2026-02-22 | Messages | `admin/src/pages/Messages.jsx` | 非缓存优化：全部/未读切换改为前端过滤（不重复请求）；列表增加分页（每页 12 条）与条目 `content-visibility`；仅初次加载显示全页 `Spin`，批量已读仅按钮 loading | 降低页面切换时的网络与主线程渲染开销，减少长列表导致的渲染压力 | `npm run build` 通过；`npm test` 通过 |
