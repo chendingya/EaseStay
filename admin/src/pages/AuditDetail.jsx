@@ -29,6 +29,8 @@ export default function AuditDetail() {
   const [pendingRequests, setPendingRequests] = useState([])
   const [rejecting, setRejecting] = useState(false)
   const [offlineModal, setOfflineModal] = useState(false)
+  const [renderRoomsSection, setRenderRoomsSection] = useState(false)
+  const [renderPromotionTimeline, setRenderPromotionTimeline] = useState(false)
   const [rejectForm] = Form.useForm()
   const [offlineForm] = Form.useForm()
   const [actionLoading, setActionLoading] = useState(false)
@@ -60,21 +62,90 @@ export default function AuditDetail() {
     }
   }, [id, t])
 
-  const fetchPendingRequests = useCallback(async () => {
-    try {
-      const data = await api.get(`/api/admin/requests?hotelId=${id}`)
-      if (Array.isArray(data)) {
-        setPendingRequests(data)
-      }
-    } catch (error) {
-      console.error(error)
-    }
-  }, [id])
-
   useEffect(() => {
     fetchHotel()
-    fetchPendingRequests()
-  }, [fetchHotel, fetchPendingRequests])
+  }, [fetchHotel])
+
+  useEffect(() => {
+    if (!hotel?.id) return
+    let canceled = false
+    const run = async () => {
+      try {
+        const data = await api.get(`/api/admin/requests?hotelId=${id}`)
+        if (!canceled && Array.isArray(data)) {
+          setPendingRequests(data)
+        }
+      } catch (error) {
+        console.error(error)
+      }
+    }
+    if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      const idleId = window.requestIdleCallback(run, { timeout: 1200 })
+      return () => {
+        canceled = true
+        if (typeof window.cancelIdleCallback === 'function') {
+          window.cancelIdleCallback(idleId)
+        }
+      }
+    }
+    const timer = setTimeout(run, 300)
+    return () => {
+      canceled = true
+      clearTimeout(timer)
+    }
+  }, [hotel?.id, id])
+
+  useEffect(() => {
+    const hasRooms = Array.isArray(hotel?.roomTypes) && hotel.roomTypes.length > 0
+    if (!hasRooms) {
+      setRenderRoomsSection(false)
+      return
+    }
+    let canceled = false
+    const show = () => {
+      if (!canceled) setRenderRoomsSection(true)
+    }
+    if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      const idleId = window.requestIdleCallback(show, { timeout: 1000 })
+      return () => {
+        canceled = true
+        if (typeof window.cancelIdleCallback === 'function') {
+          window.cancelIdleCallback(idleId)
+        }
+      }
+    }
+    const timer = setTimeout(show, 250)
+    return () => {
+      canceled = true
+      clearTimeout(timer)
+    }
+  }, [hotel?.roomTypes])
+
+  useEffect(() => {
+    const hasPromotions = Array.isArray(hotel?.promotions) && hotel.promotions.length > 0
+    if (!hasPromotions) {
+      setRenderPromotionTimeline(false)
+      return
+    }
+    let canceled = false
+    const show = () => {
+      if (!canceled) setRenderPromotionTimeline(true)
+    }
+    if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      const idleId = window.requestIdleCallback(show, { timeout: 1200 })
+      return () => {
+        canceled = true
+        if (typeof window.cancelIdleCallback === 'function') {
+          window.cancelIdleCallback(idleId)
+        }
+      }
+    }
+    const timer = setTimeout(show, 300)
+    return () => {
+      canceled = true
+      clearTimeout(timer)
+    }
+  }, [hotel?.promotions])
 
   const updateStatus = async (status, rejectReason) => {
     setActionLoading(true)
@@ -91,7 +162,7 @@ export default function AuditDetail() {
       setOfflineModal(false)
       rejectForm.resetFields()
       offlineForm.resetFields()
-      fetchHotel()
+      await fetchHotel()
     } catch (error) {
       console.error(error)
       message.error(t('common.errorRetry'))
@@ -166,6 +237,8 @@ export default function AuditDetail() {
                   src={url}
                   width={44}
                   height={32}
+                  loading={idx === 0 ? 'eager' : 'lazy'}
+                  decoding="async"
                   style={{ objectFit: 'cover', borderRadius: 4 }}
                 />
               ))}
@@ -337,6 +410,8 @@ export default function AuditDetail() {
                       alt={`${hotel.name} - ${idx + 1}`}
                       width={150}
                       height={100}
+                      loading={idx === 0 ? 'eager' : 'lazy'}
+                      decoding="async"
                       style={{ objectFit: 'cover', borderRadius: 8 }}
                     />
                   ))}
@@ -377,13 +452,19 @@ export default function AuditDetail() {
           {/* 房型信息 */}
           <Card title={<><HomeOutlined /> {t('auditDetail.sections.rooms')}</>} style={{ marginBottom: 24 }}>
             {hotel.roomTypes && hotel.roomTypes.length > 0 ? (
-              <Table 
-                columns={roomColumns} 
-                dataSource={hotel.roomTypes} 
-                rowKey={(record) => record.name || record.id}
-                pagination={false}
-                size="small"
-              />
+              renderRoomsSection ? (
+                <Table
+                  columns={roomColumns}
+                  dataSource={hotel.roomTypes}
+                  rowKey={(record) => record.name || record.id}
+                  pagination={false}
+                  size="small"
+                />
+              ) : (
+                <div style={{ textAlign: 'center', padding: 24 }}>
+                  <Spin />
+                </div>
+              )
             ) : (
               <Empty description={t('auditDetail.emptyRooms')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
             )}
@@ -418,14 +499,16 @@ export default function AuditDetail() {
                     )
                   })}
                 </div>
-                <div style={{ marginTop: 12 }}>
-                  <GanttTimeline
-                    items={promotionList}
-                    getTitle={(promo) => promo.title || promo.type || t('auditDetail.room.promoFallback')}
-                    getPeriods={(promo) => promo.periods}
-                    formatAxisLabel={(value) => dayjs(value).format('YYYY-MM-DD')}
-                  />
-                </div>
+                {renderPromotionTimeline && (
+                  <div style={{ marginTop: 12 }}>
+                    <GanttTimeline
+                      items={promotionList}
+                      getTitle={(promo) => promo.title || promo.type || t('auditDetail.room.promoFallback')}
+                      getPeriods={(promo) => promo.periods}
+                      formatAxisLabel={(value) => dayjs(value).format('YYYY-MM-DD')}
+                    />
+                  </div>
+                )}
               </>
             ) : (
               <Empty description={t('auditDetail.emptyPromotions')} image={Empty.PRESENTED_IMAGE_SIMPLE} />

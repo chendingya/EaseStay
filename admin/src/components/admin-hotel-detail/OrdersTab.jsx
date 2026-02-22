@@ -4,8 +4,8 @@ export default function OrdersTab(props) {
   return (
     <OrdersTabBase
       {...props}
-      i18nPrefix="hotelDetail.order"
-      emptyTextKey="hotelDetail.emptyOrders"
+      i18nPrefix="adminHotelDetail.order"
+      emptyTextKey="adminHotelDetail.emptyOrders"
     />
   )
 }
