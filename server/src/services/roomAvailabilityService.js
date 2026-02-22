@@ -1,6 +1,7 @@
 const supabase = require('../config/supabase')
 
 const normalizeNumber = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0)
+const OCCUPYING_ORDER_STATUSES = ['pending_payment', 'confirmed', 'finished']
 
 const formatDateOnly = (value) => {
   const date = value instanceof Date ? value : new Date(value)
@@ -19,7 +20,8 @@ const getActiveOrderQtyMap = async ({ roomTypeIds, asOfDate, checkIn, checkOut }
     .from('orders')
     .select('room_type_id, quantity')
     .in('room_type_id', ids)
-    .in('status', ['pending_payment', 'confirmed'])
+    // finished 但未到退房日的订单仍占用库存，需纳入统计
+    .in('status', OCCUPYING_ORDER_STATUSES)
 
   const normalizedAsOf = asOfDate ? formatDateOnly(asOfDate) : null
   const normalizedCheckIn = checkIn ? formatDateOnly(checkIn) : null
