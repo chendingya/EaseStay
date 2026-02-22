@@ -29,3 +29,8 @@
 | 2026-02-22 | OrderStats | `admin/src/pages/OrderStats.jsx` | `echarts-for-react` 懒加载，图表在数据到位后空闲时再挂载 | 降低统计页首屏 Script Evaluation 与图表初始化阻塞 | `npm run build` 通过；`npm test` 通过 |
 | 2026-02-22 | HotelDetail/AdminHotelDetail 复用收口 | `admin/src/components/hotel-shared/OrdersTabBase.jsx` | 将商户/管理员 `OrdersTab` 共用列定义与渲染逻辑，页面侧仅保留 i18n 前缀与空态配置 | 减少重复代码与双端维护偏差，稳定后续性能优化复用效率 | `npm run build` 通过；`npm test` 通过 |
 | 2026-02-22 | HotelDetail/AdminHotelDetail 复用收口 | `admin/src/components/hotel-shared/RoomsTabBase.jsx` | 将商户/管理员 `RoomsTab` 共用为统一基座，差异通过状态列/操作列开关与 i18n key 注入 | 减少房型表格双端重复实现，保持行为一致并降低后续维护回归风险 | `npm run build` 通过；`npm test` 通过 |
+| 2026-02-22 | Dashboard（管理员/商户） | `admin/src/pages/Dashboard.jsx` | 首屏改为轻量统计请求；批量弹窗所需酒店列表改为点击后按需分页拉取；商户 overview 改为空闲时请求 | 降低 Dashboard 首屏请求体积与主线程压力，减少低频数据对关键路径阻塞 | `npm run build` 通过；`npm test` 通过 |
+| 2026-02-22 | Dashboard 批量弹窗 | `admin/src/components/DashboardBatchModals.jsx` | 增加酒店列表 loading 态并在加载中禁用批量提交，避免低频数据加载阶段误触发提交 | 降低批量操作异常与无效渲染触发概率，提升交互稳定性 | `npm run build` 通过；`npm test` 通过 |
+| 2026-02-22 | RequestAudit | `admin/src/pages/RequestAudit.jsx` | 审核提交由全页 loading 改为行级 loading；列表刷新改为无阻塞刷新；`typeMap/statusMap/columns/tabItems` 收口到 memo | 降低审核动作引发的整页重渲染与交互阻塞，减少无意义重复计算 | `npm run build` 通过；`npm test` 通过 |
+| 2026-02-22 | Audit | `admin/src/pages/Audit.jsx` | `statusMap` 与表格 `columns` 使用 memo 收口，减少筛选/分页过程中的重复列对象重建 | 降低列表页渲染抖动与不必要重渲染开销 | `npm run build` 通过；`npm test` 通过 |
+| 2026-02-22 | Audit 首屏关键路径 | `admin/src/pages/Audit.jsx`、`admin/src/components/audit/AuditTable.jsx` | 审核列表 `Table` 下沉到懒加载子组件；父页仅保留筛选与数据态，表格在空闲时挂载并使用稳定占位回退 | 降低审核页首屏 JS 解析执行压力，改善 FCP/LCP（重依赖组件延后加载） | `npm run build` 通过；`npm test` 通过 |

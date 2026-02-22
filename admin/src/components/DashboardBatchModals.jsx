@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { GlassButton, glassMessage as message } from './index.js'
 import { api } from '../services'
 
-export default function DashboardBatchModals({ mode, role, hotels, onClose }) {
+export default function DashboardBatchModals({ mode, role, hotels, hotelsLoading = false, onClose }) {
   const { t } = useTranslation()
   const [selectedHotels, setSelectedHotels] = useState([])
   const [discountForm] = Form.useForm()
@@ -176,6 +176,7 @@ export default function DashboardBatchModals({ mode, role, hotels, onClose }) {
                   columns={hotelColumns}
                   dataSource={hotels.filter((hotel) => hotel.status === 'approved')}
                   rowKey="id"
+                  loading={hotelsLoading}
                   size="small"
                   pagination={{ pageSize: 5 }}
                 />
@@ -249,7 +250,7 @@ export default function DashboardBatchModals({ mode, role, hotels, onClose }) {
 
           <Form.Item>
             <Space>
-              <GlassButton type="primary" loading={batchLoading} onClick={handleBatchDiscount}>
+              <GlassButton type="primary" loading={batchLoading} disabled={hotelsLoading} onClick={handleBatchDiscount}>
                 {t('dashboard.batchDiscount.confirm')}
               </GlassButton>
               <GlassButton onClick={onClose}>{t('dashboard.batchDiscount.cancel')}</GlassButton>
@@ -272,6 +273,7 @@ export default function DashboardBatchModals({ mode, role, hotels, onClose }) {
               columns={hotelColumns}
               dataSource={hotels.filter((hotel) => hotel.status === 'approved')}
               rowKey="id"
+              loading={hotelsLoading}
               size="small"
               pagination={{ pageSize: 5 }}
             />
@@ -321,7 +323,7 @@ export default function DashboardBatchModals({ mode, role, hotels, onClose }) {
 
           <Form.Item>
             <Space>
-              <GlassButton type="primary" loading={batchLoading} onClick={handleBatchRoom}>
+              <GlassButton type="primary" loading={batchLoading} disabled={hotelsLoading} onClick={handleBatchRoom}>
                 {t('dashboard.batchRoom.confirm')}
               </GlassButton>
               <GlassButton onClick={onClose}>{t('dashboard.batchRoom.cancel')}</GlassButton>

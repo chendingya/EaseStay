@@ -1,5 +1,5 @@
-import { Card, Col, Row, Statistic, Space, Typography, Table, Progress } from 'antd'
-import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
+import { Card, Col, Progress, Row, Space, Statistic, Table, Typography } from 'antd'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PercentageOutlined from '@ant-design/icons/es/icons/PercentageOutlined'
 import EditOutlined from '@ant-design/icons/es/icons/EditOutlined'
@@ -10,6 +10,14 @@ import { useTranslation } from 'react-i18next'
 
 const OVERVIEW_CACHE_KEY = 'dashboard_overview_cache_v1'
 const DashboardBatchModals = lazy(() => import('../components/DashboardBatchModals.jsx'))
+
+const toList = (data) => (Array.isArray(data?.list) ? data.list : (Array.isArray(data) ? data : []))
+
+const toTotal = (data) => {
+  if (Array.isArray(data?.list)) return Number(data?.total) || 0
+  const list = toList(data)
+  return list.length
+}
 
 const readOverviewCache = () => {
   try {
@@ -30,13 +38,44 @@ const writeOverviewCache = (value) => {
   }
 }
 
+async function fetchAllHotels(basePath) {
+  const pageSize = 200
+  let page = 1
+  let total = Number.POSITIVE_INFINITY
+  const merged = []
+
+  while (merged.length < total) {
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(pageSize)
+    })
+    const data = await api.get(`${basePath}?${params.toString()}`)
+    const list = toList(data)
+    if (!list.length) break
+    merged.push(...list)
+
+    if (Array.isArray(data?.list)) {
+      total = Number(data?.total) || merged.length
+      page += 1
+      if (page > 100) break
+      continue
+    }
+
+    break
+  }
+
+  return merged
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const role = localStorage.getItem('role')
   const [stats, setStats] = useState({ pending: 0, approved: 0, offline: 0, total: 0 })
-  const [loading, setLoading] = useState(false)
+  const [statsLoading, setStatsLoading] = useState(false)
   const [hotels, setHotels] = useState([])
+  const [hotelsLoading, setHotelsLoading] = useState(false)
+  const [hotelsReady, setHotelsReady] = useState(false)
 
   const [batchModalType, setBatchModalType] = useState(null)
   const [overview, setOverview] = useState(() => (role === 'merchant' ? readOverviewCache() : null))
@@ -56,29 +95,106 @@ export default function Dashboard() {
     }
   }, [role])
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
+  const fetchStats = useCallback(async () => {
+    setStatsLoading(true)
     try {
-      const url = role === 'admin' ? '/api/admin/hotels' : '/api/merchant/hotels'
-      const data = await api.get(url)
-      setHotels(data)
-      const counts = data.reduce((acc, item) => {
-        acc.total += 1
-        if (item.status === 'pending') acc.pending += 1
-        if (item.status === 'approved') acc.approved += 1
-        if (item.status === 'offline') acc.offline += 1
-        return acc
-      }, { pending: 0, approved: 0, offline: 0, total: 0 })
-      setStats(counts)
-    } finally { setLoading(false) }
+      if (role === 'admin') {
+        const data = await api.get('/api/admin/hotels?page=1&pageSize=1')
+        if (data?.stats && typeof data.stats === 'object') {
+          setStats({
+            pending: Number(data.stats.pending) || 0,
+            approved: Number(data.stats.approved) || 0,
+            offline: Number(data.stats.offline) || 0,
+            total: Number(data.stats.total) || 0
+          })
+          return
+        }
+        const list = toList(data)
+        setStats(list.reduce((acc, item) => {
+          acc.total += 1
+          if (item.status === 'pending') acc.pending += 1
+          if (item.status === 'approved') acc.approved += 1
+          if (item.status === 'offline') acc.offline += 1
+          return acc
+        }, { pending: 0, approved: 0, offline: 0, total: 0 }))
+        return
+      }
+
+      const fetchMerchantCount = async (status) => {
+        const params = new URLSearchParams({
+          page: '1',
+          pageSize: '1'
+        })
+        if (status) params.append('status', status)
+        const data = await api.get(`/api/merchant/hotels?${params.toString()}`)
+        return toTotal(data)
+      }
+
+      const [total, pending, approved, offline] = await Promise.all([
+        fetchMerchantCount(),
+        fetchMerchantCount('pending'),
+        fetchMerchantCount('approved'),
+        fetchMerchantCount('offline')
+      ])
+
+      setStats({ total, pending, approved, offline })
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setStatsLoading(false)
+    }
   }, [role])
 
-  useEffect(() => {
-    fetchData()
-    if (role === 'merchant') {
-      fetchOverview()
+  const ensureHotelsLoaded = useCallback(async () => {
+    if (hotelsReady || hotelsLoading) return
+    setHotelsLoading(true)
+    try {
+      const basePath = role === 'admin' ? '/api/admin/hotels' : '/api/merchant/hotels'
+      const allHotels = await fetchAllHotels(basePath)
+      setHotels(allHotels)
+      setHotelsReady(true)
+    } catch (error) {
+      console.error(error)
+      setHotels([])
+    } finally {
+      setHotelsLoading(false)
     }
-  }, [fetchData, fetchOverview, role])
+  }, [hotelsLoading, hotelsReady, role])
+
+  useEffect(() => {
+    fetchStats()
+
+    if (role !== 'merchant') return
+    let canceled = false
+    const run = async () => {
+      if (!canceled) {
+        await fetchOverview()
+      }
+    }
+
+    if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      const idleId = window.requestIdleCallback(run, { timeout: 1200 })
+      return () => {
+        canceled = true
+        if (typeof window.cancelIdleCallback === 'function') {
+          window.cancelIdleCallback(idleId)
+        }
+      }
+    }
+
+    const timer = setTimeout(run, 250)
+    return () => {
+      canceled = true
+      clearTimeout(timer)
+    }
+  }, [fetchOverview, fetchStats, role])
+
+  const openBatchModal = (type) => {
+    setBatchModalType(type)
+    ensureHotelsLoaded().catch((error) => {
+      console.error(error)
+    })
+  }
 
   const currentMonthLabel = t('dashboard.overview.monthlyRevenue', { month: new Date().getMonth() + 1 })
   const overviewStats = overview || {}
@@ -89,6 +205,24 @@ export default function Dashboard() {
   const overviewAvailableRooms = overviewStats.availableRooms || 0
   const overviewOfflineRooms = overviewStats.offlineRooms || 0
   const showOverviewLoading = overviewLoading && !overview
+
+  const overviewColumns = useMemo(
+    () => [
+      { title: t('dashboard.distribution.columns.hotel'), dataIndex: 'name', key: 'name' },
+      { title: t('dashboard.distribution.columns.roomTypes'), dataIndex: 'roomTypeCount', key: 'roomTypeCount', width: 90 },
+      { title: t('dashboard.distribution.columns.totalRooms'), dataIndex: 'totalRooms', key: 'totalRooms', width: 90 },
+      { title: t('dashboard.distribution.columns.usedRooms'), dataIndex: 'usedRooms', key: 'usedRooms', width: 80 },
+      { title: t('dashboard.distribution.columns.availableRooms'), dataIndex: 'availableRooms', key: 'availableRooms', width: 80 },
+      {
+        title: t('dashboard.distribution.columns.occupancy'),
+        dataIndex: 'occupancyRate',
+        key: 'occupancyRate',
+        width: 160,
+        render: (value) => <Progress percent={value || 0} size="small" />
+      }
+    ],
+    [t]
+  )
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 24 }}>
@@ -139,32 +273,32 @@ export default function Dashboard() {
           </Row>
           <Row gutter={16} style={{ marginTop: 16 }}>
             <Col span={6}>
-              <Statistic title={t('dashboard.stats.pending')} value={stats.pending} loading={loading} styles={{ content: { color: '#faad14' } }} suffix={t('dashboard.overview.hotelCountSuffix')} />
+              <Statistic title={t('dashboard.stats.pending')} value={stats.pending} loading={statsLoading} styles={{ content: { color: '#faad14' } }} suffix={t('dashboard.overview.hotelCountSuffix')} />
             </Col>
             <Col span={6}>
-              <Statistic title={t('dashboard.stats.approved')} value={stats.approved} loading={loading} styles={{ content: { color: '#52c41a' } }} suffix={t('dashboard.overview.hotelCountSuffix')} />
+              <Statistic title={t('dashboard.stats.approved')} value={stats.approved} loading={statsLoading} styles={{ content: { color: '#52c41a' } }} suffix={t('dashboard.overview.hotelCountSuffix')} />
             </Col>
             <Col span={6}>
-              <Statistic title={t('dashboard.stats.offline')} value={stats.offline} loading={loading} styles={{ content: { color: '#999' } }} suffix={t('dashboard.overview.hotelCountSuffix')} />
+              <Statistic title={t('dashboard.stats.offline')} value={stats.offline} loading={statsLoading} styles={{ content: { color: '#999' } }} suffix={t('dashboard.overview.hotelCountSuffix')} />
             </Col>
           </Row>
         </Card>
       )}
-      {/* 统计卡片 */}
+
       {role !== 'merchant' && (
         <Row gutter={16}>
           <Col span={6}>
-            <Card><Statistic title={t('dashboard.stats.pending')} value={stats.pending} loading={loading} styles={{ content: { color: '#faad14' } }} /></Card>
+            <Card><Statistic title={t('dashboard.stats.pending')} value={stats.pending} loading={statsLoading} styles={{ content: { color: '#faad14' } }} /></Card>
           </Col>
           <Col span={6}>
-            <Card><Statistic title={t('dashboard.stats.approved')} value={stats.approved} loading={loading} styles={{ content: { color: '#52c41a' } }} /></Card>
+            <Card><Statistic title={t('dashboard.stats.approved')} value={stats.approved} loading={statsLoading} styles={{ content: { color: '#52c41a' } }} /></Card>
           </Col>
           <Col span={6}>
-            <Card><Statistic title={t('dashboard.stats.offline')} value={stats.offline} loading={loading} styles={{ content: { color: '#999' } }} /></Card>
+            <Card><Statistic title={t('dashboard.stats.offline')} value={stats.offline} loading={statsLoading} styles={{ content: { color: '#999' } }} /></Card>
           </Col>
           {role === 'admin' && (
             <Col span={6}>
-              <Card><Statistic title={t('dashboard.stats.total')} value={stats.total} loading={loading} /></Card>
+              <Card><Statistic title={t('dashboard.stats.total')} value={stats.total} loading={statsLoading} /></Card>
             </Col>
           )}
         </Row>
@@ -173,20 +307,7 @@ export default function Dashboard() {
       {role === 'merchant' && (
         <Card title={t('dashboard.distribution.title')} loading={showOverviewLoading}>
           <Table
-            columns={[
-              { title: t('dashboard.distribution.columns.hotel'), dataIndex: 'name', key: 'name' },
-              { title: t('dashboard.distribution.columns.roomTypes'), dataIndex: 'roomTypeCount', key: 'roomTypeCount', width: 90 },
-              { title: t('dashboard.distribution.columns.totalRooms'), dataIndex: 'totalRooms', key: 'totalRooms', width: 90 },
-              { title: t('dashboard.distribution.columns.usedRooms'), dataIndex: 'usedRooms', key: 'usedRooms', width: 80 },
-              { title: t('dashboard.distribution.columns.availableRooms'), dataIndex: 'availableRooms', key: 'availableRooms', width: 80 },
-              {
-                title: t('dashboard.distribution.columns.occupancy'),
-                dataIndex: 'occupancyRate',
-                key: 'occupancyRate',
-                width: 160,
-                render: (value) => <Progress percent={value || 0} size="small" />
-              }
-            ]}
+            columns={overviewColumns}
             dataSource={overviewHotelStats}
             rowKey="hotelId"
             pagination={{ pageSize: 6 }}
@@ -195,7 +316,6 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* 快捷操作 */}
       <Card title={t('dashboard.quickActions.title')}>
         <Space wrap size={12}>
           {role === 'merchant' && (
@@ -208,25 +328,26 @@ export default function Dashboard() {
               {t('dashboard.quickActions.pendingAudit')}
             </GlassButton>
           )}
-          <GlassButton icon={<PercentageOutlined />} onClick={() => setBatchModalType('discount')}>
+          <GlassButton icon={<PercentageOutlined />} onClick={() => openBatchModal('discount')}>
             {t('dashboard.quickActions.batchDiscount')}
           </GlassButton>
-          <GlassButton icon={<EditOutlined />} onClick={() => setBatchModalType('room')}>
+          <GlassButton icon={<EditOutlined />} onClick={() => openBatchModal('room')}>
             {t('dashboard.quickActions.batchRoom')}
           </GlassButton>
         </Space>
       </Card>
+
       {batchModalType && (
         <Suspense fallback={null}>
           <DashboardBatchModals
             mode={batchModalType}
             role={role}
             hotels={hotels}
+            hotelsLoading={hotelsLoading}
             onClose={() => setBatchModalType(null)}
           />
         </Suspense>
       )}
-
     </div>
   )
 }
