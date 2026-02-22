@@ -1,12 +1,21 @@
 import './App.css'
 import { Layout, Menu, Space, Typography, Tag, Button, Breadcrumb, Badge, Tooltip, Result, Select, ConfigProvider } from 'antd'
-import { HomeOutlined, SettingOutlined, UserOutlined, TeamOutlined, BellOutlined, FileSearchOutlined, ShopOutlined, MenuFoldOutlined, MenuUnfoldOutlined, GlobalOutlined } from '@ant-design/icons'
+import HomeOutlined from '@ant-design/icons/es/icons/HomeOutlined'
+import SettingOutlined from '@ant-design/icons/es/icons/SettingOutlined'
+import UserOutlined from '@ant-design/icons/es/icons/UserOutlined'
+import TeamOutlined from '@ant-design/icons/es/icons/TeamOutlined'
+import BellOutlined from '@ant-design/icons/es/icons/BellOutlined'
+import FileSearchOutlined from '@ant-design/icons/es/icons/FileSearchOutlined'
+import ShopOutlined from '@ant-design/icons/es/icons/ShopOutlined'
+import MenuFoldOutlined from '@ant-design/icons/es/icons/MenuFoldOutlined'
+import MenuUnfoldOutlined from '@ant-design/icons/es/icons/MenuUnfoldOutlined'
+import GlobalOutlined from '@ant-design/icons/es/icons/GlobalOutlined'
 import { Routes, Route, useLocation, useNavigate, Navigate, Outlet } from 'react-router-dom'
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import zhCN from 'antd/locale/zh_CN'
 import enUS from 'antd/locale/en_US'
-import { changeLanguage, loadNamespaces } from './locales'
+import { changeLanguage, hasLoadedNamespaces, loadNamespaces } from './locales'
 import { getUnreadCount, onUnreadCountChange, api } from './services'
 import { routeConfig, getRouteNamespaces } from './routes/routeConfig'
 
@@ -27,7 +36,8 @@ const AdminHotelDetail = lazy(() => import('./pages/AdminHotelDetail.jsx'))
 const MerchantDetail = lazy(() => import('./pages/MerchantDetail.jsx'))
 const OrderStats = lazy(() => import('./pages/OrderStats.jsx'))
 
-function LazyRoute({ children }) {
+function LazyRoute({ children, routeNamespacesReady = true }) {
+  if (!routeNamespacesReady) return null
   return <Suspense fallback={null}>{children}</Suspense>
 }
 
@@ -255,9 +265,11 @@ function App() {
     role: localStorage.getItem('role'),
     username: localStorage.getItem('username')
   }))
+  const [routeNamespacesReady, setRouteNamespacesReady] = useState(() =>
+    hasLoadedNamespaces(getRouteNamespaces(location.pathname))
+  )
   const [unreadCount, setUnreadCount] = useState(0)
   const [adminPending, setAdminPending] = useState({ pendingHotels: 0, pendingRequests: 0 })
-  const [routeNamespacesReady, setRouteNamespacesReady] = useState(false)
   
   const antdLocale = i18n.language === 'en-US' ? enUS : zhCN
 
@@ -269,27 +281,27 @@ function App() {
   }, [i18n])
 
   useEffect(() => {
-    let cancelled = false
+    let canceled = false
 
     async function syncRouteNamespaces() {
-      setRouteNamespacesReady(false)
       const namespaces = getRouteNamespaces(location.pathname)
-      await loadNamespaces(namespaces)
-
-      if (!cancelled) {
-        setRouteNamespacesReady(true)
+      if (hasLoadedNamespaces(namespaces)) {
+        if (!canceled) setRouteNamespacesReady(true)
+        return
       }
+
+      if (!canceled) setRouteNamespacesReady(false)
+      await loadNamespaces(namespaces)
+      if (!canceled) setRouteNamespacesReady(true)
     }
 
     syncRouteNamespaces().catch((error) => {
       console.error(error)
-      if (!cancelled) {
-        setRouteNamespacesReady(true)
-      }
+      if (!canceled) setRouteNamespacesReady(true)
     })
 
     return () => {
-      cancelled = true
+      canceled = true
     }
   }, [location.pathname, i18n.language])
 
@@ -412,10 +424,6 @@ function App() {
 
   const homePath = auth.role === 'admin' ? '/audit' : auth.role === 'merchant' ? '/hotels' : '/'
 
-  if (!routeNamespacesReady) {
-    return <div style={{ minHeight: '100vh' }} />
-  }
-
   return (
     <ConfigProvider locale={antdLocale}>
       <Routes>
@@ -424,7 +432,7 @@ function App() {
           element={
             auth.token
               ? <Navigate to={homePath} replace />
-              : <LazyRoute><Login onLoggedIn={handleLoggedIn} /></LazyRoute>
+              : <LazyRoute routeNamespacesReady={routeNamespacesReady}><Login onLoggedIn={handleLoggedIn} /></LazyRoute>
           }
         />
         <Route element={<RequireAuth token={auth.token} />}>
@@ -442,26 +450,26 @@ function App() {
               />
             }
           >
-            <Route path="/" element={<LazyRoute><Dashboard /></LazyRoute>} />
+            <Route path="/" element={<LazyRoute routeNamespacesReady={routeNamespacesReady}><Dashboard /></LazyRoute>} />
             <Route element={<RequireRole role={auth.role} allow="merchant" />}>
-              <Route path="/hotels" element={<LazyRoute><Hotels /></LazyRoute>} />
-              <Route path="/hotels/new" element={<LazyRoute><HotelEdit /></LazyRoute>} />
-              <Route path="/hotels/edit/:id" element={<LazyRoute><HotelEdit /></LazyRoute>} />
-              <Route path="/hotels/:id" element={<LazyRoute><HotelDetail /></LazyRoute>} />
-              <Route path="/hotels/:id/stats" element={<LazyRoute><OrderStats /></LazyRoute>} />
+              <Route path="/hotels" element={<LazyRoute routeNamespacesReady={routeNamespacesReady}><Hotels /></LazyRoute>} />
+              <Route path="/hotels/new" element={<LazyRoute routeNamespacesReady={routeNamespacesReady}><HotelEdit /></LazyRoute>} />
+              <Route path="/hotels/edit/:id" element={<LazyRoute routeNamespacesReady={routeNamespacesReady}><HotelEdit /></LazyRoute>} />
+              <Route path="/hotels/:id" element={<LazyRoute routeNamespacesReady={routeNamespacesReady}><HotelDetail /></LazyRoute>} />
+              <Route path="/hotels/:id/stats" element={<LazyRoute routeNamespacesReady={routeNamespacesReady}><OrderStats /></LazyRoute>} />
             </Route>
             <Route element={<RequireRole role={auth.role} allow="admin" />}>
-              <Route path="/admin-hotels" element={<LazyRoute><AdminHotels /></LazyRoute>} />
-              <Route path="/admin-hotels/:id" element={<LazyRoute><AdminHotelDetail /></LazyRoute>} />
-              <Route path="/admin-hotels/:id/stats" element={<LazyRoute><OrderStats /></LazyRoute>} />
-              <Route path="/audit" element={<LazyRoute><Audit /></LazyRoute>} />
-              <Route path="/audit/:id" element={<LazyRoute><AuditDetail /></LazyRoute>} />
-              <Route path="/requests" element={<LazyRoute><RequestAudit /></LazyRoute>} />
-              <Route path="/merchants" element={<LazyRoute><Merchants /></LazyRoute>} />
-              <Route path="/merchants/:id" element={<LazyRoute><MerchantDetail /></LazyRoute>} />
+              <Route path="/admin-hotels" element={<LazyRoute routeNamespacesReady={routeNamespacesReady}><AdminHotels /></LazyRoute>} />
+              <Route path="/admin-hotels/:id" element={<LazyRoute routeNamespacesReady={routeNamespacesReady}><AdminHotelDetail /></LazyRoute>} />
+              <Route path="/admin-hotels/:id/stats" element={<LazyRoute routeNamespacesReady={routeNamespacesReady}><OrderStats /></LazyRoute>} />
+              <Route path="/audit" element={<LazyRoute routeNamespacesReady={routeNamespacesReady}><Audit /></LazyRoute>} />
+              <Route path="/audit/:id" element={<LazyRoute routeNamespacesReady={routeNamespacesReady}><AuditDetail /></LazyRoute>} />
+              <Route path="/requests" element={<LazyRoute routeNamespacesReady={routeNamespacesReady}><RequestAudit /></LazyRoute>} />
+              <Route path="/merchants" element={<LazyRoute routeNamespacesReady={routeNamespacesReady}><Merchants /></LazyRoute>} />
+              <Route path="/merchants/:id" element={<LazyRoute routeNamespacesReady={routeNamespacesReady}><MerchantDetail /></LazyRoute>} />
             </Route>
-            <Route path="/messages" element={<LazyRoute><Messages /></LazyRoute>} />
-            <Route path="/account" element={<LazyRoute><Account /></LazyRoute>} />
+            <Route path="/messages" element={<LazyRoute routeNamespacesReady={routeNamespacesReady}><Messages /></LazyRoute>} />
+            <Route path="/account" element={<LazyRoute routeNamespacesReady={routeNamespacesReady}><Account /></LazyRoute>} />
             <Route path="/unauthorized" element={<Unauthorized homePath={homePath} />} />
             <Route path="*" element={<NotFound homePath={homePath} />} />
           </Route>

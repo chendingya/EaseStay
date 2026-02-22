@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Card, Col, Empty, Row, Space, Spin, Statistic, Typography } from 'antd'
-import ReactECharts from 'echarts-for-react'
 import { GlassButton } from '../components'
 import { api } from '../services'
 import { useTranslation } from 'react-i18next'
+
+const ReactECharts = lazy(() => import('echarts-for-react'))
 
 export default function OrderStats() {
   const { id } = useParams()
@@ -15,6 +16,7 @@ export default function OrderStats() {
   const [loading, setLoading] = useState(true)
   const [hotel, setHotel] = useState(null)
   const [orderStats, setOrderStats] = useState(null)
+  const [renderCharts, setRenderCharts] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -36,6 +38,31 @@ export default function OrderStats() {
     }
     fetchData()
   }, [id, isAdmin, navigate])
+
+  useEffect(() => {
+    if (loading || !orderStats) {
+      setRenderCharts(false)
+      return
+    }
+    let canceled = false
+    const showCharts = () => {
+      if (!canceled) setRenderCharts(true)
+    }
+    if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      const idleId = window.requestIdleCallback(showCharts, { timeout: 1200 })
+      return () => {
+        canceled = true
+        if (typeof window.cancelIdleCallback === 'function') {
+          window.cancelIdleCallback(idleId)
+        }
+      }
+    }
+    const timer = setTimeout(showCharts, 300)
+    return () => {
+      canceled = true
+      clearTimeout(timer)
+    }
+  }, [loading, orderStats])
 
   const statusStats = useMemo(() => orderStats?.statusStats || [], [orderStats])
   const monthly = useMemo(() => orderStats?.monthly || [], [orderStats])
@@ -125,6 +152,24 @@ export default function OrderStats() {
     series: [{ type: 'line', data: dailyRevenue, areaStyle: { opacity: 0.2 } }]
   }), [dailyDates, dailyRevenue])
 
+  const renderChart = (hasData, option, emptyText) => {
+    if (!hasData) {
+      return <Empty description={emptyText} />
+    }
+    if (!renderCharts) {
+      return (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+          <Spin />
+        </div>
+      )
+    }
+    return (
+      <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}><Spin /></div>}>
+        <ReactECharts option={option} style={{ height: 300 }} />
+      </Suspense>
+    )
+  }
+
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: 100 }}>
@@ -171,20 +216,12 @@ export default function OrderStats() {
       <Row gutter={24}>
         <Col span={12}>
           <Card title={t('orderStats.cards.status')}>
-            {statusData.length ? (
-              <ReactECharts option={statusOption} style={{ height: 300 }} />
-            ) : (
-              <Empty description={t('orderStats.empty.status')} />
-            )}
+            {renderChart(statusData.length > 0, statusOption, t('orderStats.empty.status'))}
           </Card>
         </Col>
         <Col span={12}>
           <Card title={t('orderStats.cards.monthly')}>
-            {monthlyRevenue.length ? (
-              <ReactECharts option={monthlyOption} style={{ height: 300 }} />
-            ) : (
-              <Empty description={t('orderStats.empty.monthly')} />
-            )}
+            {renderChart(monthlyRevenue.length > 0, monthlyOption, t('orderStats.empty.monthly'))}
           </Card>
         </Col>
       </Row>
@@ -192,20 +229,12 @@ export default function OrderStats() {
       <Row gutter={24}>
         <Col span={12}>
           <Card title={t('orderStats.cards.roomType')}>
-            {roomTypeNames.length ? (
-              <ReactECharts option={roomTypeOption} style={{ height: 300 }} />
-            ) : (
-              <Empty description={t('orderStats.empty.roomType')} />
-            )}
+            {renderChart(roomTypeNames.length > 0, roomTypeOption, t('orderStats.empty.roomType'))}
           </Card>
         </Col>
         <Col span={12}>
           <Card title={t('orderStats.cards.daily')}>
-            {dailyDates.length ? (
-              <ReactECharts option={dailyOption} style={{ height: 300 }} />
-            ) : (
-              <Empty description={t('orderStats.empty.daily')} />
-            )}
+            {renderChart(dailyDates.length > 0, dailyOption, t('orderStats.empty.daily'))}
           </Card>
         </Col>
       </Row>

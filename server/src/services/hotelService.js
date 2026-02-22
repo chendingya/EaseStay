@@ -1140,7 +1140,7 @@ const updateHotel = async ({ merchantId, hotelId, payload }) => {
     })
     if (stockViolations) {
       const activeQty = activeQtyMap.get(stockViolations.id) || 0
-      return { ok: false, status: 400, message: `房型 ${stockViolations.name} 库存不能小于未完成订单数量 ${activeQty}` }
+      return { ok: false, status: 400, message: `房型 ${stockViolations.name} 库存不能小于在住/未退房订单占用数量 ${activeQty}` }
     }
 
     const updateTargets = incomingWithResolvedId.filter((room) => room.id && existingIds.has(room.id))

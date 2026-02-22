@@ -1,10 +1,14 @@
 import { Card, Table, Typography, Tag, Modal, Form, Input, Tabs, Descriptions, Empty, Alert, Space } from 'antd'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { 
-  CheckCircleOutlined, CloseCircleOutlined, ShopOutlined, 
-  AppstoreOutlined, HomeOutlined, GiftOutlined, ArrowLeftOutlined, DeleteOutlined
-} from '@ant-design/icons'
+import CheckCircleOutlined from '@ant-design/icons/es/icons/CheckCircleOutlined'
+import CloseCircleOutlined from '@ant-design/icons/es/icons/CloseCircleOutlined'
+import ShopOutlined from '@ant-design/icons/es/icons/ShopOutlined'
+import AppstoreOutlined from '@ant-design/icons/es/icons/AppstoreOutlined'
+import HomeOutlined from '@ant-design/icons/es/icons/HomeOutlined'
+import GiftOutlined from '@ant-design/icons/es/icons/GiftOutlined'
+import ArrowLeftOutlined from '@ant-design/icons/es/icons/ArrowLeftOutlined'
+import DeleteOutlined from '@ant-design/icons/es/icons/DeleteOutlined'
 import { GlassButton, glassMessage as message } from '../components'
 import { api } from '../services'
 import { useTranslation } from 'react-i18next'
@@ -15,7 +19,7 @@ export default function RequestAudit() {
   const { t } = useTranslation()
   const hotelIdFilter = searchParams.get('hotelId')
   
-  const [loading, setLoading] = useState(false)
+  const [tableLoading, setTableLoading] = useState(false)
   const [requests, setRequests] = useState([])
   const [activeTab, setActiveTab] = useState('all')
   const [page, setPage] = useState(1)
@@ -24,9 +28,11 @@ export default function RequestAudit() {
   const [rejecting, setRejecting] = useState(null)
   const [rejectForm] = Form.useForm()
   const [detailModal, setDetailModal] = useState(null)
+  const [reviewingId, setReviewingId] = useState(null)
+  const [reviewingAction, setReviewingAction] = useState('')
 
-  const fetchRequests = useCallback(async (type) => {
-    setLoading(true)
+  const fetchRequests = useCallback(async (type, withLoading = true) => {
+    if (withLoading) setTableLoading(true)
     try {
       const params = new URLSearchParams()
       if (type && type !== 'all') params.append('type', type)
@@ -44,7 +50,7 @@ export default function RequestAudit() {
     } catch (error) {
       console.error(error)
     } finally {
-      setLoading(false)
+      if (withLoading) setTableLoading(false)
     }
   }, [hotelIdFilter, page, pageSize])
 
@@ -69,19 +75,21 @@ export default function RequestAudit() {
   }
 
   const handleReview = async (id, action, rejectReason) => {
-    setLoading(true)
+    setReviewingId(id)
+    setReviewingAction(action)
     try {
       await api.put(`/api/admin/requests/${id}/review`, { action, rejectReason })
       message.success(action === 'approve' ? t('requestAudit.successApprove') : t('requestAudit.successReject'))
       window.dispatchEvent(new Event('admin-pending-update'))
       setRejecting(null)
       rejectForm.resetFields()
-      fetchRequests(activeTab)
+      await fetchRequests(activeTab, false)
     } catch (error) {
       console.error(error)
       message.error(t('requestAudit.errorReview'))
     } finally {
-      setLoading(false)
+      setReviewingId(null)
+      setReviewingAction('')
     }
   }
 
@@ -135,20 +143,20 @@ export default function RequestAudit() {
     return null
   }
 
-  const typeMap = {
+  const typeMap = useMemo(() => ({
     facility: { label: t('requestAudit.type.facility'), icon: <AppstoreOutlined />, color: 'blue' },
     room_type: { label: t('requestAudit.type.roomType'), icon: <HomeOutlined />, color: 'purple' },
     promotion: { label: t('requestAudit.type.promotion'), icon: <GiftOutlined />, color: 'orange' },
     hotel_delete: { label: t('requestAudit.type.hotelDelete'), icon: <DeleteOutlined />, color: 'red' }
-  }
+  }), [t])
 
-  const statusMap = {
+  const statusMap = useMemo(() => ({
     pending: { color: 'orange', label: t('status.pending') },
     approved: { color: 'green', label: t('requestAudit.status.approved') },
     rejected: { color: 'red', label: t('requestAudit.status.rejected') }
-  }
+  }), [t])
 
-  const columns = [
+  const columns = useMemo(() => [
     {
       title: t('requestAudit.columns.type'),
       dataIndex: 'type',
@@ -201,6 +209,8 @@ export default function RequestAudit() {
                 type="primary" 
                 size="small" 
                 icon={<CheckCircleOutlined />}
+                loading={reviewingId === record.id && reviewingAction === 'approve'}
+                disabled={!!reviewingId && reviewingId !== record.id}
                 onClick={() => handleReview(record.id, 'approve')}
               >
                 {t('common.approve')}
@@ -209,6 +219,8 @@ export default function RequestAudit() {
                 danger 
                 size="small" 
                 icon={<CloseCircleOutlined />}
+                loading={reviewingId === record.id && reviewingAction === 'reject'}
+                disabled={!!reviewingId && reviewingId !== record.id}
                 onClick={() => setRejecting(record)}
               >
                 {t('common.reject')}
@@ -221,15 +233,15 @@ export default function RequestAudit() {
         </div>
       )
     }
-  ]
+  ], [handleReview, reviewingAction, reviewingId, statusMap, t, typeMap])
 
-  const tabItems = [
+  const tabItems = useMemo(() => ([
     { key: 'all', label: t('requestAudit.tabs.all') },
     { key: 'facility', label: t('requestAudit.tabs.facility') },
     { key: 'room_type', label: t('requestAudit.tabs.roomType') },
     { key: 'promotion', label: t('requestAudit.tabs.promotion') },
     { key: 'hotel_delete', label: t('requestAudit.tabs.hotelDelete') }
-  ]
+  ]), [t])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 24 }}>
@@ -270,7 +282,7 @@ export default function RequestAudit() {
           columns={columns}
           dataSource={requests}
           rowKey="id"
-          loading={loading}
+          loading={tableLoading}
           pagination={{
             current: page,
             pageSize,
@@ -291,6 +303,7 @@ export default function RequestAudit() {
         onCancel={() => { setRejecting(null); rejectForm.resetFields() }}
         okText={t('requestAudit.rejectModal.confirm')}
         okButtonProps={{ danger: true }}
+        confirmLoading={reviewingId === rejecting?.id && reviewingAction === 'reject'}
       >
         <p>{t('requestAudit.rejectModal.content', { name: rejecting?.name })}</p>
         <Form form={rejectForm} layout="vertical">
@@ -319,7 +332,11 @@ export default function RequestAudit() {
               <GlassButton danger onClick={() => { setDetailModal(null); setRejecting(detailModal) }}>
                 {t('common.reject')}
               </GlassButton>
-              <GlassButton type="primary" onClick={() => { handleReview(detailModal.id, 'approve'); setDetailModal(null) }}>
+              <GlassButton
+                type="primary"
+                loading={reviewingId === detailModal?.id && reviewingAction === 'approve'}
+                onClick={() => { handleReview(detailModal.id, 'approve'); setDetailModal(null) }}
+              >
                 {t('common.approve')}
               </GlassButton>
             </Space>

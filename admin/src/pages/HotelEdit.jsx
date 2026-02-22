@@ -4,10 +4,14 @@ import {
   Form, Input, InputNumber, Select, Space, Typography, Divider, DatePicker,
   Row, Col, Spin, Image, Tag, Table, Descriptions, Tabs, Upload, Modal, Badge, Card, Checkbox
 } from 'antd'
-import {
-  EyeOutlined, EditOutlined, StarFilled, EnvironmentOutlined, CalendarOutlined,
-  PlusOutlined, DeleteOutlined, SearchOutlined
-} from '@ant-design/icons'
+import EyeOutlined from '@ant-design/icons/es/icons/EyeOutlined'
+import EditOutlined from '@ant-design/icons/es/icons/EditOutlined'
+import StarFilled from '@ant-design/icons/es/icons/StarFilled'
+import EnvironmentOutlined from '@ant-design/icons/es/icons/EnvironmentOutlined'
+import CalendarOutlined from '@ant-design/icons/es/icons/CalendarOutlined'
+import PlusOutlined from '@ant-design/icons/es/icons/PlusOutlined'
+import DeleteOutlined from '@ant-design/icons/es/icons/DeleteOutlined'
+import SearchOutlined from '@ant-design/icons/es/icons/SearchOutlined'
 import { GlassButton, glassMessage as message } from '../components'
 import { api } from '../services'
 import dayjs from 'dayjs'

@@ -1,11 +1,12 @@
-import { Card, Table, Space, Typography, Tag } from 'antd'
-import { useCallback, useEffect, useState } from 'react'
+import { Card, Spin, Typography } from 'antd'
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { EyeOutlined, StarFilled } from '@ant-design/icons'
-import { GlassButton, TableFilterBar } from '../components'
+import { TableFilterBar } from '../components'
 import { api } from '../services'
 import { useTranslation } from 'react-i18next'
 import { useRemoteTableQuery } from '../hooks/useRemoteTableQuery'
+
+const AuditTable = lazy(() => import('../components/audit/AuditTable.jsx'))
 
 export default function Audit() {
   const navigate = useNavigate()
@@ -13,6 +14,7 @@ export default function Audit() {
   const [loading, setLoading] = useState(false)
   const [hotels, setHotels] = useState([])
   const [statusFilter, setStatusFilter] = useState('pending')
+  const [renderTable, setRenderTable] = useState(false)
   const {
     page,
     pageSize,
@@ -23,13 +25,6 @@ export default function Audit() {
   } = useRemoteTableQuery({
     initialPageSize: 8
   })
-
-  const statusMap = {
-    pending: { color: 'orange', label: t('status.pending') },
-    approved: { color: 'green', label: t('status.approved') },
-    rejected: { color: 'red', label: t('status.rejected') },
-    offline: { color: 'default', label: t('status.offline') }
-  }
 
   const fetchHotels = useCallback(async () => {
     setLoading(true)
@@ -56,6 +51,27 @@ export default function Audit() {
     fetchHotels()
   }, [fetchHotels])
 
+  useEffect(() => {
+    let canceled = false
+    const showTable = () => {
+      if (!canceled) setRenderTable(true)
+    }
+    if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      const idleId = window.requestIdleCallback(showTable, { timeout: 1000 })
+      return () => {
+        canceled = true
+        if (typeof window.cancelIdleCallback === 'function') {
+          window.cancelIdleCallback(idleId)
+        }
+      }
+    }
+    const timer = setTimeout(showTable, 200)
+    return () => {
+      canceled = true
+      clearTimeout(timer)
+    }
+  }, [])
+
   const handleStatusChange = (value) => {
     setStatusFilter(value)
     setPage(1)
@@ -64,34 +80,6 @@ export default function Audit() {
   const handleRefresh = async () => {
     await fetchHotels()
   }
-
-  const columns = [
-    { title: t('audit.columns.name'), dataIndex: 'name', render: (text, record) => (
-      <a onClick={() => navigate(`/audit/${record.id}`)}>{text}</a>
-    )},
-    { title: t('audit.columns.city'), dataIndex: 'city' },
-    { title: t('audit.columns.star'), dataIndex: 'star_rating', render: v => v ? <span><StarFilled style={{ color: '#faad14' }} /> {t('audit.starLabel', { value: v })}</span> : '-' },
-    { title: t('audit.columns.lowestPrice'), dataIndex: 'lowestPrice', render: v => v ? <span style={{ color: '#f5222d' }}>¥{v}</span> : '-' },
-    { title: t('audit.columns.createdAt'), dataIndex: 'created_at', render: v => v ? v.split('T')[0] : '-' },
-    {
-      title: t('audit.columns.status'),
-      dataIndex: 'status',
-      render: (value) => {
-        const info = statusMap[value] || { color: 'default', label: value }
-        return <Tag color={info.color}>{info.label}</Tag>
-      }
-    },
-    {
-      title: t('audit.columns.action'),
-      render: (_, record) => (
-        <Space>
-          <GlassButton type="link" icon={<EyeOutlined />} onClick={() => navigate(`/audit/${record.id}`)}>
-            {record.status === 'pending' ? t('audit.action.audit') : t('common.view')}
-          </GlassButton>
-        </Space>
-      )
-    }
-  ]
 
   return (
     <Card
@@ -117,20 +105,24 @@ export default function Audit() {
         refreshLoading={loading}
         refreshText={t('common.refresh')}
       />
-      <Table
-        columns={columns}
-        dataSource={hotels}
-        rowKey="id"
-        loading={loading}
-        pagination={{
-          current: page,
-          pageSize,
-          total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          onChange: handlePageChange
-        }}
-      />
+
+      {renderTable ? (
+        <Suspense fallback={<div style={{ minHeight: 320, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>}>
+          <AuditTable
+            hotels={hotels}
+            loading={loading}
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={handlePageChange}
+            onNavigateDetail={(id) => navigate(`/audit/${id}`)}
+          />
+        </Suspense>
+      ) : (
+        <div style={{ minHeight: 320, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Spin />
+        </div>
+      )}
     </Card>
   )
 }

@@ -63,12 +63,12 @@ describe('RequestAudit page', () => {
       </MemoryRouter>
     )
     expect(await screen.findByText('申请审核')).toBeTruthy()
-    expect(screen.getByText('全部申请')).toBeTruthy()
+    expect(screen.getByText('全部')).toBeTruthy()
     expect(screen.getByText('设施申请')).toBeTruthy()
     expect(screen.getByText('房型申请')).toBeTruthy()
-    expect(screen.getByText('优惠申请')).toBeTruthy()
-    expect(screen.getByText('删除酒店申请')).toBeTruthy()
-    expect(mockGet).toHaveBeenCalledWith('/api/admin/requests')
+    expect(screen.getByText('活动申请')).toBeTruthy()
+    expect(screen.getByText('酒店删除')).toBeTruthy()
+    expect(mockGet).toHaveBeenCalledWith('/api/admin/requests?page=1&pageSize=10')
   })
 
   it('renders hotel filter actions when hotelId is present', async () => {
@@ -79,7 +79,7 @@ describe('RequestAudit page', () => {
       </MemoryRouter>
     )
     expect(await screen.findByText('返回酒店审核')).toBeTruthy()
-    expect(screen.getByText('查看全部申请')).toBeTruthy()
-    expect(mockGet).toHaveBeenCalledWith('/api/admin/requests?hotelId=12')
+    expect(screen.getByText('查看全部')).toBeTruthy()
+    expect(mockGet).toHaveBeenCalledWith('/api/admin/requests?hotelId=12&page=1&pageSize=10')
   })
 })

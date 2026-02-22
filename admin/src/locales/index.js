@@ -63,6 +63,7 @@ const namespaceLoaders = {
 }
 
 const loadedNamespacesByLanguage = new Map()
+const loadingNamespacesByLanguage = new Map()
 
 function normalizeLanguage(lng) {
   if (!lng) return fallbackLng
@@ -82,6 +83,9 @@ async function ensureLanguageLoaded(lng) {
   if (!loadedNamespacesByLanguage.has(normalized)) {
     loadedNamespacesByLanguage.set(normalized, new Set())
   }
+  if (!loadingNamespacesByLanguage.has(normalized)) {
+    loadingNamespacesByLanguage.set(normalized, new Map())
+  }
 
   return normalized
 }
@@ -89,16 +93,31 @@ async function ensureLanguageLoaded(lng) {
 async function ensureNamespaceLoaded(lng, namespace) {
   const normalized = await ensureLanguageLoaded(lng)
   const loadedNamespaces = loadedNamespacesByLanguage.get(normalized)
-  const shouldForceReloadInDev = import.meta.env.DEV
+  const loadingNamespaces = loadingNamespacesByLanguage.get(normalized)
+  const shouldForceReloadInDev = import.meta.env.VITE_I18N_FORCE_RELOAD === 'true'
 
   if (!shouldForceReloadInDev && loadedNamespaces.has(namespace)) return normalized
+
+  const inflight = loadingNamespaces.get(namespace)
+  if (inflight) {
+    await inflight
+    return normalized
+  }
 
   const loader = namespaceLoaders[normalized]?.[namespace]
   if (!loader) return normalized
 
-  const mod = await loader()
-  i18n.addResourceBundle(normalized, 'translation', unwrapLocaleModule(mod), true, true)
-  loadedNamespaces.add(namespace)
+  const task = (async () => {
+    const mod = await loader()
+    i18n.addResourceBundle(normalized, 'translation', unwrapLocaleModule(mod), true, true)
+    loadedNamespaces.add(namespace)
+  })()
+  loadingNamespaces.set(namespace, task)
+  try {
+    await task
+  } finally {
+    loadingNamespaces.delete(namespace)
+  }
 
   return normalized
 }
@@ -107,9 +126,9 @@ async function ensureNamespacesLoaded(lng, namespaces = []) {
   const normalized = await ensureLanguageLoaded(lng)
   const targetNamespaces = new Set([...baseNamespaces, ...namespaces])
 
-  for (const namespace of targetNamespaces) {
-    await ensureNamespaceLoaded(normalized, namespace)
-  }
+  await Promise.all(
+    Array.from(targetNamespaces).map((namespace) => ensureNamespaceLoaded(normalized, namespace))
+  )
 
   return normalized
 }
@@ -122,6 +141,15 @@ export async function changeLanguage(lng, ...args) {
 export async function loadNamespaces(namespaces = []) {
   const activeLng = normalizeLanguage(i18n.resolvedLanguage || i18n.language || fallbackLng)
   await ensureNamespacesLoaded(activeLng, namespaces)
+}
+
+export function hasLoadedNamespaces(namespaces = []) {
+  const activeLng = normalizeLanguage(i18n.resolvedLanguage || i18n.language || fallbackLng)
+  const loaded = loadedNamespacesByLanguage.get(activeLng)
+  if (!loaded) return false
+
+  const targetNamespaces = new Set([...baseNamespaces, ...namespaces])
+  return Array.from(targetNamespaces).every((namespace) => loaded.has(namespace))
 }
 
 export async function initI18n() {
