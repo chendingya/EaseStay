@@ -6,7 +6,7 @@ import { CalendarOutline } from 'antd-mobile-icons'
 import { api } from '../../services/request'
 import PageTopBar from '../../components/PageTopBar'
 import BookingBottomBar from '../../components/BookingBottomBar'
-import { formatDate, parseLocalDate, resolveDateRange } from '../../utils/dateRange'
+import { formatDate, getCalendarBounds, parseLocalDate, resolveDateRange } from '../../utils/dateRange'
 import './index.css'
 
 const formatPeriodLabel = (periods) => {
@@ -47,6 +47,7 @@ export default function RoomDetail() {
   })
   const [checkIn, setCheckIn] = useState(() => initialDateRange.checkIn)
   const [checkOut, setCheckOut] = useState(() => initialDateRange.checkOut)
+  const calendarBounds = useMemo(() => getCalendarBounds(), [])
 
   const [loading, setLoading] = useState(true)
   const [booking, setBooking] = useState(false)
@@ -345,6 +346,8 @@ export default function RoomDetail() {
         visible={calendarVisible}
         onClose={() => setCalendarVisible(false)}
         onConfirm={handleDateConfirm}
+        min={calendarBounds.min}
+        max={calendarBounds.max}
         defaultValue={[parseLocalDate(checkIn), parseLocalDate(checkOut)]}
       />
     </View>

@@ -1,14 +1,14 @@
 import { View, Text, Image, ScrollView, Swiper, SwiperItem } from '@tarojs/components'
 import { useRouter } from '@tarojs/taro'
 import Taro from '@tarojs/taro'
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CalendarPicker } from 'antd-mobile'
 import { api } from '../../services/request'
 import { isFavoriteHotel, toggleFavoriteHotel } from '../../services/favorites'
 import PageTopBar from '../../components/PageTopBar'
 import BookingBottomBar from '../../components/BookingBottomBar'
 import { createListByType } from '../../components/OrderList'
-import { formatDate, parseLocalDate, resolveDateRange } from '../../utils/dateRange'
+import { formatDate, getCalendarBounds, parseLocalDate, resolveDateRange } from '../../utils/dateRange'
 import { SendOutline, HeartOutline, HeartFill, MessageOutline, CalendarOutline } from 'antd-mobile-icons'
 import './index.css'
 
@@ -39,6 +39,7 @@ export default function Detail() {
   })
   const [checkIn, setCheckIn] = useState(() => initialDateRange.checkIn)
   const [checkOut, setCheckOut] = useState(() => initialDateRange.checkOut)
+  const calendarBounds = useMemo(() => getCalendarBounds(), [])
 
   const [hotel, setHotel] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -504,6 +505,8 @@ export default function Detail() {
         visible={calendarVisible}
         onClose={() => setCalendarVisible(false)}
         onConfirm={handleDateConfirm}
+        min={calendarBounds.min}
+        max={calendarBounds.max}
         defaultValue={[parseLocalDate(checkIn), parseLocalDate(checkOut)]}
       />
     </View>
