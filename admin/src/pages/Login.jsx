@@ -1,5 +1,7 @@
 import { ConfigProvider, Form, Input, Select, Tabs, Typography, theme } from 'antd'
-import { LockOutlined, MobileOutlined, UserOutlined } from '@ant-design/icons'
+import LockOutlined from '@ant-design/icons/es/icons/LockOutlined'
+import MobileOutlined from '@ant-design/icons/es/icons/MobileOutlined'
+import UserOutlined from '@ant-design/icons/es/icons/UserOutlined'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { GlassButton, glassMessage as message } from '../components'

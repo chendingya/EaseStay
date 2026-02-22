@@ -6,8 +6,10 @@
 - 设计原则（Design Principles）：[DesignPrinciples.md](./DesignPrinciples.md)
 - 国际化实践手册（i18n Practices）：[I18nPractices.md](./I18nPractices.md)
 - 移动端动效指南（Motion Guide）：[MotionGuide.md](./MotionGuide.md)
+- 前端性能优化复用手册（Frontend Performance Playbook）：[FrontendPerformancePlaybook.md](./FrontendPerformancePlaybook.md)
 
 ## 最近更新（2026-02）
+- Admin 前端性能规则沉淀：新增《前端性能优化复用手册》，固化跨页面可复用的拆分、请求、渲染与验收规则
 - Admin 国际化工程化升级：词典 namespace 拆分、路由级按需加载、语言切换懒加载
 - i18n 门禁上线：`i18n:check`（key 一致性）与 `i18n:check:strict`（含硬编码扫描）
 - 国际化一致性修复：占位符命名与调用参数对齐（`count/value`），标题 key 与模板 key 分离

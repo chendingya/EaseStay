@@ -1,10 +1,14 @@
 import { Card, Table, Typography, Tag, Modal, Form, Input, Tabs, Descriptions, Empty, Alert, Space } from 'antd'
 import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { 
-  CheckCircleOutlined, CloseCircleOutlined, ShopOutlined, 
-  AppstoreOutlined, HomeOutlined, GiftOutlined, ArrowLeftOutlined, DeleteOutlined
-} from '@ant-design/icons'
+import CheckCircleOutlined from '@ant-design/icons/es/icons/CheckCircleOutlined'
+import CloseCircleOutlined from '@ant-design/icons/es/icons/CloseCircleOutlined'
+import ShopOutlined from '@ant-design/icons/es/icons/ShopOutlined'
+import AppstoreOutlined from '@ant-design/icons/es/icons/AppstoreOutlined'
+import HomeOutlined from '@ant-design/icons/es/icons/HomeOutlined'
+import GiftOutlined from '@ant-design/icons/es/icons/GiftOutlined'
+import ArrowLeftOutlined from '@ant-design/icons/es/icons/ArrowLeftOutlined'
+import DeleteOutlined from '@ant-design/icons/es/icons/DeleteOutlined'
 import { GlassButton, glassMessage as message } from '../components'
 import { api } from '../services'
 import { useTranslation } from 'react-i18next'

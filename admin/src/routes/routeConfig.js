@@ -1,22 +1,20 @@
-import { HomeOutlined, SettingOutlined, UserOutlined, TeamOutlined, BellOutlined, FileSearchOutlined, ShopOutlined } from '@ant-design/icons'
-
 export const routeConfig = {
   '/login': { titleKey: 'auth.login', namespaces: ['login'] },
-  '/': { titleKey: 'route.dashboard', icon: HomeOutlined, namespaces: ['dashboard'] },
-  '/hotels': { titleKey: 'route.myHotels', icon: SettingOutlined, namespaces: ['hotels'] },
+  '/': { titleKey: 'route.dashboard', namespaces: ['dashboard'] },
+  '/hotels': { titleKey: 'route.myHotels', namespaces: ['hotels'] },
   '/hotels/new': { titleKey: 'route.newHotel', parent: '/hotels', namespaces: ['hotelEdit'] },
   '/hotels/edit/:id': { titleKey: 'route.editHotel', parent: '/hotels', namespaces: ['hotelEdit'] },
   '/hotels/:id': { titleKey: 'route.hotelDetail', parent: '/hotels', namespaces: ['hotelDetail'] },
   '/hotels/:id/stats': { titleKey: 'route.orderStats', parent: '/hotels/:id', namespaces: ['orderStats'] },
-  '/admin-hotels': { titleKey: 'route.hotels', icon: ShopOutlined, namespaces: ['adminHotels'] },
+  '/admin-hotels': { titleKey: 'route.hotels', namespaces: ['adminHotels'] },
   '/admin-hotels/:id': { titleKey: 'route.hotelDetail', parent: '/admin-hotels', namespaces: ['adminHotelDetail'] },
   '/admin-hotels/:id/stats': { titleKey: 'route.orderStats', parent: '/admin-hotels/:id', namespaces: ['orderStats'] },
-  '/audit': { titleKey: 'route.hotelAudit', icon: SettingOutlined, namespaces: ['audit'] },
+  '/audit': { titleKey: 'route.hotelAudit', namespaces: ['audit'] },
   '/audit/:id': { titleKey: 'route.auditDetail', parent: '/audit', namespaces: ['auditDetail'] },
-  '/requests': { titleKey: 'route.requestAudit', icon: FileSearchOutlined, namespaces: ['requestAudit'] },
-  '/messages': { titleKey: 'route.messages', icon: BellOutlined, namespaces: ['messages'] },
-  '/account': { titleKey: 'route.account', icon: UserOutlined, namespaces: ['account'] },
-  '/merchants': { titleKey: 'route.merchants', icon: TeamOutlined, namespaces: ['merchants'] },
+  '/requests': { titleKey: 'route.requestAudit', namespaces: ['requestAudit'] },
+  '/messages': { titleKey: 'route.messages', namespaces: ['messages'] },
+  '/account': { titleKey: 'route.account', namespaces: ['account'] },
+  '/merchants': { titleKey: 'route.merchants', namespaces: ['merchants'] },
   '/merchants/:id': { titleKey: 'route.merchantDetail', parent: '/merchants', namespaces: ['merchants', 'merchantDetail'] }
 }
 

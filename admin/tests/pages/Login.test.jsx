@@ -44,7 +44,7 @@ beforeAll(() => {
 describe('Login page', () => {
   it('renders tabs and title', () => {
     render(<Login onLoggedIn={vi.fn()} />)
-    expect(screen.getByText('易宿酒店平台')).toBeTruthy()
+    expect(screen.getByText('欢迎使用易宿')).toBeTruthy()
     expect(screen.getAllByText('登录').length).toBeGreaterThan(0)
     expect(screen.getAllByText('注册').length).toBeGreaterThan(0)
   })

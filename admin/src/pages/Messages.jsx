@@ -1,9 +1,11 @@
 import { Card, Typography, Tag, Empty, Badge, Tabs, Spin } from 'antd'
 import { useCallback, useEffect, useState } from 'react'
-import { 
-  BellOutlined, CheckCircleOutlined, CloseCircleOutlined, 
-  InfoCircleOutlined, WarningOutlined, DeleteOutlined
-} from '@ant-design/icons'
+import BellOutlined from '@ant-design/icons/es/icons/BellOutlined'
+import CheckCircleOutlined from '@ant-design/icons/es/icons/CheckCircleOutlined'
+import CloseCircleOutlined from '@ant-design/icons/es/icons/CloseCircleOutlined'
+import InfoCircleOutlined from '@ant-design/icons/es/icons/InfoCircleOutlined'
+import WarningOutlined from '@ant-design/icons/es/icons/WarningOutlined'
+import DeleteOutlined from '@ant-design/icons/es/icons/DeleteOutlined'
 import { GlassButton, glassMessage as message } from '../components'
 import { getNotifications, markAsRead as markNotificationAsRead, formatNotificationTime } from '../services'
 import { useTranslation } from 'react-i18next'

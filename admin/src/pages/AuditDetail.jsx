@@ -1,12 +1,20 @@
 import { Card, Typography, Tag, Descriptions, Image, Table, Space, Row, Col, Divider, Form, Input, Modal, Spin, Empty, Alert, Badge } from 'antd'
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { 
-  StarFilled, EnvironmentOutlined, CalendarOutlined, CheckCircleOutlined, 
-  CloseCircleOutlined, ArrowLeftOutlined, PictureOutlined, HomeOutlined,
-  GiftOutlined, AppstoreOutlined, CarOutlined, ShopOutlined, CompassOutlined,
-  ExclamationCircleOutlined
-} from '@ant-design/icons'
+import StarFilled from '@ant-design/icons/es/icons/StarFilled'
+import EnvironmentOutlined from '@ant-design/icons/es/icons/EnvironmentOutlined'
+import CalendarOutlined from '@ant-design/icons/es/icons/CalendarOutlined'
+import CheckCircleOutlined from '@ant-design/icons/es/icons/CheckCircleOutlined'
+import CloseCircleOutlined from '@ant-design/icons/es/icons/CloseCircleOutlined'
+import ArrowLeftOutlined from '@ant-design/icons/es/icons/ArrowLeftOutlined'
+import PictureOutlined from '@ant-design/icons/es/icons/PictureOutlined'
+import HomeOutlined from '@ant-design/icons/es/icons/HomeOutlined'
+import GiftOutlined from '@ant-design/icons/es/icons/GiftOutlined'
+import AppstoreOutlined from '@ant-design/icons/es/icons/AppstoreOutlined'
+import CarOutlined from '@ant-design/icons/es/icons/CarOutlined'
+import ShopOutlined from '@ant-design/icons/es/icons/ShopOutlined'
+import CompassOutlined from '@ant-design/icons/es/icons/CompassOutlined'
+import ExclamationCircleOutlined from '@ant-design/icons/es/icons/ExclamationCircleOutlined'
 import { GlassButton, GanttTimeline, glassMessage as message } from '../components'
 import { api } from '../services'
 import dayjs from 'dayjs'

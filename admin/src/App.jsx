@@ -1,6 +1,15 @@
 import './App.css'
 import { Layout, Menu, Space, Typography, Tag, Button, Breadcrumb, Badge, Tooltip, Result, Select, ConfigProvider } from 'antd'
-import { HomeOutlined, SettingOutlined, UserOutlined, TeamOutlined, BellOutlined, FileSearchOutlined, ShopOutlined, MenuFoldOutlined, MenuUnfoldOutlined, GlobalOutlined } from '@ant-design/icons'
+import HomeOutlined from '@ant-design/icons/es/icons/HomeOutlined'
+import SettingOutlined from '@ant-design/icons/es/icons/SettingOutlined'
+import UserOutlined from '@ant-design/icons/es/icons/UserOutlined'
+import TeamOutlined from '@ant-design/icons/es/icons/TeamOutlined'
+import BellOutlined from '@ant-design/icons/es/icons/BellOutlined'
+import FileSearchOutlined from '@ant-design/icons/es/icons/FileSearchOutlined'
+import ShopOutlined from '@ant-design/icons/es/icons/ShopOutlined'
+import MenuFoldOutlined from '@ant-design/icons/es/icons/MenuFoldOutlined'
+import MenuUnfoldOutlined from '@ant-design/icons/es/icons/MenuUnfoldOutlined'
+import GlobalOutlined from '@ant-design/icons/es/icons/GlobalOutlined'
 import { Routes, Route, useLocation, useNavigate, Navigate, Outlet } from 'react-router-dom'
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -257,7 +266,6 @@ function App() {
   }))
   const [unreadCount, setUnreadCount] = useState(0)
   const [adminPending, setAdminPending] = useState({ pendingHotels: 0, pendingRequests: 0 })
-  const [routeNamespacesReady, setRouteNamespacesReady] = useState(false)
   
   const antdLocale = i18n.language === 'en-US' ? enUS : zhCN
 
@@ -269,28 +277,14 @@ function App() {
   }, [i18n])
 
   useEffect(() => {
-    let cancelled = false
-
     async function syncRouteNamespaces() {
-      setRouteNamespacesReady(false)
       const namespaces = getRouteNamespaces(location.pathname)
       await loadNamespaces(namespaces)
-
-      if (!cancelled) {
-        setRouteNamespacesReady(true)
-      }
     }
 
     syncRouteNamespaces().catch((error) => {
       console.error(error)
-      if (!cancelled) {
-        setRouteNamespacesReady(true)
-      }
     })
-
-    return () => {
-      cancelled = true
-    }
   }, [location.pathname, i18n.language])
 
   // Fetch unread count and subscribe to changes
@@ -411,10 +405,6 @@ function App() {
   }
 
   const homePath = auth.role === 'admin' ? '/audit' : auth.role === 'merchant' ? '/hotels' : '/'
-
-  if (!routeNamespacesReady) {
-    return <div style={{ minHeight: '100vh' }} />
-  }
 
   return (
     <ConfigProvider locale={antdLocale}>
