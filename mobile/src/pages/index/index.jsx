@@ -59,6 +59,7 @@ export default function Index() {
   const [selectedAddress, setSelectedAddress] = useState('')
   const [cityPickerVisible, setCityPickerVisible] = useState(false)
   const [locationCity, setLocationCity] = useState('') // Store GPS location city separately
+  const amapInitRef = useRef({ rafId: null, active: false, tries: 0 })
   // const [cityList, setCityList] = useState([]) // Deprecated in favor of static cityData for hierarchy
   const hotColumns = hotHotels.reduce((cols, hotel, index) => {
     const next = cols
@@ -194,66 +195,113 @@ export default function Index() {
   }
 
   useEffect(() => {
+    const stopInit = () => {
+      if (amapInitRef.current.rafId) {
+        cancelAnimationFrame(amapInitRef.current.rafId)
+        amapInitRef.current.rafId = null
+      }
+      amapInitRef.current.active = false
+    }
+
     if (mapVisible && process.env.TARO_ENV === 'h5') {
-      // H5 Amap Loader
+      const scheduleAmapInit = () => {
+        if (amapInitRef.current.active) return
+        amapInitRef.current.active = true
+        amapInitRef.current.tries = 0
+        const tick = () => {
+          if (!mapVisible || process.env.TARO_ENV !== 'h5') {
+            stopInit()
+            return
+          }
+          if (initAmap()) {
+            stopInit()
+            return
+          }
+          amapInitRef.current.tries += 1
+          if (amapInitRef.current.tries > 60) {
+            stopInit()
+            return
+          }
+          amapInitRef.current.rafId = requestAnimationFrame(tick)
+        }
+        amapInitRef.current.rafId = requestAnimationFrame(tick)
+      }
+
       if (!window.AMap) {
-        // 检查是否已经存在 script 标签，避免重复加载
         if (document.querySelector('script[src*="webapi.amap.com/maps"]')) {
-           // 如果 script 存在但 AMap 未就绪，等待一下（简单轮询）
-           const checkAMap = setInterval(() => {
-             if (window.AMap) {
-               clearInterval(checkAMap)
-               initAmap()
-             }
-           }, 100)
-           // 5秒超时
-           setTimeout(() => clearInterval(checkAMap), 5000)
-           return
+          const checkAMap = setInterval(() => {
+            if (window.AMap) {
+              clearInterval(checkAMap)
+              scheduleAmapInit()
+            }
+          }, 100)
+          setTimeout(() => clearInterval(checkAMap), 5000)
+          return () => {
+            clearInterval(checkAMap)
+            stopInit()
+          }
         }
 
         const script = document.createElement('script')
         script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}`
         script.onload = () => {
-             initAmap()
+          scheduleAmapInit()
         }
         script.onerror = () => {
-             Toast.show({ content: '地图加载失败', icon: 'fail' })
+          Toast.show({ content: '地图加载失败', icon: 'fail' })
         }
         document.body.appendChild(script)
       } else {
-        initAmap()
+        scheduleAmapInit()
       }
+    }
+
+    return () => {
+      stopInit()
     }
   }, [mapVisible])
 
-  const initAmap = () => {
-    if (window.AMap) {
-        const map = new window.AMap.Map('amap-container', {
-            zoom: 4, // 调整缩放级别以显示全国
-            center: [105.0, 35.0], // 中国地理中心坐标
-        })
-        const marker = new window.AMap.Marker({
-            position: [longitude, latitude],
-            title: '当前位置'
-        })
-        // 初始不显示 marker，只有点击或定位后才显示
-        // map.add(marker)
-        setMapInstance(map)
-        setMarkerInstance(marker)
-
-        map.on('click', (e) => {
-            const lng = e.lnglat.getLng()
-            const lat = e.lnglat.getLat()
-            marker.setPosition([lng, lat])
-            // 确保 marker 在地图上
-            if (!marker.getMap()) {
-                map.add(marker)
-            }
-            setLongitude(lng)
-            setLatitude(lat)
-            handleReverseGeocode(lng, lat)
-        })
+  useEffect(() => {
+    if (mapVisible || process.env.TARO_ENV !== 'h5') return
+    if (mapInstance && typeof mapInstance.destroy === 'function') {
+      mapInstance.destroy()
     }
+    if (mapInstance) {
+      setMapInstance(null)
+    }
+    if (markerInstance) {
+      setMarkerInstance(null)
+    }
+  }, [mapVisible, mapInstance, markerInstance])
+
+  const initAmap = () => {
+    if (!window.AMap) return false
+    const container = document.getElementById('amap-container')
+    if (!container) return false
+    if (mapInstance) return true
+    const map = new window.AMap.Map('amap-container', {
+      zoom: 4,
+      center: [105.0, 35.0],
+    })
+    const marker = new window.AMap.Marker({
+      position: [longitude, latitude],
+      title: '当前位置'
+    })
+    setMapInstance(map)
+    setMarkerInstance(marker)
+
+    map.on('click', (e) => {
+      const lng = e.lnglat.getLng()
+      const lat = e.lnglat.getLat()
+      marker.setPosition([lng, lat])
+      if (!marker.getMap()) {
+        map.add(marker)
+      }
+      setLongitude(lng)
+      setLatitude(lat)
+      handleReverseGeocode(lng, lat)
+    })
+    return true
   }
 
   const handleReverseGeocode = async (lng, lat) => {
