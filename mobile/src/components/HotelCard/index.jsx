@@ -33,6 +33,8 @@ export default function HotelCard({ hotel, onClick, badgeText, extraMetaItems = 
             src={imageSrc}
             mode="aspectFill"
             className="hotel-card-image"
+            width={112}
+            height={132}
             onError={() => setImageFailed(true)}
           />
         ) : (

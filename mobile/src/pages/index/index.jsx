@@ -722,7 +722,7 @@ export default function Index() {
                           className="hot-card-image"
                           src={imageSrc}
                           mode="widthFix"
-                          style={{ height: `${resolveHotImageHeight(hotel.id)}px` }}
+                          style={{ width: '100%', height: `${resolveHotImageHeight(hotel.id)}px` }}
                           onLoad={handleHotImageLoad(hotel.id)}
                           onError={handleHotImageError(hotel.id)}
                         />

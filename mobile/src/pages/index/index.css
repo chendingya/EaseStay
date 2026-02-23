@@ -78,7 +78,9 @@
 }
 
 .hot-column {
-  flex: 1;
+  flex: 0 0 calc((100% - 12px) / 2);
+  max-width: calc((100% - 12px) / 2);
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;

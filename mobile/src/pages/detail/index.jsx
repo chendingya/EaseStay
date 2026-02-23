@@ -293,6 +293,7 @@ export default function Detail() {
                     className="banner-img"
                     src={img}
                     mode="aspectFill"
+                    style={{ width: '100%', height: '280px' }}
                     onError={() => setBannerImageError((prev) => ({ ...prev, [idx]: true }))}
                   />
                 ) : (

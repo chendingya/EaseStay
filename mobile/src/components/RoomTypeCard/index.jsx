@@ -59,6 +59,8 @@ function RoomTypeCard({
           className='room-type-card-image'
           src={imageSrc}
           mode='aspectFill'
+          width={84}
+          height={84}
           onError={() => setImageFailed(true)}
         />
       ) : (
