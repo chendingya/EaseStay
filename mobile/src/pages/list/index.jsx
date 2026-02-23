@@ -1,13 +1,14 @@
 import { View, Text } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Dropdown, Radio, Checkbox, Button, Space, CalendarPicker, Popup, SearchBar, Cascader, Slider, Tag } from 'antd-mobile'
+import { Dropdown, Radio, Checkbox, Button, Space, CalendarPicker, Popup, SearchBar, Cascader, Slider, Tag, Empty } from 'antd-mobile'
 import { SearchOutline, CalendarOutline } from 'antd-mobile-icons'
 import { api } from '../../services/request'
-import { createListByType } from '../../components/OrderList'
+import ListContainer from '../../components/OrderList'
 import PageTopBar from '../../components/PageTopBar'
 import { cityData } from '../../utils/cityData'
 import { formatDate, getCalendarBounds, parseLocalDate, resolveDateRange } from '../../utils/dateRange'
+import HotelCard from '../../components/HotelCard'
 import './index.css'
 
 export default function List() {
@@ -55,6 +56,11 @@ export default function List() {
   const [hasMore, setHasMore] = useState(true)
   const [page, setPage] = useState(1)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [recommendList, setRecommendList] = useState([])
+  const [recommendHasMore, setRecommendHasMore] = useState(true)
+  const [recommendPage, setRecommendPage] = useState(1)
+  const [recommendLoading, setRecommendLoading] = useState(false)
+  const recommendPageSize = 6
   
   // Filter State
   const [sort, setSort] = useState('recommend') // recommend, price_asc, price_desc, star
@@ -82,6 +88,9 @@ export default function List() {
   const loadingRef = useRef(false)
   const pageRef = useRef(page)
   const hasMoreRef = useRef(hasMore)
+  const recommendLoadingRef = useRef(false)
+  const recommendHasMoreRef = useRef(true)
+  const recommendPageRef = useRef(1)
 
   const searchParamsRef = useRef({ city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags, userLat, userLng })
 
@@ -94,8 +103,20 @@ export default function List() {
   }, [hasMore])
 
   useEffect(() => {
+    recommendHasMoreRef.current = recommendHasMore
+  }, [recommendHasMore])
+
+  useEffect(() => {
     pageRef.current = page
   }, [page])
+
+  useEffect(() => {
+    recommendPageRef.current = recommendPage
+  }, [recommendPage])
+
+  useEffect(() => {
+    recommendLoadingRef.current = recommendLoading
+  }, [recommendLoading])
 
   useEffect(() => {
     Taro.setStorageSync(SEARCH_STORAGE_KEY, {
@@ -126,7 +147,7 @@ export default function List() {
   }, [])
 
   // Fetch Data
-  async function loadMore() {
+  async function loadSearchMore() {
     if (loadingRef.current || !hasMoreRef.current) return
     loadingRef.current = true
     setLoadingMore(true)
@@ -173,6 +194,44 @@ export default function List() {
     }
   }
 
+  async function loadRecommendMore() {
+    if (recommendLoadingRef.current || !recommendHasMoreRef.current) return
+    recommendLoadingRef.current = true
+    setRecommendLoading(true)
+    try {
+      const nextPage = recommendPageRef.current
+      const res = await api.get(`/api/hotels?page=${nextPage}&pageSize=${recommendPageSize}`)
+      if (res && res.list) {
+        setRecommendList(prev => (nextPage === 1 ? res.list : [...prev, ...res.list]))
+        const nextHasMore = res.list.length >= recommendPageSize
+        setRecommendHasMore(nextHasMore)
+        recommendHasMoreRef.current = nextHasMore
+        setRecommendPage(nextPage + 1)
+        recommendPageRef.current = nextPage + 1
+      } else {
+        setRecommendHasMore(false)
+        recommendHasMoreRef.current = false
+      }
+    } catch (e) {
+      setRecommendHasMore(false)
+      recommendHasMoreRef.current = false
+    } finally {
+      recommendLoadingRef.current = false
+      setRecommendLoading(false)
+    }
+  }
+
+  const handleLoadMore = () => {
+    if (loadingRef.current || recommendLoadingRef.current) return
+    if (hasMoreRef.current) {
+      loadSearchMore()
+      return
+    }
+    if (recommendHasMoreRef.current) {
+      loadRecommendMore()
+    }
+  }
+
   useEffect(() => {
     setPage(1)
     pageRef.current = 1
@@ -180,11 +239,18 @@ export default function List() {
     setHasMore(true)
     hasMoreRef.current = true
     loadingRef.current = false
+    setRecommendList([])
+    setRecommendHasMore(true)
+    recommendHasMoreRef.current = true
+    setRecommendPage(1)
+    recommendPageRef.current = 1
+    recommendLoadingRef.current = false
     searchParamsRef.current = { city, keyword, checkIn, checkOut, minPrice, maxPrice, sort, selectedStars, selectedTags, userLat, userLng }
     if (isFirstLoad.current) {
       isFirstLoad.current = false
     }
-    loadMore()
+    loadSearchMore()
+    loadRecommendMore()
   }, [sort, selectedStars, selectedTags, city, keyword, minPrice, maxPrice, checkIn, checkOut])
 
   const handleSearchClick = () => {
@@ -221,6 +287,28 @@ export default function List() {
       keyword: draftKeyword
     }
   }
+
+  const combinedItems = useMemo(() => {
+    const items = []
+    if (list.length > 0) {
+      items.push(...list.map((hotel) => ({ kind: 'hotel', source: 'match', hotel })))
+    } else {
+      items.push({ kind: 'empty' })
+    }
+    items.push({ kind: 'divider' })
+    if (recommendList.length > 0) {
+      items.push(...recommendList.map((hotel) => ({ kind: 'hotel', source: 'recommend', hotel })))
+    } else if (recommendLoading) {
+      items.push({ kind: 'recommend-loading' })
+    }
+    return items
+  }, [list, recommendList, recommendLoading])
+
+  const hasMoreCombined = hasMore || recommendHasMore
+  const loadingCombined = loadingMore || recommendLoading
+  const loadTipText = hasMoreCombined
+    ? (loadingCombined ? '正在加载更多酒店...' : '上拉加载更多酒店')
+    : (list.length > 0 || recommendList.length > 0 ? '已全部加载完成' : '')
 
   return (
     <View className="list-page">
@@ -434,20 +522,53 @@ export default function List() {
 
       {/* List Content */}
       <View className="list-content">
-        {createListByType({
-          type: 'hotel',
-          items: list,
-          loading: loadingMore,
-          hasMore,
-          onLoadMore: loadMore,
-          loadTipText: hasMore
-            ? (loadingMore ? '正在加载更多酒店...' : '上拉加载更多酒店')
-            : (list.length > 0 ? '已全部加载完成' : ''),
-          emptyText: '暂无符合条件的酒店',
-          onOpen: (hotelId) => Taro.navigateTo({
-            url: `/pages/detail/index?id=${hotelId}&checkIn=${checkIn}&checkOut=${checkOut}`
-          })
-        })}
+        <ListContainer
+          items={combinedItems}
+          loading={loadingCombined}
+          hasMore={hasMoreCombined}
+          onLoadMore={handleLoadMore}
+          loadTipText={loadTipText}
+          showEmpty={false}
+          keyExtractor={(item, index) => {
+            if (item?.kind === 'hotel') {
+              return `${item.source}-${item.hotel?.id ?? index}`
+            }
+            return `${item?.kind || 'item'}-${index}`
+          }}
+          renderItem={(item) => {
+            if (item?.kind === 'divider') {
+              return (
+                <View className="list-recommend-divider">
+                  <View className="list-recommend-divider-line" />
+                  <Text className="list-recommend-divider-text">以下为额外推荐</Text>
+                  <View className="list-recommend-divider-line" />
+                </View>
+              )
+            }
+            if (item?.kind === 'empty') {
+              return (
+                <View className="list-match-empty">
+                  <Empty description="暂无符合条件的酒店" />
+                </View>
+              )
+            }
+            if (item?.kind === 'recommend-loading') {
+              return (
+                <View className="list-recommend-loading">
+                  <Text className="list-recommend-loading-text">正在为你推荐...</Text>
+                </View>
+              )
+            }
+            return (
+              <HotelCard
+                hotel={item.hotel}
+                onClick={() => Taro.navigateTo({
+                  url: `/pages/detail/index?id=${item.hotel?.id}&checkIn=${checkIn}&checkOut=${checkOut}`
+                })}
+              />
+            )
+          }}
+        />
       </View>
 
       <CalendarPicker
