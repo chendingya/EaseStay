@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useState } from 'react'
 import { View, Image, Text } from '@tarojs/components'
 import { RightOutline } from 'antd-mobile-icons'
+import { resolveImageUrl } from '../../services/request'
 import './index.css'
 
 const getDefaultMeta = (room) => {
@@ -28,6 +29,7 @@ function RoomTypeCard({
   metaResolver
 }) {
   const imageSrc = (Array.isArray(room?.images) && room.images[0]) || room?.image || ''
+  const optimizedImageSrc = resolveImageUrl(imageSrc, { width: 84, height: 84, quality: 70 })
   const [imageFailed, setImageFailed] = useState(false)
 
   useEffect(() => {
@@ -57,10 +59,11 @@ function RoomTypeCard({
       {imageSrc && !imageFailed ? (
         <Image
           className='room-type-card-image'
-          src={imageSrc}
+          src={optimizedImageSrc}
           mode='aspectFill'
           width={84}
           height={84}
+          lazyLoad
           onError={() => setImageFailed(true)}
         />
       ) : (

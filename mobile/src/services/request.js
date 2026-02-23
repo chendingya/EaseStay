@@ -1,6 +1,22 @@
 import Taro from '@tarojs/taro'
 
-const apiBase = (typeof process !== 'undefined' && process.env && process.env.TARO_APP_API_BASE) || 'http://127.0.0.1:4100'
+export const apiBase = (typeof process !== 'undefined' && process.env && process.env.TARO_APP_API_BASE) || 'http://127.0.0.1:4100'
+
+export const resolveImageUrl = (url, options = {}) => {
+  if (!url) return ''
+  if (process.env.TARO_ENV !== 'h5') return url
+  const width = Number.isFinite(Number(options.width)) ? Math.round(Number(options.width)) : null
+  const height = Number.isFinite(Number(options.height)) ? Math.round(Number(options.height)) : null
+  const quality = Number.isFinite(Number(options.quality)) ? Math.round(Number(options.quality)) : null
+  const format = options.format || 'webp'
+  const params = []
+  params.push(`url=${encodeURIComponent(url)}`)
+  if (width) params.push(`w=${width}`)
+  if (height) params.push(`h=${height}`)
+  if (quality) params.push(`q=${quality}`)
+  if (format) params.push(`fmt=${format}`)
+  return `${apiBase}/api/image?${params.join('&')}`
+}
 
 const request = async (options) => {
   const token = Taro.getStorageSync('token')

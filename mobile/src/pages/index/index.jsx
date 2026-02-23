@@ -3,7 +3,7 @@ import Taro, { useReachBottom } from '@tarojs/taro'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Swiper, Button, Card, SearchBar, Tag, Space, Toast, CalendarPicker, Picker, Popup, Cascader, Slider } from 'antd-mobile'
 import { SearchOutline, CalendarOutline, EnvironmentOutline } from 'antd-mobile-icons'
-import { api } from '../../services/request'
+import { api, resolveImageUrl } from '../../services/request'
 import { cityData } from '../../utils/cityData'
 import { formatDate, getCalendarBounds, parseLocalDate, resolveDateRange } from '../../utils/dateRange'
 import './index.css'
@@ -710,6 +710,8 @@ export default function Index() {
                   const hotelName = hotel?.name || hotel?.name_en || `酒店 #${hotel?.id ?? '--'}`
                   const starCount = Math.max(0, Math.min(5, Number(hotel?.star_rating) || 0))
                   const lowestPrice = hotel?.lowestPrice
+                  const hotImageWidth = Math.round(hotCardWidth || 200)
+                  const optimizedImageSrc = resolveImageUrl(imageSrc, { width: hotImageWidth, quality: 70 })
 
                   return (
                     <View
@@ -720,9 +722,10 @@ export default function Index() {
                       {imageSrc ? (
                         <Image
                           className="hot-card-image"
-                          src={imageSrc}
+                          src={optimizedImageSrc}
                           mode="widthFix"
                           style={{ width: '100%', height: `${resolveHotImageHeight(hotel.id)}px` }}
+                          lazyLoad
                           onLoad={handleHotImageLoad(hotel.id)}
                           onError={handleHotImageError(hotel.id)}
                         />

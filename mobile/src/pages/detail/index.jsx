@@ -3,7 +3,7 @@ import { useRouter } from '@tarojs/taro'
 import Taro from '@tarojs/taro'
 import { useEffect, useMemo, useState } from 'react'
 import { CalendarPicker } from 'antd-mobile'
-import { api } from '../../services/request'
+import { api, resolveImageUrl } from '../../services/request'
 import { isFavoriteHotel, toggleFavoriteHotel } from '../../services/favorites'
 import PageTopBar from '../../components/PageTopBar'
 import BookingBottomBar from '../../components/BookingBottomBar'
@@ -47,7 +47,18 @@ export default function Detail() {
   const [bookingRoomId, setBookingRoomId] = useState(null)
   const [collected, setCollected] = useState(false)
   const [bannerImageError, setBannerImageError] = useState({})
+  const [bannerIndex, setBannerIndex] = useState(0)
   const [calendarVisible, setCalendarVisible] = useState(false)
+  const bannerSize = useMemo(() => {
+    if (process.env.TARO_ENV !== 'h5') return { width: null, height: null }
+    try {
+      const info = Taro.getSystemInfoSync() || {}
+      const width = Math.round(info.windowWidth || 375)
+      return { width, height: 280 }
+    } catch (error) {
+      return { width: 375, height: 280 }
+    }
+  }, [])
 
   useEffect(() => {
     fetchHotelDetail()
@@ -67,6 +78,7 @@ export default function Detail() {
 
   useEffect(() => {
     setBannerImageError({})
+    setBannerIndex(0)
   }, [id])
 
   useEffect(() => {
@@ -285,24 +297,42 @@ export default function Detail() {
       >
         {/* 轮播图 */}
         <View className="banner-section">
-          <Swiper className="banner-swiper" indicatorDots indicatorColor="rgba(255,255,255,0.5)" indicatorActiveColor="#fff">
-            {images.map((img, idx) => (
-              <SwiperItem key={idx}>
-                {img && !bannerImageError[idx] ? (
-                  <Image
-                    className="banner-img"
-                    src={img}
-                    mode="aspectFill"
-                    style={{ width: '100%', height: '280px' }}
-                    onError={() => setBannerImageError((prev) => ({ ...prev, [idx]: true }))}
-                  />
-                ) : (
-                  <View className="banner-placeholder">
-                    <Text className="placeholder-text">暂无图片</Text>
-                  </View>
-                )}
-              </SwiperItem>
-            ))}
+          <Swiper
+            className="banner-swiper"
+            indicatorDots
+            indicatorColor="rgba(255,255,255,0.5)"
+            indicatorActiveColor="#fff"
+            onChange={(event) => setBannerIndex(event?.detail?.current || 0)}
+          >
+            {images.map((img, idx) => {
+              const canLoad = idx <= bannerIndex + 1
+              const hasError = Boolean(bannerImageError[idx])
+              const showImage = img && !hasError && canLoad
+              const showPlaceholderText = !img || hasError
+              const optimizedImageSrc = resolveImageUrl(img, {
+                width: bannerSize.width,
+                height: bannerSize.height,
+                quality: 70
+              })
+              return (
+                <SwiperItem key={idx}>
+                  {showImage ? (
+                    <Image
+                      className="banner-img"
+                      src={optimizedImageSrc}
+                      mode="aspectFill"
+                      style={{ width: '100%', height: '280px' }}
+                      lazyLoad={idx > 0}
+                      onError={() => setBannerImageError((prev) => ({ ...prev, [idx]: true }))}
+                    />
+                  ) : (
+                    <View className="banner-placeholder">
+                      {showPlaceholderText ? <Text className="placeholder-text">暂无图片</Text> : null}
+                    </View>
+                  )}
+                </SwiperItem>
+              )
+            })}
           </Swiper>
           <View className="banner-count">{images.length} 张</View>
         </View>

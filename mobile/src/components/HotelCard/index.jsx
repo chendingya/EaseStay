@@ -1,10 +1,12 @@
 import { View, Image, Text } from '@tarojs/components'
 import { useEffect, useState } from 'react'
 import { RightOutline } from 'antd-mobile-icons'
+import { resolveImageUrl } from '../../services/request'
 import './index.css'
 
 export default function HotelCard({ hotel, onClick, badgeText, extraMetaItems = [] }) {
   const imageSrc = (Array.isArray(hotel.images) && hotel.images[0]) || hotel.cover_image || ''
+  const optimizedImageSrc = resolveImageUrl(imageSrc, { width: 112, height: 132, quality: 70 })
   const [imageFailed, setImageFailed] = useState(false)
   const openingYear = hotel.opening_time ? String(hotel.opening_time).slice(0, 4) : ''
   const facilities = Array.isArray(hotel.facilities) ? hotel.facilities.slice(0, 2) : []
@@ -30,11 +32,12 @@ export default function HotelCard({ hotel, onClick, badgeText, extraMetaItems = 
       <View className="hotel-card-main">
         {imageSrc && !imageFailed ? (
           <Image
-            src={imageSrc}
+            src={optimizedImageSrc}
             mode="aspectFill"
             className="hotel-card-image"
             width={112}
             height={132}
+            lazyLoad
             onError={() => setImageFailed(true)}
           />
         ) : (

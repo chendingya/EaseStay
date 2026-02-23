@@ -9,6 +9,7 @@ const mapRoutes = require('./map')
 const userRoutes = require('./user')
 const statusRoutes = require('./status')
 const notificationRoutes = require('./notifications')
+const imageRoutes = require('./image')
 const { authRequired, requireRole } = require('../middleware/auth')
 
 const router = express.Router()
@@ -24,6 +25,7 @@ router.use('/admin/requests', authRequired, requireRole('admin'), require('./adm
 router.use('/presets', presetRoutes)
 router.use('/admin/presets', authRequired, requireRole('admin'), require('./adminPresets'))
 router.use('/map', mapRoutes)
+router.use('/image', imageRoutes)
 
 module.exports = {
   apiRouter: router,

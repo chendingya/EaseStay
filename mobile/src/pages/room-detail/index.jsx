@@ -3,7 +3,7 @@ import { View, Text, Image, ScrollView, Swiper, SwiperItem } from '@tarojs/compo
 import Taro, { useRouter } from '@tarojs/taro'
 import { CalendarPicker } from 'antd-mobile'
 import { CalendarOutline } from 'antd-mobile-icons'
-import { api } from '../../services/request'
+import { api, resolveImageUrl } from '../../services/request'
 import PageTopBar from '../../components/PageTopBar'
 import BookingBottomBar from '../../components/BookingBottomBar'
 import { formatDate, getCalendarBounds, parseLocalDate, resolveDateRange } from '../../utils/dateRange'
@@ -54,8 +54,19 @@ export default function RoomDetail() {
   const [hotel, setHotel] = useState(null)
   const [room, setRoom] = useState(null)
   const [bannerImageError, setBannerImageError] = useState({})
+  const [bannerIndex, setBannerIndex] = useState(0)
   const [navOpacity, setNavOpacity] = useState(0)
   const [calendarVisible, setCalendarVisible] = useState(false)
+  const bannerSize = useMemo(() => {
+    if (process.env.TARO_ENV !== 'h5') return { width: null, height: null }
+    try {
+      const info = Taro.getSystemInfoSync() || {}
+      const width = Math.round(info.windowWidth || 375)
+      return { width, height: 280 }
+    } catch (error) {
+      return { width: 375, height: 280 }
+    }
+  }, [])
 
   const fetchRoomDetail = async () => {
     if (!hotelId || !roomId) {
@@ -88,6 +99,7 @@ export default function RoomDetail() {
 
   useEffect(() => {
     setBannerImageError({})
+    setBannerIndex(0)
   }, [roomId])
 
   useEffect(() => {
@@ -208,24 +220,42 @@ export default function RoomDetail() {
         scrollWithAnimation
       >
         <View className='room-banner-section'>
-          <Swiper className='room-banner-swiper' indicatorDots indicatorColor='rgba(255,255,255,0.5)' indicatorActiveColor='#fff'>
-            {images.length > 0 ? images.map((img, idx) => (
-              <SwiperItem key={`${img}-${idx}`}>
-                {img && !bannerImageError[idx] ? (
-                  <Image
-                    className='room-banner-image'
-                    src={img}
-                    mode='aspectFill'
-                    style={{ width: '100%', height: '280px' }}
-                    onError={() => setBannerImageError((prev) => ({ ...prev, [idx]: true }))}
-                  />
-                ) : (
-                  <View className='room-banner-placeholder'>
-                    <Text className='room-banner-placeholder-text'>暂无图片</Text>
-                  </View>
-                )}
-              </SwiperItem>
-            )) : (
+          <Swiper
+            className='room-banner-swiper'
+            indicatorDots
+            indicatorColor='rgba(255,255,255,0.5)'
+            indicatorActiveColor='#fff'
+            onChange={(event) => setBannerIndex(event?.detail?.current || 0)}
+          >
+            {images.length > 0 ? images.map((img, idx) => {
+              const canLoad = idx <= bannerIndex + 1
+              const hasError = Boolean(bannerImageError[idx])
+              const showImage = img && !hasError && canLoad
+              const showPlaceholderText = !img || hasError
+              const optimizedImageSrc = resolveImageUrl(img, {
+                width: bannerSize.width,
+                height: bannerSize.height,
+                quality: 70
+              })
+              return (
+                <SwiperItem key={`${img}-${idx}`}>
+                  {showImage ? (
+                    <Image
+                      className='room-banner-image'
+                      src={optimizedImageSrc}
+                      mode='aspectFill'
+                      style={{ width: '100%', height: '280px' }}
+                      lazyLoad={idx > 0}
+                      onError={() => setBannerImageError((prev) => ({ ...prev, [idx]: true }))}
+                    />
+                  ) : (
+                    <View className='room-banner-placeholder'>
+                      {showPlaceholderText ? <Text className='room-banner-placeholder-text'>暂无图片</Text> : null}
+                    </View>
+                  )}
+                </SwiperItem>
+              )
+            }) : (
               <SwiperItem key='empty'>
                 <View className='room-banner-placeholder'>
                   <Text className='room-banner-placeholder-text'>暂无图片</Text>
