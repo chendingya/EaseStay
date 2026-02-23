@@ -10,7 +10,8 @@
     "ai": "node scripts/ai-harness.js"
   },
   "devDependencies": {
-    "concurrently": "^9.0.0"
+    "concurrently": "^9.0.0",
+    "pptxgenjs": "^4.0.1"
   },
   "dependencies": {
     "i18next": "^25.8.8",
