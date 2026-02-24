@@ -11,6 +11,7 @@ import './index.css'
 
 export default function Favorites() {
   const [list, setList] = useState([])
+  const [loading, setLoading] = useState(true)
 
   const refresh = async () => {
     try {
@@ -25,6 +26,8 @@ export default function Favorites() {
       setList(sorted)
     } catch (error) {
       setList([])
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -97,6 +100,7 @@ export default function Favorites() {
             {createListByType({
               type: 'favorite',
               items: list,
+              loading,
               onOpen: openHotel,
               onRemove: removeFavorite,
               badgeText: '已收藏',

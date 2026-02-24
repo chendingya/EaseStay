@@ -28,6 +28,24 @@ const renderOrderSkeletonCards = (count, prefix) => {
   ))
 }
 
+const renderFavoriteSkeletonCards = (count, prefix) => {
+  return Array.from({ length: count }).map((_, idx) => (
+    <View key={`${prefix}-${idx}`} className='list-skeleton-hotel-card'>
+      <View className='list-skeleton-hotel-thumb' />
+      <View className='list-skeleton-hotel-info'>
+        <View className='list-skeleton-line title' />
+        <View className='list-skeleton-line short' />
+        <View className='list-skeleton-line' />
+        <View className='list-skeleton-line short' />
+        <View className='list-skeleton-footer'>
+          <View className='list-skeleton-line tiny' />
+          <View className='list-skeleton-line price' />
+        </View>
+      </View>
+    </View>
+  ))
+}
+
 function ListContainer({
   items = [],
   renderItem,
@@ -267,6 +285,7 @@ export const createListByType = ({
         showSummary={false}
         emptyText={emptyText || '暂无收藏酒店'}
         animate={animate}
+        renderSkeleton={renderFavoriteSkeletonCards}
         renderItem={(hotel, index) => {
           const extraMetaItems = extraMetaItemsResolver ? extraMetaItemsResolver(hotel) : []
           const cardNode = (
