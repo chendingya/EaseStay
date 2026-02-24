@@ -737,6 +737,7 @@ Query：`keyword`（可选），`page`、`pageSize`（分页模式可选）
 
 ### 11.4 酒店详情与房型详情
 - `pages/detail`：房型区改为复用 `createListByType({ type: 'room' })`，统一走列表容器与卡片渲染链路
+- `pages/detail` Hero 图片区：原固定高度轮播改为可展开 Hero 区块（默认 280px，顶部下拉超 60px 松手后平滑展开至 75vh，CSS `transition` 过渡）；酒店图片与各房型图片合并为 `allSlides` 统一幻灯片数组（`useMemo` 全局 URL 去重）；切换至房型幻灯片时左下角显示半透明胶囊标签（房型名 + 参考价格）；背景层采用与当前幻灯片同源图片的 `blur(28px)` 模糊版本，所有背景图预渲染并通过 `opacity` + `transition` 淡切，消除切换白屏；`pullDeltaRef` 用 `useRef` 代替 `useState` 存储拖动量，避免 `touchmove` 触发重渲染抖动；所有前景图关闭 `lazyLoad` 预加载
 - `components/RoomTypeCard`：房型卡片（图片、标签、基础参数、优惠价/原价、查看详情、预订按钮）
 - `components/OrderList`：新增 `room` 类型与嵌入式渲染能力，支持在详情页滚动容器中展示房型列表
 - `pages/room-detail`：房型详情页（房型参数、优惠有效期、入住离店展示、直接下单跳转支付）
