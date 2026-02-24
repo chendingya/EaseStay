@@ -1,5 +1,6 @@
 .orders-page {
-  height: calc(100vh - 58px);
+  height: calc(100vh - var(--app-bottom-nav-height));
+  height: calc(100dvh - var(--app-bottom-nav-height));
   background: #f5f7fb;
   display: flex;
   flex-direction: column;
@@ -58,7 +59,7 @@
 .orders-content {
   flex: 1;
   min-height: 0;
-  padding: 4px 12px 12px;
+  padding: 4px 12px calc(12px + var(--app-safe-area-bottom));
 }
 
 .orders-login-tip {

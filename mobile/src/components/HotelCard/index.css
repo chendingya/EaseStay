@@ -127,6 +127,10 @@
   margin-top: auto;
 }
 
+.hotel-card-bottom-no-price {
+  justify-content: flex-end;
+}
+
 .hotel-card-price {
   color: #ff4d4f;
   font-weight: 700;

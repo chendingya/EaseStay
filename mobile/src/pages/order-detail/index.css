@@ -1,5 +1,6 @@
 .order-detail-page {
-  min-height: calc(100vh - 58px);
+  min-height: calc(100vh - var(--app-bottom-nav-height));
+  min-height: calc(100dvh - var(--app-bottom-nav-height));
   background: #f5f7fb;
 }
 
@@ -113,11 +114,12 @@
 .order-detail-actions {
   display: flex;
   gap: 10px;
+  margin-top: 2px;
 }
 
-.order-detail-actions .adm-button,
-.order-detail-actions .glass-button {
+.order-detail-actions .adm-button {
   flex: 1;
+  min-height: 42px;
 }
 
 .order-detail-loading {

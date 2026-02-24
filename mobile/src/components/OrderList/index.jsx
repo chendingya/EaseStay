@@ -293,6 +293,7 @@ export const createListByType = ({
               hotel={hotel}
               badgeText={badgeText}
               extraMetaItems={extraMetaItems}
+              showPrice={false}
               onClick={() => onOpen && onOpen(hotel?.id)}
             />
           )

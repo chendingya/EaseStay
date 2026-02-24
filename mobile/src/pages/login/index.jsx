@@ -95,50 +95,66 @@ export default function Login() {
   return (
     <View className='login-page'>
       <PageTopBar title='手机号登录' onBack={handleBack} />
-      <View className='title'>手机号登录</View>
-      <Form
-        form={form}
-        layout='horizontal'
-        onFinish={onFinish}
-        footer={
-          <Button block type='submit' color='primary' size='large' loading={loading}>
-            登录
-          </Button>
-        }
-      >
-        <Form.Item
-          name='phone'
-          label='手机号'
-          rules={[
-            { required: true, message: '请输入手机号' },
-            { pattern: PHONE_REGEX, message: '手机号格式不正确' }
-          ]}
-        >
-          <Input placeholder='请输入手机号' maxLength={11} />
-        </Form.Item>
-        <Form.Item
-          name='code'
-          label='验证码'
-          rules={[{ required: true, message: '请输入验证码' }]}
-          extra={(
+      <View className='auth-hero'>
+        <View className='auth-title'>手机号登录</View>
+        <View className='auth-subtitle'>登录后可查看订单与收藏酒店</View>
+      </View>
+
+      <View className='auth-card'>
+        <Form
+          form={form}
+          className='auth-form'
+          layout='vertical'
+          onFinish={onFinish}
+          footer={
             <Button
-              size='small'
+              className='auth-submit-btn'
+              block
+              type='submit'
               color='primary'
-              fill='outline'
-              disabled={countdown > 0}
-              onClick={onGetCode}
+              size='large'
+              loading={loading}
             >
-              {countdown > 0 ? `${countdown}s` : '获取验证码'}
+              登录
             </Button>
-          )}
+          }
         >
-          <Input placeholder='请输入验证码' maxLength={6} />
-        </Form.Item>
-      </Form>
-      <View className='footer-actions'>
-        <Button fill='none' onClick={() => Taro.navigateTo({ url: '/pages/register/index' })}>
-          没有账号？去注册
-        </Button>
+          <Form.Item
+            name='phone'
+            label='手机号'
+            rules={[
+              { required: true, message: '请输入手机号' },
+              { pattern: PHONE_REGEX, message: '手机号格式不正确' }
+            ]}
+          >
+            <Input className='auth-input' placeholder='请输入手机号' maxLength={11} />
+          </Form.Item>
+          <Form.Item
+            name='code'
+            label='验证码'
+            rules={[{ required: true, message: '请输入验证码' }]}
+            extra={(
+              <Button
+                className='auth-code-btn'
+                size='small'
+                color='primary'
+                fill='outline'
+                disabled={countdown > 0}
+                onClick={onGetCode}
+              >
+                {countdown > 0 ? `${countdown}s` : '获取验证码'}
+              </Button>
+            )}
+          >
+            <Input className='auth-input' placeholder='请输入验证码' maxLength={6} />
+          </Form.Item>
+        </Form>
+
+        <View className='auth-footer-actions'>
+          <Button className='auth-link-btn' fill='none' onClick={() => Taro.navigateTo({ url: '/pages/register/index' })}>
+            没有账号？去注册
+          </Button>
+        </View>
       </View>
     </View>
   )
