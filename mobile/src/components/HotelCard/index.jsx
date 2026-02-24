@@ -4,7 +4,7 @@ import { RightOutline } from 'antd-mobile-icons'
 import { resolveImageUrl } from '../../services/request'
 import './index.css'
 
-export default function HotelCard({ hotel, onClick, badgeText, extraMetaItems = [] }) {
+export default function HotelCard({ hotel, onClick, badgeText, extraMetaItems = [], showPrice = true }) {
   const imageSrc = (Array.isArray(hotel.images) && hotel.images[0]) || hotel.cover_image || ''
   const optimizedImageSrc = resolveImageUrl(imageSrc, { width: 112, height: 132, quality: 70 })
   const [imageFailed, setImageFailed] = useState(false)
@@ -74,18 +74,20 @@ export default function HotelCard({ hotel, onClick, badgeText, extraMetaItems = 
               ))}
             </View>
           ) : null}
-          <View className="hotel-card-bottom">
-            <View className="hotel-card-price">
-              {hasPrice ? (
-                <>
-                  <Text className="hotel-card-price-symbol">¥</Text>
-                  <Text className="hotel-card-price-value">{displayPrice}</Text>
-                  <Text className="hotel-card-price-suffix"> 起</Text>
-                </>
-              ) : (
-                <Text className="hotel-card-price-empty">暂无房型</Text>
-              )}
-            </View>
+          <View className={`hotel-card-bottom ${showPrice ? '' : 'hotel-card-bottom-no-price'}`}>
+            {showPrice ? (
+              <View className="hotel-card-price">
+                {hasPrice ? (
+                  <>
+                    <Text className="hotel-card-price-symbol">¥</Text>
+                    <Text className="hotel-card-price-value">{displayPrice}</Text>
+                    <Text className="hotel-card-price-suffix"> 起</Text>
+                  </>
+                ) : (
+                  <Text className="hotel-card-price-empty">暂无房型</Text>
+                )}
+              </View>
+            ) : null}
             <View className="hotel-card-open">
               <Text className="hotel-card-open-text">查看详情</Text>
               <RightOutline className="hotel-card-open-icon" />

@@ -3,7 +3,6 @@ import { View, Text } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { Button } from 'antd-mobile'
 import PageTopBar from '../../components/PageTopBar'
-import GlassButton from '../../components/GlassButton'
 import { cancelOrder, getOrderDetail, useOrder } from '../../services/auth'
 import './index.css'
 
@@ -177,18 +176,18 @@ export default function OrderDetail() {
 
         <View className='order-detail-actions'>
           {canPay ? (
-            <Button color='primary' onClick={handlePay}>
+            <Button size='large' color='primary' onClick={handlePay}>
               去支付
             </Button>
           ) : null}
           {canOperate ? (
             <>
-              <GlassButton tone='danger' fill='outline' size='middle' loading={actionLoading} onClick={handleCancel}>
+              <Button size='large' color='danger' fill='outline' loading={actionLoading} onClick={handleCancel}>
                 取消订单
-              </GlassButton>
-              <GlassButton tone='primary' fill='solid' size='middle' loading={actionLoading} onClick={handleUse}>
+              </Button>
+              <Button size='large' color='primary' loading={actionLoading} onClick={handleUse}>
                 确认使用
-              </GlassButton>
+              </Button>
             </>
           ) : null}
         </View>
