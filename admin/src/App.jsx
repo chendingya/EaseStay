@@ -16,7 +16,6 @@ import { useTranslation } from 'react-i18next'
 import zhCN from 'antd/locale/zh_CN'
 import enUS from 'antd/locale/en_US'
 import { changeLanguage, hasLoadedNamespaces, loadNamespaces } from './locales'
-import { getUnreadCount, onUnreadCountChange, api } from './services'
 import { routeConfig, getRouteNamespaces } from './routes/routeConfig'
 
 const appPerfStart = import.meta.env.DEV ? performance.now() : 0
@@ -35,10 +34,32 @@ const AdminHotels = lazy(() => import('./pages/AdminHotels.jsx'))
 const AdminHotelDetail = lazy(() => import('./pages/AdminHotelDetail.jsx'))
 const MerchantDetail = lazy(() => import('./pages/MerchantDetail.jsx'))
 const OrderStats = lazy(() => import('./pages/OrderStats.jsx'))
+let servicesModulePromise = null
+
+function loadServicesModule() {
+  if (!servicesModulePromise) {
+    servicesModulePromise = import('./services')
+  }
+  return servicesModulePromise
+}
 
 function LazyRoute({ children, routeNamespacesReady = true }) {
   if (!routeNamespacesReady) return null
   return <Suspense fallback={null}>{children}</Suspense>
+}
+
+function scheduleIdleTask(task, { timeout = 1200, fallbackDelay = 250 } = {}) {
+  if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+    const idleId = window.requestIdleCallback(task, { timeout })
+    return () => {
+      if (typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleId)
+      }
+    }
+  }
+
+  const timerId = setTimeout(task, fallbackDelay)
+  return () => clearTimeout(timerId)
 }
 
 // 面包屑组件
@@ -307,21 +328,37 @@ function App() {
 
   // Fetch unread count and subscribe to changes
   useEffect(() => {
-    if (auth.token) {
-      getUnreadCount().then(setUnreadCount)
-      
-      // 订阅未读数量变化
-      const unsubscribe = onUnreadCountChange((count) => {
-        setUnreadCount(count)
-      })
-      
-      return unsubscribe
+    if (!auth.token) return
+
+    let canceled = false
+    let unsubscribe = () => {}
+    const cleanupIdle = scheduleIdleTask(async () => {
+      try {
+        const { getUnreadCount, onUnreadCountChange } = await loadServicesModule()
+        if (canceled) return
+
+        const count = await getUnreadCount()
+        if (!canceled) setUnreadCount(count)
+
+        unsubscribe = onUnreadCountChange((nextCount) => {
+          if (!canceled) setUnreadCount(nextCount)
+        })
+      } catch (error) {
+        console.error(error)
+      }
+    }, { timeout: 1500, fallbackDelay: 400 })
+
+    return () => {
+      canceled = true
+      cleanupIdle()
+      unsubscribe()
     }
   }, [auth.token]) // Remove location.pathname dependency as we now have real-time updates via subscription
 
   const fetchAdminPending = useCallback(async () => {
     if (!auth.token || auth.role !== 'admin') return
     try {
+      const { api } = await loadServicesModule()
       const [hotels, requests] = await Promise.all([
         api.get('/api/admin/hotels?status=pending'),
         api.get('/api/admin/requests?status=pending')
@@ -336,13 +373,14 @@ function App() {
   }, [auth.role, auth.token])
 
   useEffect(() => {
-    if (auth.token && auth.role === 'admin') {
-      const initialId = setTimeout(fetchAdminPending, 0)
-      const timerId = setInterval(fetchAdminPending, 30000)
-      return () => {
-        clearTimeout(initialId)
-        clearInterval(timerId)
-      }
+    if (!(auth.token && auth.role === 'admin')) return
+
+    const cleanupIdle = scheduleIdleTask(fetchAdminPending, { timeout: 2000, fallbackDelay: 700 })
+    const timerId = setInterval(fetchAdminPending, 30000)
+
+    return () => {
+      cleanupIdle()
+      clearInterval(timerId)
     }
   }, [auth.token, auth.role, fetchAdminPending])
 

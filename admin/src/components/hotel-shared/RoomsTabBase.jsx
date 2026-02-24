@@ -1,7 +1,7 @@
 import { Card, Image, Space, Table, Tag, Typography } from 'antd'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { GlassButton } from '../GlassUI'
+import { GlassButton } from '../GlassButton'
 import { estimateActionColumnWidth } from '../../utils/tableWidth'
 
 function getRoomImages(room) {

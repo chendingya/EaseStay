@@ -3,7 +3,7 @@ import EyeOutlined from '@ant-design/icons/es/icons/EyeOutlined'
 import StarFilled from '@ant-design/icons/es/icons/StarFilled'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { GlassButton } from '../GlassUI'
+import { GlassButton } from '../GlassButton'
 
 export default function AuditTable({ hotels, loading, page, pageSize, total, onPageChange, onNavigateDetail }) {
   const { t } = useTranslation()

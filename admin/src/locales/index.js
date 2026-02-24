@@ -1,23 +1,56 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
+import zhCommon from './zh-CN/common.json'
+import zhAuth from './zh-CN/auth.json'
+import zhMenu from './zh-CN/menu.json'
+import zhRoute from './zh-CN/route.json'
+import zhHeader from './zh-CN/header.json'
+import zhRole from './zh-CN/role.json'
+import zhStatus from './zh-CN/status.json'
+import zhError from './zh-CN/error.json'
+import zhBrand from './zh-CN/brand.json'
+import enCommon from './en-US/common.json'
+import enAuth from './en-US/auth.json'
+import enMenu from './en-US/menu.json'
+import enRoute from './en-US/route.json'
+import enHeader from './en-US/header.json'
+import enRole from './en-US/role.json'
+import enStatus from './en-US/status.json'
+import enError from './en-US/error.json'
+import enBrand from './en-US/brand.json'
 
 const fallbackLng = 'zh-CN'
 const supportedLngs = ['zh-CN', 'en-US']
 const baseNamespaces = ['common', 'auth', 'menu', 'route', 'header', 'role', 'status', 'error', 'brand']
 const unwrapLocaleModule = (mod) => mod?.default ?? mod ?? {}
+const staticBaseResources = {
+  'zh-CN': {
+    common: zhCommon,
+    auth: zhAuth,
+    menu: zhMenu,
+    route: zhRoute,
+    header: zhHeader,
+    role: zhRole,
+    status: zhStatus,
+    error: zhError,
+    brand: zhBrand
+  },
+  'en-US': {
+    common: enCommon,
+    auth: enAuth,
+    menu: enMenu,
+    route: enRoute,
+    header: enHeader,
+    role: enRole,
+    status: enStatus,
+    error: enError,
+    brand: enBrand
+  }
+}
 
 const namespaceLoaders = {
   'zh-CN': {
-    common: () => import('./zh-CN/common.json'),
-    auth: () => import('./zh-CN/auth.json'),
-    menu: () => import('./zh-CN/menu.json'),
-    route: () => import('./zh-CN/route.json'),
-    header: () => import('./zh-CN/header.json'),
-    role: () => import('./zh-CN/role.json'),
-    status: () => import('./zh-CN/status.json'),
-    error: () => import('./zh-CN/error.json'),
-    brand: () => import('./zh-CN/brand.json'),
     hotels: () => import('./zh-CN/hotels.json'),
     hotelDetail: () => import('./zh-CN/hotelDetail.json'),
     login: () => import('./zh-CN/login.json'),
@@ -35,15 +68,6 @@ const namespaceLoaders = {
     adminHotelDetail: () => import('./zh-CN/adminHotelDetail.json')
   },
   'en-US': {
-    common: () => import('./en-US/common.json'),
-    auth: () => import('./en-US/auth.json'),
-    menu: () => import('./en-US/menu.json'),
-    route: () => import('./en-US/route.json'),
-    header: () => import('./en-US/header.json'),
-    role: () => import('./en-US/role.json'),
-    status: () => import('./en-US/status.json'),
-    error: () => import('./en-US/error.json'),
-    brand: () => import('./en-US/brand.json'),
     hotels: () => import('./en-US/hotels.json'),
     hotelDetail: () => import('./en-US/hotelDetail.json'),
     login: () => import('./en-US/login.json'),
@@ -95,6 +119,13 @@ async function ensureNamespaceLoaded(lng, namespace) {
   const loadedNamespaces = loadedNamespacesByLanguage.get(normalized)
   const loadingNamespaces = loadingNamespacesByLanguage.get(normalized)
   const shouldForceReloadInDev = import.meta.env.VITE_I18N_FORCE_RELOAD === 'true'
+  const staticResource = staticBaseResources[normalized]?.[namespace]
+
+  if (staticResource) {
+    i18n.addResourceBundle(normalized, 'translation', staticResource, true, true)
+    loadedNamespaces.add(namespace)
+    return normalized
+  }
 
   if (!shouldForceReloadInDev && loadedNamespaces.has(namespace)) return normalized
 
@@ -152,7 +183,7 @@ export function hasLoadedNamespaces(namespaces = []) {
   return Array.from(targetNamespaces).every((namespace) => loaded.has(namespace))
 }
 
-export async function initI18n() {
+export async function initI18n(initialNamespaces = []) {
   if (!i18n.isInitialized) {
     await i18n
       .use(LanguageDetector)
@@ -185,7 +216,7 @@ export async function initI18n() {
   }
 
   const initialLng = normalizeLanguage(i18n.resolvedLanguage || i18n.language || fallbackLng)
-  await ensureNamespacesLoaded(initialLng)
+  await ensureNamespacesLoaded(initialLng, initialNamespaces)
   await i18n.changeLanguage(initialLng)
 
   return i18n

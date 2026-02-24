@@ -1,7 +1,7 @@
 import { Card, Table } from 'antd'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { GlassButton } from '../GlassUI'
+import { GlassButton } from '../GlassButton'
 
 export default function OrdersTabBase({
   hotelId,

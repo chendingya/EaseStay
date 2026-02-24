@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>三端协同总架构</title>
+  <style>
+    :root {
+      --bg: #eaf4ff;
+      --card: #ffffff;
+      --line: #39a9ff;
+      --line-soft: #8ec7ff;
+      --text: #0e1f3d;
+      --muted: #5b6b8c;
+      --title: #1677ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      color: var(--text);
+    }
+    .canvas {
+      width: 1920px;
+      height: 1080px;
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(145deg, #f4f9ff 0%, #eaf4ff 55%, #e2eeff 100%);
+    }
+    .header {
+      position: absolute;
+      left: 80px;
+      top: 40px;
+      font-size: 48px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #0a2d74;
+    }
+    .sub {
+      position: absolute;
+      left: 84px;
+      top: 106px;
+      font-size: 24px;
+      color: #3b5c92;
+    }
+    .node {
+      position: absolute;
+      border: 3px solid #b8dcff;
+      background: var(--card);
+      border-radius: 18px;
+      padding: 18px 20px;
+      box-shadow: 0 6px 16px rgba(17, 68, 153, 0.08);
+    }
+    .node h3 {
+      margin: 0 0 8px 0;
+      font-size: 28px;
+      color: var(--title);
+      line-height: 1.2;
+    }
+    .node p {
+      margin: 0;
+      font-size: 20px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .pill {
+      position: absolute;
+      background: #1677ff;
+      color: #fff;
+      font-size: 20px;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 8px 18px;
+    }
+    .line {
+      position: absolute;
+      background: var(--line);
+      border-radius: 999px;
+    }
+    .line.soft { background: var(--line-soft); }
+    .arrow {
+      position: absolute;
+      width: 0;
+      height: 0;
+      border-top: 10px solid transparent;
+      border-bottom: 10px solid transparent;
+      border-left: 16px solid var(--line);
+    }
+    .legend {
+      position: absolute;
+      left: 84px;
+      bottom: 56px;
+      font-size: 22px;
+      color: #30538a;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="header">三端协同总架构</div>
+    <div class="sub">移动端 + 管理端统一接入 API 网关，业务规则集中在服务层</div>
+
+    <div class="node" style="left:130px;top:220px;width:360px;height:170px;">
+      <h3>移动端</h3>
+      <p>Taro + React + antd-mobile</p>
+    </div>
+    <div class="node" style="left:560px;top:220px;width:390px;height:170px;">
+      <h3>管理端</h3>
+      <p>React + Vite + Ant Design</p>
+    </div>
+
+    <div class="pill" style="left:980px;top:250px;">HTTP / REST</div>
+
+    <div class="node" style="left:1160px;top:210px;width:640px;height:190px;">
+      <h3>API Gateway（Express）</h3>
+      <p>JWT 鉴权、路由聚合、接口兼容层</p>
+      <p style="margin-top:6px;">/auth /user /merchant/hotels /admin/hotels /requests ...</p>
+    </div>
+
+    <div class="node" style="left:270px;top:520px;width:250px;height:150px;">
+      <h3>Auth</h3>
+      <p>JWT + Role</p>
+    </div>
+    <div class="node" style="left:560px;top:520px;width:250px;height:150px;">
+      <h3>Hotel</h3>
+      <p>库存/状态</p>
+    </div>
+    <div class="node" style="left:850px;top:520px;width:250px;height:150px;">
+      <h3>Request</h3>
+      <p>审核流转</p>
+    </div>
+    <div class="node" style="left:1140px;top:520px;width:250px;height:150px;">
+      <h3>Order</h3>
+      <p>下单/支付</p>
+    </div>
+    <div class="node" style="left:1430px;top:520px;width:250px;height:150px;">
+      <h3>Notify</h3>
+      <p>消息通知</p>
+    </div>
+
+    <div class="node" style="left:520px;top:790px;width:430px;height:150px;">
+      <h3>Supabase（PostgreSQL）</h3>
+      <p>业务主数据：用户/酒店/房型/订单</p>
+    </div>
+    <div class="node" style="left:1030px;top:790px;width:360px;height:150px;">
+      <h3>Map Service</h3>
+      <p>POI / 地理编码</p>
+    </div>
+
+    <div class="line" style="left:490px;top:302px;width:70px;height:6px;"></div>
+    <div class="arrow" style="left:546px;top:295px;"></div>
+
+    <div class="line" style="left:950px;top:302px;width:210px;height:6px;"></div>
+    <div class="arrow" style="left:1146px;top:295px;"></div>
+
+    <div class="line soft" style="left:1480px;top:402px;width:6px;height:116px;"></div>
+    <div class="arrow" style="left:1471px;top:502px;transform:rotate(90deg);"></div>
+    <div class="line soft" style="left:1476px;top:518px;width:6px;height:170px;"></div>
+    <div class="line soft" style="left:735px;top:688px;width:744px;height:6px;"></div>
+    <div class="arrow" style="left:726px;top:681px;transform:rotate(180deg);"></div>
+
+    <div class="line soft" style="left:1190px;top:670px;width:6px;height:120px;"></div>
+    <div class="arrow" style="left:1181px;top:775px;transform:rotate(90deg);"></div>
+
+    <div class="legend">核心信息：双前端共网关、单服务规则源、跨端行为一致</div>
+  </div>
+</body>
+</html>
