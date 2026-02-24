@@ -4,6 +4,7 @@ import { View, Text } from '@tarojs/components'
 import { Button, Popup, Selector, Input } from 'antd-mobile'
 import { FilterOutline } from 'antd-mobile-icons'
 import { getMyOrders } from '../../services/auth'
+import { useUserContext } from '../../services/UserContext'
 import { createListByType } from '../../components/OrderList'
 import PageTopBar from '../../components/PageTopBar'
 import './index.css'
@@ -54,6 +55,8 @@ const getOrderHotelName = (order) => {
 
 export default function Orders() {
   const router = useRouter()
+  // 从根组件 Context 读取登录状态，切换 tab 时无需等待
+  const { isLogin } = useUserContext()
   const [activeTab, setActiveTab] = useState('all')
   const [list, setList] = useState([])
   const [total, setTotal] = useState(0)
@@ -62,7 +65,6 @@ export default function Orders() {
   const [refreshing, setRefreshing] = useState(false)
   const [pullDistance, setPullDistance] = useState(0)
   const [isHeaderElevated, setIsHeaderElevated] = useState(false)
-  const [isLogin, setIsLogin] = useState(false)
   const [filterVisible, setFilterVisible] = useState(false)
   const [filters, setFilters] = useState(defaultFilters)
   const [draftFilters, setDraftFilters] = useState(defaultFilters)
@@ -185,11 +187,6 @@ export default function Orders() {
   }
 
   useEffect(() => {
-    const token = Taro.getStorageSync('token')
-    setIsLogin(!!token)
-  }, [])
-
-  useEffect(() => {
     const incomingTab = String(router?.params?.tab || '').trim()
     if (incomingTab && statusTabs.some((item) => item.key === incomingTab)) {
       setActiveTab(incomingTab)
@@ -197,10 +194,7 @@ export default function Orders() {
   }, [router?.params?.tab])
 
   useDidShow(() => {
-    const token = Taro.getStorageSync('token')
-    const nextLogin = !!token
-    setIsLogin(nextLogin)
-    if (nextLogin) {
+    if (isLogin) {
       resetPagination()
       loadOrders({ reset: true })
     }
