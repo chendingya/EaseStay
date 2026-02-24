@@ -1,21 +1,73 @@
 .register-page {
-  min-height: calc(100vh - 58px);
+  height: calc(100vh - var(--app-bottom-nav-height));
+  height: calc(100dvh - var(--app-bottom-nav-height));
   background: #f5f7fb;
+  display: flex;
+  flex-direction: column;
 }
 
-.title {
+.auth-hero {
+  padding: 16px 16px 10px;
+}
+
+.auth-title {
+  color: #12263f;
   font-size: 24px;
-  font-weight: bold;
-  margin: 22px 20px 26px;
-  text-align: center;
-  color: #1f1f1f;
+  line-height: 1.2;
+  font-weight: 800;
 }
 
-.register-page .adm-form {
-  margin: 0 20px;
+.auth-subtitle {
+  margin-top: 8px;
+  color: #6f7e92;
+  font-size: 13px;
 }
 
-.footer-actions {
-  margin-top: 20px;
+.auth-card {
+  margin: 0 12px;
+  padding: 14px 12px 12px;
+  border-radius: 16px;
+  border: 1px solid #e6edf5;
+  background: #fff;
+}
+
+.auth-form .adm-form {
+  --border-top: none;
+  --border-bottom: none;
+}
+
+.auth-form .adm-form-item {
+  --padding-left: 0;
+  --padding-right: 0;
+}
+
+.auth-form .adm-form-item-label {
+  color: #5e6c84;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.auth-input,
+.auth-form .adm-input {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #e1e9f5;
+  background: #f5f8fd;
+}
+
+.auth-code-btn {
+  min-width: 84px;
+}
+
+.auth-submit-btn {
+  margin-top: 2px;
+}
+
+.auth-footer-actions {
+  margin-top: 10px;
   text-align: center;
+}
+
+.auth-link-btn {
+  color: #2a6ddf;
 }

@@ -1,7 +1,8 @@
 .list-page {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: calc(100vh - var(--app-bottom-nav-height));
+  height: calc(100dvh - var(--app-bottom-nav-height));
   background-color: #f5f7fb;
   --adm-font-size-main: 14px;
 }
@@ -136,11 +137,7 @@
 .list-content {
   flex: 1;
   min-height: 0;
-  padding: 12px;
-}
-
-.hotel-card {
-  margin-bottom: 12px;
+  padding: 4px 12px calc(12px + var(--app-safe-area-bottom));
 }
 
 .list-load-tip {

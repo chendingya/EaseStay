@@ -1,5 +1,6 @@
 .order-pay-page {
-  min-height: calc(100vh - 58px);
+  min-height: calc(100vh - var(--app-bottom-nav-height));
+  min-height: calc(100dvh - var(--app-bottom-nav-height));
   background: #f5f7fb;
 }
 

@@ -3,7 +3,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 58px;
+  height: calc(var(--app-bottom-nav-height) + var(--app-safe-area-bottom));
+  padding-bottom: var(--app-safe-area-bottom);
   background: #fff;
   border-top: 1px solid #ececec;
   display: flex;
