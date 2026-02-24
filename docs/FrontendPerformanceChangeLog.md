@@ -34,3 +34,6 @@
 | 2026-02-22 | RequestAudit | `admin/src/pages/RequestAudit.jsx` | 审核提交由全页 loading 改为行级 loading；列表刷新改为无阻塞刷新；`typeMap/statusMap/columns/tabItems` 收口到 memo | 降低审核动作引发的整页重渲染与交互阻塞，减少无意义重复计算 | `npm run build` 通过；`npm test` 通过 |
 | 2026-02-22 | Audit | `admin/src/pages/Audit.jsx` | `statusMap` 与表格 `columns` 使用 memo 收口，减少筛选/分页过程中的重复列对象重建 | 降低列表页渲染抖动与不必要重渲染开销 | `npm run build` 通过；`npm test` 通过 |
 | 2026-02-22 | Audit 首屏关键路径 | `admin/src/pages/Audit.jsx`、`admin/src/components/audit/AuditTable.jsx` | 审核列表 `Table` 下沉到懒加载子组件；父页仅保留筛选与数据态，表格在空闲时挂载并使用稳定占位回退 | 降低审核页首屏 JS 解析执行压力，改善 FCP/LCP（重依赖组件延后加载） | `npm run build` 通过；`npm test` 通过 |
+| 2026-02-24 | Audit 启动请求链路 | `admin/src/services/request.js`、`admin/src/services/notificationService.js` | 移除全局 300ms 请求防抖等待，改为“仅并发同键请求去重”；未读数接口去掉时间戳防缓存参数；消息组件改为动态按需加载 | 降低首屏关键请求等待与 Render-blocking 请求时延，减少首屏 Unused JS/CSS 注入 | `npm run build` 通过；`npm test` 通过 |
+| 2026-02-24 | i18n 首屏命名空间加载 | `admin/src/locales/index.js`、`admin/src/main.jsx` | 基础命名空间改为静态内联资源，不再走动态 import；应用启动时预加载当前路由命名空间 | 降低 i18n 初始化网络依赖树深度，缩短首屏可渲染等待 | `npm run build` 通过；`npm test` 通过 |
+| 2026-02-24 | App 非关键请求后置 | `admin/src/App.jsx` | 未读通知数、管理员待办统计改为空闲时初始化（`requestIdleCallback`/定时回退），避免与审核页首屏数据并行争抢关键带宽 | 优化 `/audit` 首屏关键路径优先级，改善 FCP/LCP 稳定性 | `npm run build` 通过；`npm test` 通过 |

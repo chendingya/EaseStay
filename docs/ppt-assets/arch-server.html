@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>服务端架构</title>
+  <style>
+    :root {
+      --bg: #edf6ff;
+      --card: #ffffff;
+      --title: #1677ff;
+      --text: #0e1f3d;
+      --muted: #5b6b8c;
+      --line: #39a9ff;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+    .canvas {
+      width: 1920px;
+      height: 1080px;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(140deg, #f7fbff, #eaf4ff);
+    }
+    .title {
+      position: absolute;
+      left: 80px;
+      top: 42px;
+      font-size: 48px;
+      font-weight: 800;
+      color: #0a2d74;
+    }
+    .node {
+      position: absolute;
+      background: var(--card);
+      border: 3px solid #bdddff;
+      border-radius: 16px;
+      box-shadow: 0 6px 16px rgba(21, 82, 170, 0.08);
+      padding: 16px 18px;
+    }
+    .node h3 { margin: 0 0 6px; font-size: 26px; color: var(--title); }
+    .node p { margin: 0; font-size: 20px; color: var(--muted); line-height: 1.38; }
+    .line { position: absolute; background: var(--line); border-radius: 999px; }
+    .arrow {
+      position: absolute;
+      width: 0; height: 0;
+      border-top: 10px solid transparent;
+      border-bottom: 10px solid transparent;
+      border-left: 15px solid var(--line);
+    }
+    .code {
+      position: absolute;
+      left: 82px;
+      right: 82px;
+      bottom: 58px;
+      border-radius: 14px;
+      background: #0f2b63;
+      color: #c8deff;
+      padding: 18px 22px;
+      font-family: Consolas, monospace;
+      font-size: 21px;
+      line-height: 1.43;
+      white-space: pre;
+    }
+  </style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="title">服务端分层架构（Express + Supabase）</div>
+
+    <div class="node" style="left:90px;top:210px;width:410px;height:160px;">
+      <h3>Router Layer</h3>
+      <p>统一装配业务路由与中间件</p>
+    </div>
+    <div class="node" style="left:560px;top:210px;width:410px;height:160px;">
+      <h3>Controller Layer</h3>
+      <p>参数解析 + 权限守卫 + 响应</p>
+    </div>
+    <div class="node" style="left:1030px;top:210px;width:410px;height:160px;">
+      <h3>Service Layer</h3>
+      <p>状态机/库存/订单/通知规则</p>
+    </div>
+    <div class="node" style="left:1500px;top:210px;width:330px;height:160px;">
+      <h3>Data Layer</h3>
+      <p>PostgreSQL + Map</p>
+    </div>
+
+    <div class="line" style="left:500px;top:287px;width:60px;height:6px;"></div>
+    <div class="arrow" style="left:546px;top:280px;"></div>
+    <div class="line" style="left:970px;top:287px;width:60px;height:6px;"></div>
+    <div class="arrow" style="left:1016px;top:280px;"></div>
+    <div class="line" style="left:1440px;top:287px;width:60px;height:6px;"></div>
+    <div class="arrow" style="left:1486px;top:280px;"></div>
+
+    <div class="node" style="left:180px;top:460px;width:740px;height:250px;">
+      <h3>鉴权与权限（中间件）</h3>
+      <p>authRequired：校验 Bearer Token，失败返回 401</p>
+      <p>requireRole(role)：校验角色，失败返回 403</p>
+      <p>在路由注册阶段统一应用，前后端权限语义一致</p>
+    </div>
+
+    <div class="node" style="left:980px;top:460px;width:760px;height:250px;">
+      <h3>状态机与一致性</h3>
+      <p>订单：pending_payment -> confirmed -> finished / cancelled</p>
+      <p>酒店：pending -> approved / rejected / offline</p>
+      <p>关键规则统一沉淀 service，避免前端分散判定</p>
+    </div>
+
+    <div class="code">router.use('/admin/hotels', authRequired, requireRole('admin'), adminHotelRoutes)
+router.use('/merchant/hotels', authRequired, requireRole('merchant'), merchantHotelRoutes)
+router.use('/requests', authRequired, requestRoutes)</div>
+  </div>
+</body>
+</html>

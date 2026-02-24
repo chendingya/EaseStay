@@ -41,6 +41,20 @@ function LazyRoute({ children, routeNamespacesReady = true }) {
   return <Suspense fallback={null}>{children}</Suspense>
 }
 
+function scheduleIdleTask(task, { timeout = 1200, fallbackDelay = 250 } = {}) {
+  if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+    const idleId = window.requestIdleCallback(task, { timeout })
+    return () => {
+      if (typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleId)
+      }
+    }
+  }
+
+  const timerId = setTimeout(task, fallbackDelay)
+  return () => clearTimeout(timerId)
+}
+
 // 面包屑组件
 function AppBreadcrumb() {
   const location = useLocation()
@@ -307,15 +321,25 @@ function App() {
 
   // Fetch unread count and subscribe to changes
   useEffect(() => {
-    if (auth.token) {
-      getUnreadCount().then(setUnreadCount)
-      
-      // 订阅未读数量变化
-      const unsubscribe = onUnreadCountChange((count) => {
-        setUnreadCount(count)
-      })
-      
-      return unsubscribe
+    if (!auth.token) return
+
+    let canceled = false
+    const cleanupIdle = scheduleIdleTask(() => {
+      getUnreadCount()
+        .then((count) => {
+          if (!canceled) setUnreadCount(count)
+        })
+        .catch((error) => console.error(error))
+    }, { timeout: 1500, fallbackDelay: 400 })
+
+    const unsubscribe = onUnreadCountChange((count) => {
+      if (!canceled) setUnreadCount(count)
+    })
+
+    return () => {
+      canceled = true
+      cleanupIdle()
+      unsubscribe()
     }
   }, [auth.token]) // Remove location.pathname dependency as we now have real-time updates via subscription
 
@@ -336,13 +360,14 @@ function App() {
   }, [auth.role, auth.token])
 
   useEffect(() => {
-    if (auth.token && auth.role === 'admin') {
-      const initialId = setTimeout(fetchAdminPending, 0)
-      const timerId = setInterval(fetchAdminPending, 30000)
-      return () => {
-        clearTimeout(initialId)
-        clearInterval(timerId)
-      }
+    if (!(auth.token && auth.role === 'admin')) return
+
+    const cleanupIdle = scheduleIdleTask(fetchAdminPending, { timeout: 2000, fallbackDelay: 700 })
+    const timerId = setInterval(fetchAdminPending, 30000)
+
+    return () => {
+      cleanupIdle()
+      clearInterval(timerId)
     }
   }, [auth.token, auth.role, fetchAdminPending])
 

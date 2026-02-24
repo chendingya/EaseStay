@@ -1,16 +1,35 @@
 import axios from 'axios'
-import { glassMessage as message } from '../components'
 
 const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:4100'
 const defaultErrorMessage = 'Request failed'
+let messageModulePromise = null
 
 const request = axios.create({
   baseURL: apiBase,
   timeout: 15000
 })
 
-const debounceDelay = 300
-const debounceMap = new Map()
+const inflightMap = new Map()
+
+const getMessage = async () => {
+  if (!messageModulePromise) {
+    messageModulePromise = import('../components/glassMessage').then((mod) => mod.glassMessage)
+  }
+  return messageModulePromise
+}
+
+const showMessage = (type, content) => {
+  getMessage()
+    .then((message) => {
+      const handler = message?.[type]
+      if (typeof handler === 'function') handler(content)
+    })
+    .catch((error) => {
+      if (import.meta.env.DEV) {
+        console.error('[request] load message module failed', error)
+      }
+    })
+}
 
 request.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
@@ -35,11 +54,11 @@ request.interceptors.response.use(
     }
     const data = response?.data
     if (data && data.success === false) {
-      message.error(data.message || defaultErrorMessage)
+      showMessage('error', data.message || defaultErrorMessage)
       return Promise.reject(new Error(data.message || defaultErrorMessage))
     }
     if (data && data.warning) {
-      message.warning(data.warning)
+      showMessage('warning', data.warning)
     }
     return response
   },
@@ -52,7 +71,7 @@ request.interceptors.response.use(
       console.info(`[perf] ${method} ${url} ${status} ${Math.round(duration)}ms`)
     }
     const msg = error?.response?.data?.message || error?.message || defaultErrorMessage
-    message.error(msg)
+    showMessage('error', msg)
     return Promise.reject(error)
   }
 )
@@ -70,54 +89,38 @@ const buildDebounceKey = (method, url, data, config) => {
   return [method, url, safeStringify(data), safeStringify(params)].join('|')
 }
 
-const debounceRequest = (key, executor) => {
-  const existing = debounceMap.get(key)
-  if (existing) {
-    clearTimeout(existing.timer)
-    existing.timer = setTimeout(() => {
-      executor()
-        .then(existing.resolve)
-        .catch(existing.reject)
-        .finally(() => debounceMap.delete(key))
-    }, debounceDelay)
-    return existing.promise
-  }
-  let resolve
-  let reject
-  const promise = new Promise((res, rej) => {
-    resolve = res
-    reject = rej
+const dedupeInflightRequest = (key, executor) => {
+  const existing = inflightMap.get(key)
+  if (existing) return existing
+
+  const task = executor().finally(() => {
+    inflightMap.delete(key)
   })
-  const timer = setTimeout(() => {
-    executor()
-      .then(resolve)
-      .catch(reject)
-      .finally(() => debounceMap.delete(key))
-  }, debounceDelay)
-  debounceMap.set(key, { timer, promise, resolve, reject })
-  return promise
+
+  inflightMap.set(key, task)
+  return task
 }
 
 export const api = {
   get: (url, config) => {
     const key = buildDebounceKey('GET', url, null, config)
-    return debounceRequest(key, () => request.get(url, config).then((res) => res.data))
+    return dedupeInflightRequest(key, () => request.get(url, config).then((res) => res.data))
   },
   post: (url, data, config) => {
     const key = buildDebounceKey('POST', url, data, config)
-    return debounceRequest(key, () => request.post(url, data, config).then((res) => res.data))
+    return dedupeInflightRequest(key, () => request.post(url, data, config).then((res) => res.data))
   },
   put: (url, data, config) => {
     const key = buildDebounceKey('PUT', url, data, config)
-    return debounceRequest(key, () => request.put(url, data, config).then((res) => res.data))
+    return dedupeInflightRequest(key, () => request.put(url, data, config).then((res) => res.data))
   },
   patch: (url, data, config) => {
     const key = buildDebounceKey('PATCH', url, data, config)
-    return debounceRequest(key, () => request.patch(url, data, config).then((res) => res.data))
+    return dedupeInflightRequest(key, () => request.patch(url, data, config).then((res) => res.data))
   },
   delete: (url, config) => {
     const key = buildDebounceKey('DELETE', url, null, config)
-    return debounceRequest(key, () => request.delete(url, config).then((res) => res.data))
+    return dedupeInflightRequest(key, () => request.delete(url, config).then((res) => res.data))
   }
 }
 

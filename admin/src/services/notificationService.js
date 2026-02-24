@@ -50,7 +50,7 @@ export const getNotifications = async ({ unreadOnly = false } = {}) => {
  */
 export const getUnreadCount = async () => {
   try {
-    const data = await api.get(`/api/notifications/unread-count?t=${Date.now()}`)
+    const data = await api.get('/api/notifications/unread-count')
     return data?.count || 0
   } catch (error) {
     console.error(error)
