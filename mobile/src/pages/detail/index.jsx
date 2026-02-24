@@ -2,14 +2,14 @@ import { View, Text, Image, ScrollView, Swiper, SwiperItem } from '@tarojs/compo
 import { useRouter } from '@tarojs/taro'
 import Taro from '@tarojs/taro'
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarPicker } from 'antd-mobile'
+import { CalendarPicker, Popup, Selector, Input, Button } from 'antd-mobile'
 import { api, resolveImageUrl } from '../../services/request'
 import { isFavoriteHotel, toggleFavoriteHotel } from '../../services/favorites'
 import PageTopBar from '../../components/PageTopBar'
 import BookingBottomBar from '../../components/BookingBottomBar'
 import { createListByType } from '../../components/OrderList'
 import { formatDate, getCalendarBounds, parseLocalDate, resolveDateRange } from '../../utils/dateRange'
-import { SendOutline, HeartOutline, HeartFill, MessageOutline, CalendarOutline } from 'antd-mobile-icons'
+import { SendOutline, HeartOutline, HeartFill, MessageOutline, CalendarOutline, FilterOutline } from 'antd-mobile-icons'
 import './index.css'
 
 // 默认设施
@@ -26,6 +26,12 @@ const formatPeriodLabel = (periods) => {
     const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
     return `${fmt(start)}~${fmt(end)}`
   }).filter(Boolean).join('，')
+}
+
+const defaultRoomFilters = {
+  roomTypeId: 'all',
+  rooms: '',
+  guests: ''
 }
 
 export default function Detail() {
@@ -49,6 +55,9 @@ export default function Detail() {
   const [bannerImageError, setBannerImageError] = useState({})
   const [bannerIndex, setBannerIndex] = useState(0)
   const [calendarVisible, setCalendarVisible] = useState(false)
+  const [filterVisible, setFilterVisible] = useState(false)
+  const [roomFilters, setRoomFilters] = useState(defaultRoomFilters)
+  const [draftFilters, setDraftFilters] = useState(defaultRoomFilters)
   const bannerSize = useMemo(() => {
     if (process.env.TARO_ENV !== 'h5') return { width: null, height: null }
     try {
@@ -186,6 +195,140 @@ export default function Detail() {
     }
   }
 
+  const openFilter = () => {
+    setDraftFilters(roomFilters)
+    setFilterVisible(true)
+  }
+
+  const handleApplyFilters = () => {
+    setRoomFilters(draftFilters)
+    setFilterVisible(false)
+  }
+
+  const handleResetFilters = () => {
+    setDraftFilters(defaultRoomFilters)
+  }
+
+  const safeHotel = hotel || {}
+
+  const images = safeHotel.images?.length > 0 
+    ? safeHotel.images 
+    : [safeHotel.cover_image || null]
+  
+  const facilities = safeHotel.facilities?.length > 0 
+    ? safeHotel.facilities 
+    : defaultFacilities
+  
+  const rawRoomTypes = safeHotel.roomTypes?.length > 0
+    ? safeHotel.roomTypes
+    : safeHotel.room_types?.length > 0
+      ? safeHotel.room_types
+      : [] // 移除默认假数据，没有就是没有
+
+  const roomTypes = [...rawRoomTypes].sort((a, b) => {
+    const priceA = Number(a?.display_price)
+    const priceB = Number(b?.display_price)
+    if (!Number.isFinite(priceA) && !Number.isFinite(priceB)) return 0
+    if (!Number.isFinite(priceA)) return 1
+    if (!Number.isFinite(priceB)) return -1
+    return priceA - priceB
+  })
+
+  const normalizePositiveInt = (value) => {
+    const num = Number(value)
+    if (!Number.isFinite(num) || num <= 0) return null
+    return Math.floor(num)
+  }
+
+  const getAvailableCount = (room) => {
+    const available = Number(room?.available_count)
+    if (Number.isFinite(available)) return available
+    const stock = Number(room?.stock)
+    return Number.isFinite(stock) ? stock : 0
+  }
+
+  const normalizedRoomCount = normalizePositiveInt(roomFilters.rooms)
+  const normalizedGuestCount = normalizePositiveInt(roomFilters.guests)
+  const hasRoomTypeFilter = roomFilters.roomTypeId && roomFilters.roomTypeId !== 'all'
+  const hasActiveRoomFilter = hasRoomTypeFilter || Boolean(normalizedRoomCount) || Boolean(normalizedGuestCount)
+
+  const roomTypeOptions = useMemo(() => {
+    const options = [{ label: '不限', value: 'all' }]
+    const seen = new Set()
+    roomTypes.forEach((room) => {
+      const id = String(room?.id || '')
+      if (!id || seen.has(id)) return
+      seen.add(id)
+      options.push({ label: room?.name || '未知房型', value: id })
+    })
+    return options
+  }, [roomTypes])
+
+  const selectedRoomTypeLabel = useMemo(() => {
+    const target = roomTypeOptions.find((item) => String(item.value) === String(roomFilters.roomTypeId))
+    return target?.label || '不限'
+  }, [roomTypeOptions, roomFilters.roomTypeId])
+
+  const filterSummary = (() => {
+    if (!hasActiveRoomFilter) return '筛选房型'
+    const parts = []
+    if (hasRoomTypeFilter) parts.push(selectedRoomTypeLabel)
+    if (normalizedRoomCount) parts.push(`${normalizedRoomCount}间`)
+    if (normalizedGuestCount) parts.push(`${normalizedGuestCount}人`)
+    return parts.length > 0 ? parts.join(' · ') : '筛选房型'
+  })()
+
+  const resolveRequiredRooms = (room) => {
+    if (normalizedRoomCount) return normalizedRoomCount
+    if (!normalizedGuestCount) return null
+    const capacity = Number(room?.capacity)
+    if (!Number.isFinite(capacity) || capacity <= 0) return null
+    return Math.ceil(normalizedGuestCount / capacity)
+  }
+
+  const matchRoomFilter = (room) => {
+    if (hasRoomTypeFilter && String(room?.id) !== String(roomFilters.roomTypeId)) return false
+    const requiredRooms = resolveRequiredRooms(room)
+    if (normalizedGuestCount) {
+      const capacity = Number(room?.capacity)
+      if (!Number.isFinite(capacity) || capacity <= 0) return false
+      const totalCapacity = capacity * (requiredRooms || 0)
+      if (totalCapacity < normalizedGuestCount) return false
+    }
+    if (requiredRooms && getAvailableCount(room) < requiredRooms) return false
+    return true
+  }
+
+  const matchedRooms = useMemo(() => {
+    if (!hasActiveRoomFilter) return roomTypes
+    return roomTypes.filter(matchRoomFilter)
+  }, [roomTypes, hasActiveRoomFilter, hasRoomTypeFilter, roomFilters.roomTypeId, normalizedRoomCount, normalizedGuestCount])
+
+  const otherRooms = useMemo(() => {
+    if (!hasActiveRoomFilter) return []
+    return roomTypes.filter((room) => !matchRoomFilter(room))
+  }, [roomTypes, hasActiveRoomFilter, hasRoomTypeFilter, roomFilters.roomTypeId, normalizedRoomCount, normalizedGuestCount])
+
+  const displayRoomTypes = hasActiveRoomFilter && matchedRooms.length > 0 ? [...matchedRooms, ...otherRooms] : roomTypes
+
+  const minRoomPrice = Number(safeHotel?.lowestPrice)
+  const hasMinRoomPrice = Number.isFinite(minRoomPrice)
+
+  const nights = () => {
+    if (!checkIn || !checkOut) return 1
+    const checkInDate = parseLocalDate(checkIn)
+    const checkOutDate = parseLocalDate(checkOut)
+    if (!checkInDate || !checkOutDate) return 1
+    const diff = (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)
+    return Math.max(1, diff)
+  }
+
+  const openingYear = safeHotel.opening_time ? safeHotel.opening_time.split('-')[0] : ''
+  const checkinPolicy = safeHotel.check_in_time || '14:00后'
+  const checkoutPolicy = safeHotel.check_out_time || '12:00前'
+  const childPolicy = safeHotel.child_policy || '欢迎儿童入住'
+  const starCount = Math.max(0, Math.min(5, Number(safeHotel?.star_rating) || 0))
+
   if (loading) {
     return (
       <View className="detail-page">
@@ -206,47 +349,6 @@ export default function Detail() {
     )
   }
 
-  const images = hotel.images?.length > 0 
-    ? hotel.images 
-    : [hotel.cover_image || null]
-  
-  const facilities = hotel.facilities?.length > 0 
-    ? hotel.facilities 
-    : defaultFacilities
-  
-  const rawRoomTypes = hotel.roomTypes?.length > 0
-    ? hotel.roomTypes
-    : hotel.room_types?.length > 0
-      ? hotel.room_types
-      : [] // 移除默认假数据，没有就是没有
-
-  const roomTypes = [...rawRoomTypes].sort((a, b) => {
-    const priceA = Number(a?.display_price)
-    const priceB = Number(b?.display_price)
-    if (!Number.isFinite(priceA) && !Number.isFinite(priceB)) return 0
-    if (!Number.isFinite(priceA)) return 1
-    if (!Number.isFinite(priceB)) return -1
-    return priceA - priceB
-  })
-
-  const minRoomPrice = Number(hotel?.lowestPrice)
-  const hasMinRoomPrice = Number.isFinite(minRoomPrice)
-
-  const nights = () => {
-    if (!checkIn || !checkOut) return 1
-    const checkInDate = parseLocalDate(checkIn)
-    const checkOutDate = parseLocalDate(checkOut)
-    if (!checkInDate || !checkOutDate) return 1
-    const diff = (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)
-    return Math.max(1, diff)
-  }
-
-  const openingYear = hotel.opening_time ? hotel.opening_time.split('-')[0] : ''
-  const checkinPolicy = hotel.check_in_time || '14:00后'
-  const checkoutPolicy = hotel.check_out_time || '12:00前'
-  const childPolicy = hotel.child_policy || '欢迎儿童入住'
-  const starCount = Math.max(0, Math.min(5, Number(hotel?.star_rating) || 0))
-
   const getRoomMeta = (room) => {
     const meta = []
     if (Number(room.area) > 0) {
@@ -265,6 +367,22 @@ export default function Detail() {
   }
 
   const isBooking = Boolean(bookingRoomId)
+  const renderRoomList = (items, emptyText) => (
+    createListByType({
+      type: 'room',
+      items,
+      embedded: true,
+      animate: true,
+      footer: null,
+      emptyText,
+      containerClassName: 'room-list-container',
+      listClassName: 'room-list',
+      bookingRoomId,
+      roomMetaResolver: getRoomMeta,
+      onBook: handleBook,
+      onOpen: handleOpenRoomDetail
+    })
+  )
 
   return (
     <View className="detail-page">
@@ -421,20 +539,42 @@ export default function Detail() {
         {/* 房型列表 */}
         <View className="room-section">
           <Text className="section-title">房型选择</Text>
-          {createListByType({
-            type: 'room',
-            items: roomTypes,
-            embedded: true,
-            animate: true,
-            footer: null,
-            emptyText: '该酒店暂无上架房型',
-            containerClassName: 'room-list-container',
-            listClassName: 'room-list',
-            bookingRoomId,
-            roomMetaResolver: getRoomMeta,
-            onBook: handleBook,
-            onOpen: handleOpenRoomDetail
-          })}
+          <View className="room-filter-bar glass-card">
+            <View className="room-filter-summary">
+              <Text className="room-filter-title">筛选条件</Text>
+              <Text className={`room-filter-desc${hasActiveRoomFilter ? ' active' : ''}`}>{filterSummary}</Text>
+            </View>
+            <View className="room-filter-action" onClick={openFilter}>
+              <FilterOutline className="room-filter-icon" />
+              <Text className="room-filter-text">筛选</Text>
+            </View>
+          </View>
+
+          {hasActiveRoomFilter ? (
+            matchedRooms.length > 0 ? (
+              <>
+                <Text className="room-filter-group-title">符合条件的房型</Text>
+                {renderRoomList(matchedRooms, '暂无符合条件的房型')}
+                {otherRooms.length > 0 ? (
+                  <>
+                    <View className="room-filter-divider">
+                      <View className="room-filter-divider-line" />
+                      <Text className="room-filter-divider-text">其他房型</Text>
+                      <View className="room-filter-divider-line" />
+                    </View>
+                    {renderRoomList(otherRooms, '')}
+                  </>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <Text className="room-filter-empty-tip">暂无符合条件的房型，已展示其他房型</Text>
+                {renderRoomList(roomTypes, '该酒店暂无上架房型')}
+              </>
+            )
+          ) : (
+            renderRoomList(roomTypes, '该酒店暂无上架房型')
+          )}
         </View>
 
         {/* 设施服务 */}
@@ -527,11 +667,59 @@ export default function Detail() {
         loading={isBooking}
         actionClassName='main-book-btn'
         onAction={() => {
-          if (!isBooking && roomTypes.length > 0) {
-            handleBook(roomTypes[0])
+          if (!isBooking && displayRoomTypes.length > 0) {
+            handleBook(displayRoomTypes[0])
           }
         }}
       />
+
+      <Popup
+        visible={filterVisible}
+        onMaskClick={() => setFilterVisible(false)}
+        bodyStyle={{ borderTopLeftRadius: '16px', borderTopRightRadius: '16px' }}
+      >
+        <View className="room-filter-panel">
+          <Text className="room-filter-panel-title">筛选条件</Text>
+
+          <View className="room-filter-section">
+            <Text className="room-filter-label">房型</Text>
+            <Selector
+              options={roomTypeOptions}
+              value={[draftFilters.roomTypeId]}
+              onChange={(value) => {
+                setDraftFilters((prev) => ({ ...prev, roomTypeId: value?.[0] || 'all' }))
+              }}
+            />
+          </View>
+
+          <View className="room-filter-section">
+            <Text className="room-filter-label">间数</Text>
+            <Input
+              type="number"
+              placeholder="不限"
+              value={draftFilters.rooms}
+              clearable
+              onChange={(value) => setDraftFilters((prev) => ({ ...prev, rooms: value }))}
+            />
+          </View>
+
+          <View className="room-filter-section">
+            <Text className="room-filter-label">人数</Text>
+            <Input
+              type="number"
+              placeholder="不限"
+              value={draftFilters.guests}
+              clearable
+              onChange={(value) => setDraftFilters((prev) => ({ ...prev, guests: value }))}
+            />
+          </View>
+
+          <View className="room-filter-actions">
+            <Button onClick={handleResetFilters}>重置</Button>
+            <Button color="primary" onClick={handleApplyFilters}>应用</Button>
+          </View>
+        </View>
+      </Popup>
 
       <CalendarPicker
         selectionMode='range'

@@ -5,6 +5,9 @@ export const apiBase = (typeof process !== 'undefined' && process.env && process
 export const resolveImageUrl = (url, options = {}) => {
   if (!url) return ''
   if (process.env.TARO_ENV !== 'h5') return url
+  // 如果是相对路径或 data URI，直接返回
+  if (!url.startsWith('http')) return url
+
   const width = Number.isFinite(Number(options.width)) ? Math.round(Number(options.width)) : null
   const height = Number.isFinite(Number(options.height)) ? Math.round(Number(options.height)) : null
   const quality = Number.isFinite(Number(options.quality)) ? Math.round(Number(options.quality)) : null

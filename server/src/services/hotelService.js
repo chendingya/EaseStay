@@ -1608,7 +1608,9 @@ const listPublicHotels = async ({ query }) => {
     userLat,
     userLng,
     page = 1,
-    pageSize = 10
+    pageSize = 10,
+    rooms,
+    guests
   } = query || {}
   const pricingContext = { checkIn, checkOut }
 
@@ -1621,12 +1623,66 @@ const listPublicHotels = async ({ query }) => {
   const hasMinPrice = minPrice !== undefined && minPrice !== null && String(minPrice).trim() !== '' && Number.isFinite(minPriceValue)
   const hasMaxPrice = maxPrice !== undefined && maxPrice !== null && String(maxPrice).trim() !== '' && Number.isFinite(maxPriceValue)
   const needFinalPriceFilter = hasMinPrice || hasMaxPrice
+  const normalizePositiveInt = (value) => {
+    const num = Number(value)
+    if (!Number.isFinite(num) || num <= 0) return null
+    return Math.floor(num)
+  }
+  const normalizedRooms = normalizePositiveInt(rooms)
+  const normalizedGuests = normalizePositiveInt(guests)
+  const shouldFilterByRoomNeed = Boolean(normalizedRooms || normalizedGuests)
   const inFinalPriceRange = (value) => {
     const num = Number(value)
     if (!Number.isFinite(num)) return false
     if (hasMinPrice && num < minPriceValue) return false
     if (hasMaxPrice && num > maxPriceValue) return false
     return true
+  }
+  const resolveRequiredRooms = (capacity) => {
+    if (normalizedRooms) return normalizedRooms
+    if (!normalizedGuests) return null
+    if (!Number.isFinite(capacity) || capacity <= 0) return null
+    return Math.ceil(normalizedGuests / capacity)
+  }
+  const filterHotelsByRoomNeed = async (hotels) => {
+    if (!shouldFilterByRoomNeed) return { ok: true, data: hotels }
+    const hotelIds = (hotels || []).map((hotel) => hotel.id).filter((id) => Number.isFinite(Number(id)))
+    if (!hotelIds.length) return { ok: true, data: [] }
+    const { data: roomTypes, error } = await supabase
+      .from('room_types')
+      .select('id, hotel_id, capacity, stock, is_active')
+      .in('hotel_id', hotelIds)
+    if (error) {
+      return { ok: false, status: 500, message: '查询房型失败：' + error.message }
+    }
+    const roomTypeIds = (roomTypes || []).map((room) => room.id).filter((id) => Number.isFinite(Number(id)))
+    const usedResult = await getActiveOrderQtyMap(
+      checkIn && checkOut
+        ? { roomTypeIds, checkIn, checkOut }
+        : { roomTypeIds, asOfDate: new Date() }
+    )
+    if (!usedResult.ok) {
+      return { ok: false, status: 500, message: usedResult.message }
+    }
+    const matchedHotelIds = new Set()
+    ;(roomTypes || []).forEach((room) => {
+      const stock = normalizeNumber(room.stock)
+      const used = usedResult.map.get(room.id) || 0
+      const active = room.is_active !== false
+      const available = computeRoomAvailability({ stock, used, isActive: active }).available
+      if (available <= 0) return
+      const capacity = Number(room.capacity)
+      const requiredRooms = resolveRequiredRooms(capacity)
+      if (normalizedGuests) {
+        if (!Number.isFinite(capacity) || capacity <= 0) return
+        const totalCapacity = capacity * (requiredRooms || 0)
+        if (totalCapacity < normalizedGuests) return
+      }
+      if (requiredRooms && available < requiredRooms) return
+      matchedHotelIds.add(room.hotel_id)
+    })
+    const filtered = (hotels || []).filter((hotel) => matchedHotelIds.has(hotel.id))
+    return { ok: true, data: filtered }
   }
 
   let dbQuery = supabase
@@ -1797,6 +1853,11 @@ const listPublicHotels = async ({ query }) => {
     if (needFinalPriceFilter) {
       enriched = enriched.filter((hotel) => inFinalPriceRange(hotel.lowestPrice))
     }
+    if (shouldFilterByRoomNeed) {
+      const roomFilterResult = await filterHotelsByRoomNeed(enriched)
+      if (!roomFilterResult.ok) return roomFilterResult
+      enriched = roomFilterResult.data
+    }
     enriched.sort((a, b) => {
       if (tagList.length) {
         const tagDiff = (b._tagMatchCount || 0) - (a._tagMatchCount || 0)
@@ -1840,6 +1901,11 @@ const listPublicHotels = async ({ query }) => {
       ...hotel,
       lowestPrice: priceMap[hotel.id]
     })).filter((hotel) => inFinalPriceRange(hotel.lowestPrice))
+    if (shouldFilterByRoomNeed) {
+      const roomFilterResult = await filterHotelsByRoomNeed(enriched)
+      if (!roomFilterResult.ok) return roomFilterResult
+      enriched = roomFilterResult.data
+    }
 
     applyTagAwareSort(enriched, { sort, tagList })
 
@@ -1877,6 +1943,11 @@ const listPublicHotels = async ({ query }) => {
       ...hotel,
       lowestPrice: priceMap[hotel.id]
     }))
+    if (shouldFilterByRoomNeed) {
+      const roomFilterResult = await filterHotelsByRoomNeed(enriched)
+      if (!roomFilterResult.ok) return roomFilterResult
+      enriched = roomFilterResult.data
+    }
 
     applyTagAwareSort(enriched, { sort, tagList })
 
@@ -1885,6 +1956,43 @@ const listPublicHotels = async ({ query }) => {
       .slice(offset, offset + normalizedPageSize)
       .map(({ _tagMatchCount, ...rest }) => rest)
 
+    return {
+      ok: true,
+      status: 200,
+      data: {
+        page: normalizedPage,
+        pageSize: normalizedPageSize,
+        total,
+        list
+      }
+    }
+  }
+
+  if (shouldFilterByRoomNeed) {
+    const { data: hotels, error } = await dbQuery
+    if (error) {
+      return { ok: false, status: 500, message: '查询失败：' + error.message }
+    }
+    const hotelIds = (hotels || []).map((h) => h.id)
+    const priceMap = await getLowestPrices(hotelIds, pricingContext)
+    let enriched = (hotels || []).map((hotel) => ({
+      ...hotel,
+      lowestPrice: priceMap[hotel.id]
+    }))
+    const roomFilterResult = await filterHotelsByRoomNeed(enriched)
+    if (!roomFilterResult.ok) return roomFilterResult
+    enriched = roomFilterResult.data
+    if (sort === 'price_asc') {
+      enriched.sort((a, b) => (a.lowestPrice || 0) - (b.lowestPrice || 0))
+    } else if (sort === 'price_desc') {
+      enriched.sort((a, b) => (b.lowestPrice || 0) - (a.lowestPrice || 0))
+    } else if (sort === 'star' || sort === 'score_desc') {
+      enriched.sort((a, b) => (b.star_rating || 0) - (a.star_rating || 0))
+    } else if (sort === 'recommend') {
+      enriched.sort((a, b) => (b.star_rating || 0) - (a.star_rating || 0) || (a.lowestPrice || 0) - (b.lowestPrice || 0))
+    }
+    const total = enriched.length
+    const list = enriched.slice(offset, offset + normalizedPageSize)
     return {
       ok: true,
       status: 200,
@@ -1966,13 +2074,16 @@ const getPublicHotel = async ({ hotelId, query }) => {
     return { ok: false, status: 500, message: usedResult.message }
   }
 
-  const availableRoomTypes = (roomTypes || []).filter((room) => {
+  const availableRoomTypes = (roomTypes || []).map((room) => {
     const stock = normalizeNumber(room.stock)
     const used = usedResult.map.get(room.id) || 0
     const active = room.is_active !== false
     const available = computeRoomAvailability({ stock, used, isActive: active }).available
-    return available > 0
-  })
+    return {
+      ...room,
+      available_count: available
+    }
+  }).filter((room) => room.available_count > 0)
 
   const pricedRoomTypes = availableRoomTypes.map((room) => {
     const pricing = calculateRoomPrice({

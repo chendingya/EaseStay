@@ -15,7 +15,8 @@ const normalizeNumber = (value) => {
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
 const getAllowedHosts = () => {
-  const allowAll = process.env.IMAGE_PROXY_ALLOW_ALL === 'true'
+  // 默认允许所有域名，除非明确设置为 'false'
+  const allowAll = process.env.IMAGE_PROXY_ALLOW_ALL !== 'false'
   if (allowAll) {
     return { allowAll: true, allowedHosts: new Set() }
   }
