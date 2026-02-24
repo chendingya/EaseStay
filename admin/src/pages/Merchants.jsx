@@ -1,14 +1,13 @@
-import { Card, Table, Space, Typography, Tag, Modal, Form, Input } from 'antd'
-import { useCallback, useEffect, useState } from 'react'
+import { Button, Card, Input, Space, Spin, Typography, message } from 'antd'
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import UserOutlined from '@ant-design/icons/es/icons/UserOutlined'
-import ShopOutlined from '@ant-design/icons/es/icons/ShopOutlined'
-import EyeOutlined from '@ant-design/icons/es/icons/EyeOutlined'
-import KeyOutlined from '@ant-design/icons/es/icons/KeyOutlined'
-import { GlassButton, TableFilterBar, glassMessage as message } from '../components'
+import SearchOutlined from '@ant-design/icons/es/icons/SearchOutlined'
 import { api } from '../services'
 import { useTranslation } from 'react-i18next'
 import { useRemoteTableQuery } from '../hooks/useRemoteTableQuery'
+
+const MerchantsTable = lazy(() => import('../components/merchants/MerchantsTable.jsx'))
+const ResetPasswordModal = lazy(() => import('../components/merchants/ResetPasswordModal.jsx'))
 
 export default function Merchants() {
   const navigate = useNavigate()
@@ -17,8 +16,8 @@ export default function Merchants() {
   const [merchants, setMerchants] = useState([])
   const [total, setTotal] = useState(0)
   const [resetModal, setResetModal] = useState(null)
-  const [form] = Form.useForm()
   const [resetting, setResetting] = useState(false)
+  const [renderTable, setRenderTable] = useState(false)
   const {
     searchInput,
     setSearchInput,
@@ -54,21 +53,19 @@ export default function Merchants() {
     }
   }, [keyword, page, pageSize, t])
 
-  const handleResetPassword = async () => {
+  const handleResetPassword = async ({ newPassword, confirmPassword }) => {
     try {
-      const values = await form.validateFields()
-      if (values.newPassword !== values.confirmPassword) {
+      if (newPassword !== confirmPassword) {
         message.error(t('merchants.resetPassword.mismatch'))
         return
       }
 
       setResetting(true)
-      await api.post(`/api/user/merchants/${resetModal.id}/reset-password`, { newPassword: values.newPassword })
+      await api.post(`/api/user/merchants/${resetModal.id}/reset-password`, { newPassword })
       message.success(t('merchants.resetPassword.success'))
       setResetModal(null)
-      form.resetFields()
     } catch (err) {
-      if (err.errorFields) return
+      if (err?.errorFields) return
       console.error(err)
       message.error(t('merchants.resetPassword.error'))
     } finally {
@@ -80,64 +77,34 @@ export default function Merchants() {
     fetchMerchants()
   }, [fetchMerchants])
 
+  useEffect(() => {
+    if (renderTable || loading) return
+
+    let canceled = false
+    const showTable = () => {
+      if (!canceled) setRenderTable(true)
+    }
+
+    if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      const idleId = window.requestIdleCallback(showTable, { timeout: 1200 })
+      return () => {
+        canceled = true
+        if (typeof window.cancelIdleCallback === 'function') {
+          window.cancelIdleCallback(idleId)
+        }
+      }
+    }
+
+    const timer = setTimeout(showTable, 180)
+    return () => {
+      canceled = true
+      clearTimeout(timer)
+    }
+  }, [loading, renderTable])
+
   const handleRefresh = async () => {
     await fetchMerchants()
   }
-
-  const columns = [
-    {
-      title: t('merchants.columns.username'),
-      dataIndex: 'username',
-      render: (text) => (
-        <Space>
-          <UserOutlined />
-          <span>{text}</span>
-        </Space>
-      )
-    },
-    {
-      title: t('merchants.columns.hotelCount'),
-      dataIndex: 'hotelCount',
-      render: (count, record) => (
-        <Space>
-          <ShopOutlined />
-          <span>{t('merchants.hotelCountValue', { count })}</span>
-          {record.approvedCount > 0 && (
-            <Tag color="green">{t('merchants.approvedCountValue', { count: record.approvedCount })}</Tag>
-          )}
-        </Space>
-      )
-    },
-    {
-      title: t('merchants.columns.createdAt'),
-      dataIndex: 'created_at',
-      render: (v) => v ? new Date(v).toLocaleDateString('zh-CN') : '-'
-    },
-    {
-      title: t('merchants.columns.action'),
-      render: (_, record) => (
-        <Space>
-          <GlassButton
-            type="link"
-            icon={<EyeOutlined />}
-            onClick={() => navigate(`/merchants/${record.id}`)}
-          >
-            {t('common.view')}
-          </GlassButton>
-          <GlassButton
-            type="link"
-            icon={<KeyOutlined />}
-            onClick={() => {
-              setResetModal(record)
-              form.resetFields()
-            }}
-          >
-            {t('merchants.actions.resetPassword')}
-          </GlassButton>
-        </Space>
-      )
-    }
-  ]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 24 }}>
@@ -147,86 +114,53 @@ export default function Merchants() {
       </div>
 
       <Card>
-        <TableFilterBar
-          searchPlaceholder={t('merchants.filter.searchPlaceholder')}
-          searchValue={searchInput}
-          onSearchChange={setSearchInput}
-          onReset={resetKeyword}
-          onRefresh={handleRefresh}
-          refreshLoading={loading}
-          resetText={t('merchants.filter.reset')}
-          refreshText={t('common.refresh')}
-        />
-        <Table
-          columns={columns}
-          dataSource={merchants}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            current: page,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            onChange: handlePageChange
-          }}
-        />
+        <div style={{ marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'space-between' }}>
+          <Input
+            placeholder={t('merchants.filter.searchPlaceholder')}
+            prefix={<SearchOutlined style={{ color: '#bbb' }} />}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            allowClear
+            style={{ width: 320, maxWidth: '100%' }}
+          />
+          <Space>
+            <Button onClick={resetKeyword}>{t('merchants.filter.reset')}</Button>
+            <Button type="primary" onClick={handleRefresh} loading={loading}>
+              {t('common.refresh')}
+            </Button>
+          </Space>
+        </div>
+
+        {renderTable ? (
+          <Suspense fallback={<div style={{ minHeight: 280, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>}>
+            <MerchantsTable
+              merchants={merchants}
+              loading={loading}
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={handlePageChange}
+              onNavigateDetail={(id) => navigate(`/merchants/${id}`)}
+              onOpenResetPassword={setResetModal}
+            />
+          </Suspense>
+        ) : (
+          <div style={{ minHeight: 280, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Spin />
+          </div>
+        )}
       </Card>
 
-      {/* 重置密码弹窗 */}
-      <Modal
-        title={t('merchants.resetPassword.title', { username: resetModal?.username })}
-        open={!!resetModal}
-        onCancel={() => {
-          setResetModal(null)
-          form.resetFields()
-        }}
-        footer={null}
-        destroyOnHidden
-      >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item
-            name="newPassword"
-            label={t('merchants.resetPassword.new')}
-            rules={[
-              { required: true, message: t('merchants.resetPassword.newRequired') },
-              { min: 6, message: t('merchants.resetPassword.minLength') }
-            ]}
-          >
-            <Input.Password placeholder={t('merchants.resetPassword.newPlaceholder')} />
-          </Form.Item>
-
-          <Form.Item
-            name="confirmPassword"
-            label={t('merchants.resetPassword.confirm')}
-            rules={[
-              { required: true, message: t('merchants.resetPassword.confirmRequired') },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue('newPassword') === value) {
-                    return Promise.resolve()
-                  }
-                  return Promise.reject(new Error(t('merchants.resetPassword.mismatch')))
-                }
-              })
-            ]}
-          >
-            <Input.Password placeholder={t('merchants.resetPassword.confirmPlaceholder')} />
-          </Form.Item>
-
-          <Form.Item style={{ marginBottom: 0 }}>
-            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-              <GlassButton onClick={() => {
-                setResetModal(null)
-                form.resetFields()
-              }}>{t('common.cancel')}</GlassButton>
-              <GlassButton type="primary" loading={resetting} onClick={handleResetPassword}>
-                {t('merchants.resetPassword.confirmAction')}
-              </GlassButton>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
+      {resetModal ? (
+        <Suspense fallback={null}>
+          <ResetPasswordModal
+            record={resetModal}
+            resetting={resetting}
+            onCancel={() => setResetModal(null)}
+            onSubmit={handleResetPassword}
+          />
+        </Suspense>
+      ) : null}
     </div>
   )
 }

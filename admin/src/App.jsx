@@ -16,7 +16,6 @@ import { useTranslation } from 'react-i18next'
 import zhCN from 'antd/locale/zh_CN'
 import enUS from 'antd/locale/en_US'
 import { changeLanguage, hasLoadedNamespaces, loadNamespaces } from './locales'
-import { getUnreadCount, onUnreadCountChange, api } from './services'
 import { routeConfig, getRouteNamespaces } from './routes/routeConfig'
 
 const appPerfStart = import.meta.env.DEV ? performance.now() : 0
@@ -35,6 +34,14 @@ const AdminHotels = lazy(() => import('./pages/AdminHotels.jsx'))
 const AdminHotelDetail = lazy(() => import('./pages/AdminHotelDetail.jsx'))
 const MerchantDetail = lazy(() => import('./pages/MerchantDetail.jsx'))
 const OrderStats = lazy(() => import('./pages/OrderStats.jsx'))
+let servicesModulePromise = null
+
+function loadServicesModule() {
+  if (!servicesModulePromise) {
+    servicesModulePromise = import('./services')
+  }
+  return servicesModulePromise
+}
 
 function LazyRoute({ children, routeNamespacesReady = true }) {
   if (!routeNamespacesReady) return null
@@ -324,17 +331,22 @@ function App() {
     if (!auth.token) return
 
     let canceled = false
-    const cleanupIdle = scheduleIdleTask(() => {
-      getUnreadCount()
-        .then((count) => {
-          if (!canceled) setUnreadCount(count)
-        })
-        .catch((error) => console.error(error))
-    }, { timeout: 1500, fallbackDelay: 400 })
+    let unsubscribe = () => {}
+    const cleanupIdle = scheduleIdleTask(async () => {
+      try {
+        const { getUnreadCount, onUnreadCountChange } = await loadServicesModule()
+        if (canceled) return
 
-    const unsubscribe = onUnreadCountChange((count) => {
-      if (!canceled) setUnreadCount(count)
-    })
+        const count = await getUnreadCount()
+        if (!canceled) setUnreadCount(count)
+
+        unsubscribe = onUnreadCountChange((nextCount) => {
+          if (!canceled) setUnreadCount(nextCount)
+        })
+      } catch (error) {
+        console.error(error)
+      }
+    }, { timeout: 1500, fallbackDelay: 400 })
 
     return () => {
       canceled = true
@@ -346,6 +358,7 @@ function App() {
   const fetchAdminPending = useCallback(async () => {
     if (!auth.token || auth.role !== 'admin') return
     try {
+      const { api } = await loadServicesModule()
       const [hotels, requests] = await Promise.all([
         api.get('/api/admin/hotels?status=pending'),
         api.get('/api/admin/requests?status=pending')

@@ -1,6 +1,6 @@
 import { Row, Col, Input, Select, Space } from 'antd'
 import SearchOutlined from '@ant-design/icons/es/icons/SearchOutlined'
-import { GlassButton } from './GlassUI'
+import { GlassButton } from './GlassButton'
 
 export default function TableFilterBar({
   searchPlaceholder,

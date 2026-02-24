@@ -1,7 +1,7 @@
 import { DatePicker, Form, InputNumber, Modal, Radio, Space } from 'antd'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { GlassButton } from '../GlassUI'
+import { GlassButton } from '../GlassButton'
 
 export default function DiscountModal({ open, selectedRoom, onClose, onSubmit, loading }) {
   const [form] = Form.useForm()

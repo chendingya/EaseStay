@@ -1,3 +1,5 @@
-export { GlassCard, GlassButton, GanttTimeline } from './GlassUI'
+export { GlassCard } from './GlassCard'
+export { GlassButton } from './GlassButton'
+export { GanttTimeline } from './GanttTimeline'
 export { glassMessage } from './glassMessage'
 export { default as TableFilterBar } from './TableFilterBar'
