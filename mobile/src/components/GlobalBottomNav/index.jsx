@@ -145,7 +145,7 @@ export default function GlobalBottomNav() {
   }
 
   return (
-    <View className='global-bottom-nav'>
+    <View className='global-bottom-nav' role='navigation' aria-label='主导航'>
       {navItems.map((item) => {
         const Icon = item.icon
         const active = isNavActive(currentPath, item.key)

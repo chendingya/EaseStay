@@ -35,6 +35,7 @@ export default function HotelCard({ hotel, onClick, badgeText, extraMetaItems = 
             src={optimizedImageSrc}
             mode="aspectFill"
             className="hotel-card-image"
+            alt={hotelName}
             width={112}
             height={132}
             lazyLoad

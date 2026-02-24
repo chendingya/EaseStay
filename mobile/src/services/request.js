@@ -1,6 +1,10 @@
 import Taro from '@tarojs/taro'
 
-export const apiBase = (typeof process !== 'undefined' && process.env && process.env.TARO_APP_API_BASE) || 'http://127.0.0.1:4100'
+// H5 模式下用浏览器当前 origin 作为 API base（自动适配任何 IP/host），
+// 配合 webpack dev server proxy（/api → 127.0.0.1:4100）实现手机联调；
+// 也可通过 TARO_APP_API_BASE 环境变量覆盖（生产部署时使用）。
+export const apiBase = (typeof process !== 'undefined' && process.env && process.env.TARO_APP_API_BASE)
+  || (process.env.TARO_ENV === 'h5' && typeof window !== 'undefined' ? window.location.origin : 'http://127.0.0.1:4100')
 
 export const resolveImageUrl = (url, options = {}) => {
   if (!url) return ''

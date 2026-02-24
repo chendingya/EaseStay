@@ -546,7 +546,7 @@ export default function Index() {
   }
 
   return (
-    <View className="index-page">
+    <View className="index-page" role="main">
       {/* 沉浸式 Banner */}
       <View className="banner-container">
         <Swiper autoplay loop className="banner-swiper">
@@ -724,6 +724,7 @@ export default function Index() {
                           className="hot-card-image"
                           src={optimizedImageSrc}
                           mode="widthFix"
+                          alt={hotelName}
                           style={{ width: '100%', height: `${resolveHotImageHeight(hotel.id)}px` }}
                           lazyLoad
                           onLoad={handleHotImageLoad(hotel.id)}

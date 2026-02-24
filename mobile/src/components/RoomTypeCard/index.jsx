@@ -61,6 +61,7 @@ function RoomTypeCard({
           className='room-type-card-image'
           src={optimizedImageSrc}
           mode='aspectFill'
+          alt={room?.name || '房型图片'}
           width={84}
           height={84}
           lazyLoad

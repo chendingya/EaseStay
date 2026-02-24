@@ -244,6 +244,7 @@ export default function RoomDetail() {
                       className='room-banner-image'
                       src={optimizedImageSrc}
                       mode='aspectFill'
+                      alt={room?.name || '房间图片'}
                       style={{ width: '100%', height: '280px' }}
                       lazyLoad={idx > 0}
                       onError={() => setBannerImageError((prev) => ({ ...prev, [idx]: true }))}

@@ -477,6 +477,7 @@ export default function Detail() {
                   className={`hero-bg-img${idx === bannerIndex ? ' hero-bg-active' : ''}`}
                   src={resolveImageUrl(slide.src, { quality: 40 })}
                   mode="aspectFill"
+                  alt=""
                 />
               ) : idx === bannerIndex ? (
                 <View key={idx} className={`hero-bg-fallback${idx === bannerIndex ? ' hero-bg-active' : ''}`} />
@@ -499,6 +500,7 @@ export default function Detail() {
                         className="hero-img"
                         src={resolveImageUrl(slide.src, { quality: 80 })}
                         mode={heroExpanded ? 'aspectFit' : 'aspectFill'}
+                        alt={slide.label || '酒店图片'}
                         onError={() => setBannerImageError((prev) => ({ ...prev, [idx]: true }))}
                       />
                     ) : (
