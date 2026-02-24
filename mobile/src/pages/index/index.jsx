@@ -30,6 +30,7 @@ export default function Index() {
   const [city, setCity] = useState(() => storedParams.city || '上海')
   const [keyword, setKeyword] = useState(() => storedParams.keyword || '')
   const [quickTags, setQuickTags] = useState([]) // Load from backend
+  const [tagsLoading, setTagsLoading] = useState(false)
   
   // 初始化时统一按本地时区修正，避免 YYYY-MM-DD 在非东八区被解析成前一天
   const [checkIn, setCheckIn] = useState(() => initialDateRange.checkIn)
@@ -199,6 +200,7 @@ export default function Index() {
   }
 
   const fetchQuickTags = async () => {
+    setTagsLoading(true)
     try {
       // Fetch preset facilities as quick tags
       const res = await api.get('/api/presets/facilities')
@@ -214,6 +216,8 @@ export default function Index() {
     } catch (e) {
       console.error('Fetch tags failed', e)
       setQuickTags(['亲子', '免费停车', '高评分', '近地铁', '含早餐', '海景房'])
+    } finally {
+      setTagsLoading(false)
     }
   }
 
@@ -682,19 +686,49 @@ export default function Index() {
       {deferNonCritical && (
         <View style={{ padding: '20px 16px 0' }}>
           <View style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 12 }}>快捷筛选</View>
-          <Space wrap>
-            {quickTags.map((tag, idx) => (
-              <Tag 
-                key={idx} 
-                fill="outline" 
-                color="primary"
-                onClick={() => handleTagClick(tag)}
-                style={{ padding: '6px 12px', borderRadius: 4, background: '#e6f7ff', border: 'none', color: '#0086F6' }}
-              >
-                {tag}
-              </Tag>
+          {tagsLoading ? (
+            <View className="skeleton-tags-row">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <View key={i} className="skeleton-tag" />
+              ))}
+            </View>
+          ) : (
+            <Space wrap>
+              {quickTags.map((tag, idx) => (
+                <Tag 
+                  key={idx} 
+                  fill="outline" 
+                  color="primary"
+                  onClick={() => handleTagClick(tag)}
+                  style={{ padding: '6px 12px', borderRadius: 4, background: '#e6f7ff', border: 'none', color: '#0086F6' }}
+                >
+                  {tag}
+                </Tag>
+              ))}
+            </Space>
+          )}
+        </View>
+      )}
+
+      {/* 热门酒店骨架屏（首次加载） */}
+      {deferNonCritical && hotLoading && hotHotels.length === 0 && (
+        <View className="hot-section">
+          <View className="hot-title">热门推荐</View>
+          <View className="hot-waterfall">
+            {[0, 1].map(colIdx => (
+              <View key={colIdx} className="hot-column">
+                {[0, 1, 2].map(cardIdx => (
+                  <View key={cardIdx} className="skeleton-card">
+                    <View className="skeleton-card-image" />
+                    <View className="skeleton-card-body">
+                      <View className="skeleton-line skeleton-line-title" />
+                      <View className="skeleton-line skeleton-line-price" />
+                    </View>
+                  </View>
+                ))}
+              </View>
             ))}
-          </Space>
+          </View>
         </View>
       )}
 
@@ -765,9 +799,16 @@ export default function Index() {
             ))}
           </View>
           <View className="hot-load">
-            <Text className="hot-load-text">
-              {hotLoading ? '正在加载更多酒店...' : (hotHasMore ? '上拉加载更多酒店' : '已全部加载完成')}
-            </Text>
+            {hotLoading ? (
+              <View className="hot-load-spinner-row">
+                <View className="hot-load-spinner" />
+                <Text className="hot-load-text">正在加载</Text>
+              </View>
+            ) : (
+              <Text className="hot-load-text">
+                {hotHasMore ? '上拉加载更多酒店' : '已全部加载完成'}
+              </Text>
+            )}
           </View>
         </View>
       )}

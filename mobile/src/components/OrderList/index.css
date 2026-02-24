@@ -83,6 +83,35 @@
   padding: 12px;
 }
 
+.list-skeleton-hotel-card {
+  background: #fff;
+  border: 1px solid #e9eef4;
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.list-skeleton-hotel-thumb {
+  width: 112px;
+  height: 132px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, #edf1f6 10%, #f8fbff 50%, #edf1f6 90%);
+  background-size: 200% 100%;
+  animation: list-skeleton 1.2s ease-in-out infinite;
+}
+
+.list-skeleton-hotel-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: 2px;
+}
+
 .list-skeleton-line {
   height: 10px;
   border-radius: 6px;
