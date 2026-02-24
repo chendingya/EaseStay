@@ -23,44 +23,163 @@
   height: 100vh;
 }
 
-/* 轮播图 */
-.banner-section {
+/* Hero 大图区（默认 280px，下拉后展开至 3/4 屏） */
+.hero-section {
   position: relative;
   height: 280px;
+  background: #0d1033;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: height 0.42s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.banner-swiper {
-  height: 280px;
+.hero-section.hero-expanded {
+  height: 75vh;
 }
 
-.banner-img {
-  width: 100%;
-  height: 280px;
-}
-
-.banner-placeholder {
-  width: 100%;
-  height: 280px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.placeholder-text {
-  color: #fff;
-  font-size: 16px;
-}
-
-.banner-count {
+/* 模糊背景容器 */
+.hero-bg-wrap {
   position: absolute;
-  bottom: 16px;
-  right: 16px;
-  background: rgba(0, 0, 0, 0.5);
-  color: #fff;
-  font-size: 12px;
+  inset: -30px;
+  overflow: hidden;
+}
+
+.hero-bg-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: blur(28px) brightness(0.55) saturate(1.3);
+  transform: scale(1.15);
+  transform-origin: center;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+
+.hero-bg-img.hero-bg-active {
+  opacity: 1;
+}
+
+.hero-bg-fallback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(160deg, #06091a 0%, #0d1f5c 55%, #1a3a8f 100%);
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+
+.hero-bg-fallback.hero-bg-active {
+  opacity: 1;
+}
+
+/* Swiper 撑满 hero 区 */
+.hero-swiper {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.hero-swiper-item {
+  width: 100%;
+  height: 100%;
+}
+
+.hero-img {
+  width: 100%;
+  height: 100%;
+}
+
+.hero-img-placeholder {
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* 渐变遮罩：仅底部加深保证角标可读性 */
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.08) 0%,
+    rgba(0, 0, 0, 0.0) 40%,
+    rgba(0, 0, 0, 0.22) 72%,
+    rgba(0, 0, 0, 0.52) 100%
+  );
+  pointer-events: none;
+}
+
+/* 下拉提示 */
+.hero-pull-hint {
+  position: absolute;
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(6px);
+  padding: 4px 14px;
+  border-radius: 12px;
+}
+
+.hero-pull-hint-text {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 11px;
+}
+
+.hero-img-count {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.42);
   padding: 4px 10px;
   border-radius: 12px;
+}
+
+.hero-img-count-text {
+  color: #fff;
+  font-size: 12px;
+}
+
+/* 房型标签（左下角，与计数同高） */
+.hero-room-label {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(8px);
+  padding: 5px 10px;
+  border-radius: 20px;
+  max-width: 70%;
+}
+
+.hero-room-label-tag {
+  font-size: 10px;
+  color: #fff;
+  background: rgba(22, 119, 255, 0.9);
+  padding: 1px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.hero-room-label-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hero-room-label-price {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.72);
+  flex-shrink: 0;
 }
 
 /* 酒店信息卡片 */

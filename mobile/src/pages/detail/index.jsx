@@ -1,7 +1,7 @@
 import { View, Text, Image, ScrollView, Swiper, SwiperItem } from '@tarojs/components'
 import { useRouter } from '@tarojs/taro'
 import Taro from '@tarojs/taro'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarPicker, Popup, Selector, Input, Button } from 'antd-mobile'
 import { api, resolveImageUrl } from '../../services/request'
 import { isFavoriteHotel, toggleFavoriteHotel } from '../../services/favorites'
@@ -50,24 +50,19 @@ export default function Detail() {
   const [hotel, setHotel] = useState(null)
   const [loading, setLoading] = useState(true)
   const [navOpacity, setNavOpacity] = useState(0)
-  const [bookingRoomId, setBookingRoomId] = useState(null)
-  const [collected, setCollected] = useState(false)
+  const [heroExpanded, setHeroExpanded] = useState(false)
+  const scrollTopRef = useRef(0)
+  const touchStartYRef = useRef(0)
+  const isPullingRef = useRef(false)
+  const pullDeltaRef = useRef(0)
   const [bannerImageError, setBannerImageError] = useState({})
   const [bannerIndex, setBannerIndex] = useState(0)
+  const [bookingRoomId, setBookingRoomId] = useState(null)
+  const [collected, setCollected] = useState(false)
   const [calendarVisible, setCalendarVisible] = useState(false)
   const [filterVisible, setFilterVisible] = useState(false)
   const [roomFilters, setRoomFilters] = useState(defaultRoomFilters)
   const [draftFilters, setDraftFilters] = useState(defaultRoomFilters)
-  const bannerSize = useMemo(() => {
-    if (process.env.TARO_ENV !== 'h5') return { width: null, height: null }
-    try {
-      const info = Taro.getSystemInfoSync() || {}
-      const width = Math.round(info.windowWidth || 375)
-      return { width, height: 280 }
-    } catch (error) {
-      return { width: 375, height: 280 }
-    }
-  }, [])
 
   useEffect(() => {
     fetchHotelDetail()
@@ -88,6 +83,7 @@ export default function Detail() {
   useEffect(() => {
     setBannerImageError({})
     setBannerIndex(0)
+    setHeroExpanded(false)
   }, [id])
 
   useEffect(() => {
@@ -116,9 +112,34 @@ export default function Detail() {
 
   const handleScroll = (e) => {
     const scrollTop = e.detail.scrollTop
-    // 滚动 100px 内渐变显示导航栏背景
-    const opacity = Math.min(scrollTop / 100, 1)
+    scrollTopRef.current = scrollTop
+    const opacity = Math.min(scrollTop / 150, 1)
     setNavOpacity(opacity)
+    // 向下滚动超过 60px 时自动收起 hero
+    if (scrollTop > 60 && heroExpanded) {
+      setHeroExpanded(false)
+    }
+  }
+
+  const handleTouchStart = (e) => {
+    touchStartYRef.current = e.touches[0].clientY
+    isPullingRef.current = scrollTopRef.current <= 2
+  }
+
+  const handleTouchMove = (e) => {
+    if (!isPullingRef.current) return
+    const deltaY = e.touches[0].clientY - touchStartYRef.current
+    if (deltaY > 0) {
+      pullDeltaRef.current = Math.min(deltaY, 140)
+    }
+  }
+
+  const handleTouchEnd = () => {
+    if (pullDeltaRef.current > 60) {
+      setHeroExpanded(true)
+    }
+    pullDeltaRef.current = 0
+    isPullingRef.current = false
   }
 
   const handleBook = async (room) => {
@@ -233,6 +254,35 @@ export default function Detail() {
     if (!Number.isFinite(priceB)) return -1
     return priceA - priceB
   })
+
+  // 合并酒店图片 + 各房型图片，构成统一幻灯片列表（全局去重）
+  const allSlides = useMemo(() => {
+    const seenSrc = new Set()
+    const slides = []
+
+    // 酒店图片
+    ;(images || []).filter(Boolean).forEach((src) => {
+      if (seenSrc.has(src)) return
+      seenSrc.add(src)
+      slides.push({ src, label: null, labelSub: null })
+    })
+
+    // 各房型图片（room.image 与 room.images[0] 视为同一张，优先用 images 数组）
+    roomTypes.forEach((room) => {
+      const roomImgs = Array.isArray(room.images) && room.images.length > 0
+        ? room.images.filter(Boolean)
+        : room.image ? [room.image] : []
+      const price = Number(room.display_price)
+      const priceTxt = Number.isFinite(price) ? `¥${price}/晚` : ''
+      roomImgs.forEach((src) => {
+        if (seenSrc.has(src)) return
+        seenSrc.add(src)
+        slides.push({ src, label: room.name || '客房', labelSub: priceTxt })
+      })
+    })
+
+    return slides
+  }, [images, roomTypes])
 
   const normalizePositiveInt = (value) => {
     const num = Number(value)
@@ -411,48 +461,77 @@ export default function Detail() {
         className="detail-scroll" 
         scrollY 
         onScroll={handleScroll}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         scrollWithAnimation
       >
-        {/* 轮播图 */}
-        <View className="banner-section">
+        {/* Hero 大图区 */}
+        <View className={`hero-section${heroExpanded ? ' hero-expanded' : ''}`}>
+          {/* 模糊背景层：所有幻灯片预渲染，opacity 切换 */}
+          <View className="hero-bg-wrap">
+            {allSlides.map((slide, idx) => (
+              slide.src && !bannerImageError[idx] ? (
+                <Image
+                  key={idx}
+                  className={`hero-bg-img${idx === bannerIndex ? ' hero-bg-active' : ''}`}
+                  src={resolveImageUrl(slide.src, { quality: 40 })}
+                  mode="aspectFill"
+                />
+              ) : idx === bannerIndex ? (
+                <View key={idx} className={`hero-bg-fallback${idx === bannerIndex ? ' hero-bg-active' : ''}`} />
+              ) : null
+            ))}
+          </View>
           <Swiper
-            className="banner-swiper"
-            indicatorDots
-            indicatorColor="rgba(255,255,255,0.5)"
-            indicatorActiveColor="#fff"
-            onChange={(event) => setBannerIndex(event?.detail?.current || 0)}
+            className="hero-swiper"
+            indicatorDots={false}
+            onChange={(e) => setBannerIndex(e?.detail?.current || 0)}
           >
-            {images.map((img, idx) => {
-              const canLoad = idx <= bannerIndex + 1
+            {allSlides.map((slide, idx) => {
               const hasError = Boolean(bannerImageError[idx])
-              const showImage = img && !hasError && canLoad
-              const showPlaceholderText = !img || hasError
-              const optimizedImageSrc = resolveImageUrl(img, {
-                width: bannerSize.width,
-                height: bannerSize.height,
-                quality: 70
-              })
+              const showImage = slide.src && !hasError
               return (
                 <SwiperItem key={idx}>
-                  {showImage ? (
-                    <Image
-                      className="banner-img"
-                      src={optimizedImageSrc}
-                      mode="aspectFill"
-                      style={{ width: '100%', height: '280px' }}
-                      lazyLoad={idx > 0}
-                      onError={() => setBannerImageError((prev) => ({ ...prev, [idx]: true }))}
-                    />
-                  ) : (
-                    <View className="banner-placeholder">
-                      {showPlaceholderText ? <Text className="placeholder-text">暂无图片</Text> : null}
-                    </View>
-                  )}
+                  <View className="hero-swiper-item">
+                    {showImage ? (
+                      <Image
+                        className="hero-img"
+                        src={resolveImageUrl(slide.src, { quality: 80 })}
+                        mode={heroExpanded ? 'aspectFit' : 'aspectFill'}
+                        onError={() => setBannerImageError((prev) => ({ ...prev, [idx]: true }))}
+                      />
+                    ) : (
+                      <View className="hero-img-placeholder" />
+                    )}
+                  </View>
                 </SwiperItem>
               )
             })}
           </Swiper>
-          <View className="banner-count">{images.length} 张</View>
+          <View className="hero-overlay" />
+
+          {/* 房型标签：当前幻灯片属于某房型时显示 */}
+          {allSlides[bannerIndex]?.label && (
+            <View className="hero-room-label">
+              <Text className="hero-room-label-tag">房型</Text>
+              <Text className="hero-room-label-name">{allSlides[bannerIndex].label}</Text>
+              {allSlides[bannerIndex].labelSub ? (
+                <Text className="hero-room-label-price">{allSlides[bannerIndex].labelSub}</Text>
+              ) : null}
+            </View>
+          )}
+
+          {/* 下拉提示条：未展开时显示 */}
+          {!heroExpanded && (
+            <View className="hero-pull-hint">
+              <Text className="hero-pull-hint-text">下拉展开全图</Text>
+            </View>
+          )}
+          {/* 当前图片计数 */}
+          <View className="hero-img-count">
+            <Text className="hero-img-count-text">{bannerIndex + 1} / {allSlides.length}</Text>
+          </View>
         </View>
 
         {/* 酒店基本信息 */}
