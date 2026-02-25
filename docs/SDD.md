@@ -784,6 +784,13 @@ Query：`keyword`（可选），`page`、`pageSize`（分页模式可选）
 - `components/OrderList`：新增 `room` 类型与嵌入式渲染能力，支持在详情页滚动容器中展示房型列表
 - `pages/room-detail`：房型详情页（房型参数、优惠有效期、入住离店展示、直接下单跳转支付）
 
+### 11.5 移动端通知与错误提示
+- `components/GlassToast` + `services/glassToast`：新增全局毛玻璃通知通道，默认在页面顶部展示成功/失败/警告/信息提示，支持入场/退场动效与自动消失。
+- `app.js`：在应用壳挂载 `GlassToastHost`，保证任意页面可直接调用 `glassToast.success/error/warning/info`。
+- `services/request.js`：请求失败统一由请求层提示；异常对象增加 `__toastShown` 标记，防止同一错误在上层页面重复弹出。
+- `pages/login`、`pages/register`：捕获异常时先判断 `error.__toastShown`，仅在未提示时补充兜底提示（修复“验证码不存在或已过期”双提示问题）。
+- H5 与非 H5 兼容：H5 使用自定义 `GlassToast`；非 H5 环境回退到 `Taro.showToast`，保证端能力兼容。
+
 ## 12. Admin 国际化实现细节（2026-02）
 ### 12.1 目录与资源组织
 - 语言目录：`admin/src/locales/zh-CN`、`admin/src/locales/en-US`

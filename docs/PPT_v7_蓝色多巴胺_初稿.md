@@ -224,6 +224,13 @@ const delay = animate ? `${Math.min(index, 10) * 20}ms` : '0ms'
 - **`useMemo` 稳定引用**：列定义数组、状态映射对象用 `useMemo` 包裹，父组件重渲染时表格结构不重建
 - **`content-visibility: auto`**：消息列表每条通知滚出视口后，浏览器跳过其布局与绘制
 
+### 手段四：国际化按需加载（解决词典随首屏一次性打包）
+- **词典 namespace 拆分**：把单文件 `translation.json` 拆为 24 个业务域文件（`common / hotels / dashboard / orderStats …`），粒度与页面一一对应
+- **分层加载策略**：
+  - 初始化只同步加载 9 个基础 namespace（`common / auth / menu / status / error` 等），覆盖所有页面的公共文案
+  - 页面专属 namespace（如 `hotels / orderStats / audit`）在路由进入时动态 `import()`，只在访问对应页面时才下载
+- **CI 门禁保障质量**：`i18n:check` 校验 zh-CN / en-US key 是否对齐；`i18n:check:strict` 额外扫描硬编码中文，PR 阶段即拦截遗漏翻译
+
 代码点缀（1段）：
 ```jsx
 // 三个重组件独立拆包，进入对应页面/触发对应操作时才加载
@@ -234,6 +241,8 @@ const ReactECharts         = lazy(() => import('echarts-for-react'))
 scheduleIdleTask(async () => {
   setUnreadCount(await getUnreadCount())
 }, { timeout: 1500, fallbackDelay: 400 })
+// 国际化：进入路由前按需加载页面专属词典，基础 namespace 已在启动时同步就绪
+namespaceLoaders[lng][ns]().then(mod => i18n.addResourceBundle(lng, ns, mod))
 ```
 
 性能实测汇总（来自 `docs/performance-pic`）：
