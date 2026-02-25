@@ -4,6 +4,7 @@ import Taro from '@tarojs/taro'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarPicker, Popup, Selector, Input, Button } from 'antd-mobile'
 import { api, resolveImageUrl } from '../../services/request'
+import { glassToast } from '../../services/glassToast'
 import { isFavoriteHotel, toggleFavoriteHotel } from '../../services/favorites'
 import PageTopBar from '../../components/PageTopBar'
 import BookingBottomBar from '../../components/BookingBottomBar'
@@ -184,17 +185,17 @@ export default function Detail() {
   const handleBook = async (room) => {
     if (!room || bookingRoomId) return
     if (getAvailableCount(room) <= 0) {
-      Taro.showToast({ title: '该房型已售罄', icon: 'none' })
+      glassToast.warning('该房型已售罄')
       return
     }
     const token = Taro.getStorageSync('token')
     if (!token) {
-      Taro.showToast({ title: '请先登录后下单', icon: 'none' })
+      glassToast.warning('请先登录后下单')
       Taro.navigateTo({ url: '/pages/login/index' })
       return
     }
     if (!checkIn || !checkOut) {
-      Taro.showToast({ title: '请先选择入住和离店日期', icon: 'none' })
+      glassToast.warning('请先选择入住和离店日期')
       return
     }
     setBookingRoomId(room.id)
@@ -208,7 +209,7 @@ export default function Detail() {
       if (order?.id) {
         Taro.navigateTo({ url: `/pages/order-pay/index?id=${order.id}` })
       } else {
-        Taro.showToast({ title: '下单成功，请前往订单页支付', icon: 'none' })
+        glassToast.success('下单成功，请前往订单页支付')
       }
     } catch (err) {
     } finally {
@@ -232,8 +233,8 @@ export default function Detail() {
     const shareText = `${hotel?.name || '易宿酒店'} ${sharePath}`
     Taro.setClipboardData({
       data: shareText,
-      success: () => Taro.showToast({ title: '分享链接已复制', icon: 'success' }),
-      fail: () => Taro.showToast({ title: '复制失败，请稍后重试', icon: 'none' })
+      success: () => glassToast.success('分享链接已复制'),
+      fail: () => glassToast.error('复制失败，请稍后重试')
     })
   }
 
@@ -245,9 +246,9 @@ export default function Detail() {
         lowestPrice: hasMinRoomPrice ? minRoomPrice : null
       })
       setCollected(nextCollected)
-      Taro.showToast({ title: nextCollected ? '收藏成功' : '已取消收藏', icon: 'success' })
+      glassToast.success(nextCollected ? '收藏成功' : '已取消收藏')
     } catch (error) {
-      Taro.showToast({ title: '操作失败，请稍后重试', icon: 'none' })
+      glassToast.error('操作失败，请稍后重试')
     }
   }
 
@@ -790,7 +791,7 @@ export default function Detail() {
               {collected ? <HeartFill className='action-icon' /> : <HeartOutline className='action-icon' />}
               <Text className='action-text'>{collected ? '已收藏' : '收藏'}</Text>
             </View>
-            <View className='bottom-action' onClick={() => Taro.showToast({ title: '客服咨询开发中', icon: 'none' })}>
+            <View className='bottom-action' onClick={() => glassToast.info('客服咨询开发中')}>
               <MessageOutline className='action-icon' />
               <Text className='action-text'>咨询</Text>
             </View>

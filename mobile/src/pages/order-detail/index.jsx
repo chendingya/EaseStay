@@ -4,6 +4,7 @@ import Taro, { useRouter } from '@tarojs/taro'
 import { Button } from 'antd-mobile'
 import PageTopBar from '../../components/PageTopBar'
 import { cancelOrder, getOrderDetail, useOrder } from '../../services/auth'
+import { glassToast } from '../../services/glassToast'
 import './index.css'
 
 const statusTextMap = {
@@ -79,7 +80,7 @@ export default function OrderDetail() {
     try {
       const updated = await cancelOrder(order.id)
       setOrder(updated || order)
-      Taro.showToast({ title: '订单已取消', icon: 'success' })
+      glassToast.success('订单已取消')
       setTimeout(() => {
         Taro.reLaunch({ url: '/pages/orders/index?tab=cancelled' })
       }, 600)
@@ -95,7 +96,7 @@ export default function OrderDetail() {
     try {
       const updated = await useOrder(order.id)
       setOrder(updated || order)
-      Taro.showToast({ title: '订单已使用', icon: 'success' })
+      glassToast.success('订单已使用')
       setTimeout(() => {
         Taro.reLaunch({ url: '/pages/orders/index?tab=finished' })
       }, 600)

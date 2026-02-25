@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import GlobalBottomNav from './components/GlobalBottomNav'
+import GlassToastHost from './components/GlassToast'
 import { UserContext } from './services/UserContext'
 import { userStore } from './services/userStore'
 import { getCurrentUser } from './services/auth'
@@ -40,6 +41,7 @@ function App(props) {
       <View className='app-shell'>
         <View className='app-content'>{props.children}</View>
         <GlobalBottomNav />
+        <GlassToastHost />
       </View>
     </UserContext.Provider>
   )

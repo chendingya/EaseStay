@@ -4,6 +4,7 @@ import Taro, { useRouter } from '@tarojs/taro'
 import { Button, Selector } from 'antd-mobile'
 import PageTopBar from '../../components/PageTopBar'
 import { getOrderDetail, payOrder } from '../../services/auth'
+import { glassToast } from '../../services/glassToast'
 import './index.css'
 
 const payChannelOptions = [
@@ -57,7 +58,7 @@ export default function OrderPay() {
     setPaying(true)
     try {
       await payOrder(orderId, { channel: payChannel })
-      Taro.showToast({ title: '支付成功', icon: 'success' })
+      glassToast.success('支付成功')
       Taro.reLaunch({ url: '/pages/orders/index?tab=confirmed' })
     } catch (error) {
     } finally {

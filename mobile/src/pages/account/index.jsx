@@ -1,9 +1,10 @@
 import React from 'react'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { View } from '@tarojs/components'
-import { List, Button, Avatar, Toast } from 'antd-mobile'
+import { List, Button, Avatar } from 'antd-mobile'
 import { UserOutline } from 'antd-mobile-icons'
 import { getCurrentUser } from '../../services/auth'
+import { glassToast } from '../../services/glassToast'
 import { useUserContext } from '../../services/UserContext'
 import PageTopBar from '../../components/PageTopBar'
 import './index.css'
@@ -36,7 +37,7 @@ export default function Account() {
 
   const handleLogout = () => {
     logout()
-    Toast.show({ content: '已退出登录', icon: 'success' })
+    glassToast.success('已退出登录')
   }
 
   const handleLogin = () => {

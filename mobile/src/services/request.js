@@ -1,4 +1,5 @@
 import Taro from '@tarojs/taro'
+import { glassToast } from './glassToast'
 
 // H5 模式下用浏览器当前 origin 作为 API base（自动适配任何 IP/host），
 // 配合 webpack dev server proxy（/api → 127.0.0.1:4100）实现手机联调；
@@ -25,6 +26,19 @@ export const resolveImageUrl = (url, options = {}) => {
   return `${apiBase}/api/image?${params.join('&')}`
 }
 
+const markToastShown = (error) => {
+  if (!error || typeof error !== 'object') return
+  try {
+    error.__toastShown = true
+  } catch (e) {}
+}
+
+const createError = (message, toastShown = false) => {
+  const err = new Error(message)
+  if (toastShown) markToastShown(err)
+  return err
+}
+
 const request = async (options) => {
   const token = Taro.getStorageSync('token')
   const header = {
@@ -39,9 +53,9 @@ const request = async (options) => {
 
     if (data && data.success === false) {
       const msg = data.message || '请求失败'
-      Taro.showToast({ title: msg, icon: 'none' })
+      glassToast.error(msg)
       toastShown = true
-      throw new Error(msg)
+      throw createError(msg, true)
     }
 
     if (res.statusCode >= 200 && res.statusCode < 300) {
@@ -51,19 +65,24 @@ const request = async (options) => {
     const msg = data?.message || '请求失败'
     // 只有当不是 200-299 状态码时，才抛出错误并显示 Toast
     if (!toastShown) {
-        Taro.showToast({ title: msg, icon: 'none' })
+        glassToast.error(msg)
         toastShown = true
     }
-    throw new Error(msg)
+    throw createError(msg, toastShown)
   } catch (error) {
     if (!toastShown) {
       const msg = error?.data?.message || error?.errMsg || error?.message || '请求失败'
       // 避免重复显示 Toast
       if (!msg.includes('验证码已发送')) {
-         Taro.showToast({ title: msg, icon: 'none' })
+         glassToast.error(msg)
+         toastShown = true
       }
     }
-    throw error instanceof Error ? error : new Error('请求失败')
+    if (error instanceof Error) {
+      if (toastShown) markToastShown(error)
+      throw error
+    }
+    throw createError('请求失败', toastShown)
   }
 }
 

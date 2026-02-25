@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import Taro from '@tarojs/taro'
 import { View } from '@tarojs/components'
-import { Form, Input, Button, Toast, Modal } from 'antd-mobile'
+import { Form, Input, Button, Modal } from 'antd-mobile'
 import { loginByPassword, registerByPassword, sendCode } from '../../services/auth'
+import { glassToast } from '../../services/glassToast'
 import { useUserContext } from '../../services/UserContext'
 import { getCurrentUser } from '../../services/auth'
 import PageTopBar from '../../components/PageTopBar'
@@ -28,10 +29,7 @@ export default function Register() {
     if (sendingCodeRef.current || countdown > 0) return
     const username = String(form.getFieldValue('username') || '').trim()
     if (!username) {
-      Toast.show({
-        icon: 'fail',
-        content: '请先输入用户名'
-      })
+      glassToast.error('请先输入用户名')
       return
     }
 
@@ -40,10 +38,7 @@ export default function Register() {
       setSendingCode(true)
       const res = await sendCode(username)
       setCountdown(60)
-      Toast.show({
-        icon: 'success',
-        content: '验证码已发送',
-      })
+      glassToast.success('验证码已发送')
       if (res?.code) {
         Modal.alert({
           content: `模拟验证码：${res.code}`,
@@ -84,13 +79,12 @@ export default function Register() {
           }
         } catch (e) {}
       }
-      Toast.show({ icon: 'success', content: '注册成功' })
+      glassToast.success('注册成功')
       Taro.reLaunch({ url: '/pages/account/index' })
     } catch (error) {
-      Toast.show({
-        icon: 'fail',
-        content: error.message || '注册失败',
-      })
+      if (!error?.__toastShown) {
+        glassToast.error(error?.message || '注册失败')
+      }
     } finally {
       setLoading(false)
     }

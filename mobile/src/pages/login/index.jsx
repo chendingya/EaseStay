@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import Taro from '@tarojs/taro'
 import { View } from '@tarojs/components'
-import { Form, Input, Button, Toast, Modal } from 'antd-mobile'
+import { Form, Input, Button, Modal } from 'antd-mobile'
 import { loginByCode, loginByPassword, sendCode } from '../../services/auth'
+import { glassToast } from '../../services/glassToast'
 import { useUserContext } from '../../services/UserContext'
 import { getCurrentUser } from '../../services/auth'
 import PageTopBar from '../../components/PageTopBar'
@@ -53,10 +54,7 @@ export default function Login() {
     if (sendingCodeRef.current || countdown > 0) return
     const username = String(form.getFieldValue('username') || '').trim()
     if (!username) {
-      Toast.show({
-        icon: 'fail',
-        content: '请先输入用户名'
-      })
+      glassToast.error('请先输入用户名')
       return
     }
     try {
@@ -64,10 +62,7 @@ export default function Login() {
       setSendingCode(true)
       const res = await sendCode(username)
       setCountdown(60)
-      Toast.show({
-        icon: 'success',
-        content: '验证码已发送',
-      })
+      glassToast.success('验证码已发送')
       if (res?.code) {
         Modal.alert({
           content: `模拟验证码：${res.code}`,
@@ -90,10 +85,7 @@ export default function Login() {
         : await loginByPassword({ ...payload, password: values.password })
       // request.js 会在错误时抛出异常，所以只要走到这里且 res 存在，就是成功
       if (res) {
-        Toast.show({
-          icon: 'success',
-          content: '登录成功',
-        })
+        glassToast.success('登录成功')
         // 存储 Token
         Taro.setStorageSync('token', res.token)
         Taro.setStorageSync('userRole', res.userRole)
@@ -110,10 +102,9 @@ export default function Login() {
         navigateAfterLogin()
       }
     } catch (error) {
-      Toast.show({
-        icon: 'fail',
-        content: error.message || '登录失败',
-      })
+      if (!error?.__toastShown) {
+        glassToast.error(error?.message || '登录失败')
+      }
     } finally {
       setLoading(false)
     }

@@ -1,9 +1,10 @@
 import { View, Image, Text, Map } from '@tarojs/components'
 import Taro, { useReachBottom } from '@tarojs/taro'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Swiper, Button, Card, SearchBar, Tag, Space, Toast, CalendarPicker, Picker, Popup, Cascader, Slider } from 'antd-mobile'
+import { Swiper, Button, Card, SearchBar, Tag, Space, CalendarPicker, Picker, Popup, Cascader, Slider } from 'antd-mobile'
 import { SearchOutline, CalendarOutline, EnvironmentOutline } from 'antd-mobile-icons'
 import { api, resolveImageUrl } from '../../services/request'
+import { glassToast } from '../../services/glassToast'
 import { cityData } from '../../utils/cityData'
 import { formatDate, getCalendarBounds, parseLocalDate, resolveDateRange } from '../../utils/dateRange'
 import './index.css'
@@ -275,7 +276,7 @@ export default function Index() {
           scheduleAmapInit()
         }
         script.onerror = () => {
-          Toast.show({ content: '地图加载失败', icon: 'fail' })
+          glassToast.error('地图加载失败')
         }
         document.body.appendChild(script)
       } else {
@@ -382,7 +383,7 @@ export default function Index() {
             
             setCity(cityName || '未知')
             setMapVisible(false)
-            Toast.show({ content: `已切换到 ${cityName}`, icon: 'success' })
+            glassToast.success(`已切换到 ${cityName}`)
         } else {
             setMapVisible(false)
         }
@@ -455,22 +456,22 @@ export default function Index() {
             const finalCity = cityName || '未知'
             setCity(finalCity)
             setLocationCity(finalCity) // Also update location city record
-            Toast.show({ content: '定位成功', icon: 'success' })
+            glassToast.success('定位成功')
           } else {
-            Toast.show({ content: '获取位置信息失败', icon: 'fail' })
+            glassToast.error('获取位置信息失败')
           }
         } catch (error) {
           console.error('Reverse geocode error:', error)
-          Toast.show({ content: '定位服务异常', icon: 'fail' })
+          glassToast.error('定位服务异常')
         }
       },
       fail: function (err) {
         console.error('Location failed:', err)
         // If H5 geolocation is blocked or fails (e.g. non-HTTPS), show friendly message
         if (process.env.TARO_ENV === 'h5' && window.location.protocol !== 'https:') {
-             Toast.show({ content: 'H5定位需HTTPS环境', icon: 'fail' })
+             glassToast.error('H5定位需HTTPS环境')
         } else {
-             Toast.show({ content: '定位失败，请检查权限', icon: 'fail' })
+             glassToast.error('定位失败，请检查权限')
         }
       }
     })

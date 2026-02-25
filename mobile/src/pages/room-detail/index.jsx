@@ -4,6 +4,7 @@ import Taro, { useRouter } from '@tarojs/taro'
 import { CalendarPicker } from 'antd-mobile'
 import { CalendarOutline } from 'antd-mobile-icons'
 import { api, resolveImageUrl } from '../../services/request'
+import { glassToast } from '../../services/glassToast'
 import PageTopBar from '../../components/PageTopBar'
 import BookingBottomBar from '../../components/BookingBottomBar'
 import { formatDate, getCalendarBounds, parseLocalDate, resolveDateRange } from '../../utils/dateRange'
@@ -172,17 +173,17 @@ export default function RoomDetail() {
   const handleBook = async () => {
     if (!room?.id || booking) return
     if (getAvailableCount(room) <= 0) {
-      Taro.showToast({ title: '该房型已售罄', icon: 'none' })
+      glassToast.warning('该房型已售罄')
       return
     }
     const token = Taro.getStorageSync('token')
     if (!token) {
-      Taro.showToast({ title: '请先登录后下单', icon: 'none' })
+      glassToast.warning('请先登录后下单')
       Taro.navigateTo({ url: '/pages/login/index' })
       return
     }
     if (!checkIn || !checkOut) {
-      Taro.showToast({ title: '请先选择入住和离店日期', icon: 'none' })
+      glassToast.warning('请先选择入住和离店日期')
       return
     }
     setBooking(true)
@@ -196,7 +197,7 @@ export default function RoomDetail() {
       if (order?.id) {
         Taro.navigateTo({ url: `/pages/order-pay/index?id=${order.id}` })
       } else {
-        Taro.showToast({ title: '下单成功，请前往订单页支付', icon: 'none' })
+        glassToast.success('下单成功，请前往订单页支付')
       }
     } catch (error) {
     } finally {
