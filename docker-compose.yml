@@ -23,7 +23,7 @@ services:
       context: .
       dockerfile: admin/Dockerfile
       args:
-        VITE_API_BASE: ${PUBLIC_API_BASE:-http://localhost:4100}
+        VITE_API_BASE: ${PUBLIC_API_BASE:-/}
     container_name: yisu-admin
     ports:
       - "4101:80"
@@ -36,7 +36,7 @@ services:
       context: .
       dockerfile: mobile/Dockerfile
       args:
-        TARO_APP_API_BASE: ${PUBLIC_API_BASE:-http://localhost:4100}
+        TARO_APP_API_BASE: ${PUBLIC_API_BASE:-/}
     container_name: yisu-mobile
     ports:
       - "10086:80"

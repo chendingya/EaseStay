@@ -41,7 +41,7 @@
   - `mobile/Dockerfile`
   - `docker.env.example`
 - 启动前先准备环境变量（可复制 `docker.env.example` 并按实际值填写）：
-  - `PUBLIC_API_BASE`：前端构建时注入的后端地址，必须是浏览器可访问地址
+  - `PUBLIC_API_BASE`：前端构建时注入的后端地址。推荐使用 `/`（同源 + Nginx `/api` 反代），也可填写浏览器可访问的完整后端地址
   - `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY`
   - `JWT_SECRET` / `AMAP_KEY`
 - 启动：

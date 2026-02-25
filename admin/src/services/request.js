@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:4100'
+const apiBase = import.meta.env.VITE_API_BASE || '/'
 const defaultErrorMessage = 'Request failed'
 let messageModulePromise = null
 
