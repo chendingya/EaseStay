@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Form, Input, InputNumber, Select, Space, Typography, Divider, DatePicker,
-  Row, Col, Spin, Image, Tag, Table, Descriptions, Tabs, Upload, Modal, Badge, Card, Checkbox
+  Row, Col, Spin, Image, Tag, Table, Descriptions, Tabs, Upload, Modal, Badge, Card, Checkbox, Tooltip, Tour, Affix
 } from 'antd'
 import EyeOutlined from '@ant-design/icons/es/icons/EyeOutlined'
 import EditOutlined from '@ant-design/icons/es/icons/EditOutlined'
@@ -12,6 +12,7 @@ import CalendarOutlined from '@ant-design/icons/es/icons/CalendarOutlined'
 import PlusOutlined from '@ant-design/icons/es/icons/PlusOutlined'
 import DeleteOutlined from '@ant-design/icons/es/icons/DeleteOutlined'
 import SearchOutlined from '@ant-design/icons/es/icons/SearchOutlined'
+import QuestionCircleOutlined from '@ant-design/icons/es/icons/QuestionCircleOutlined'
 import { GlassButton, glassMessage as message } from '../components'
 import { api } from '../services'
 import dayjs from 'dayjs'
@@ -83,7 +84,11 @@ function MapPicker({ onAddressChange }) {
               prefix={<SearchOutlined />}
             />
           </Col>
-          <Col><GlassButton onClick={handleSearch} loading={searching}>{t('hotelEdit.map.searchButton')}</GlassButton></Col>
+          <Col>
+            <Tooltip title={t('hotelEdit.tips.tooltip.mapSearch')}>
+              <GlassButton onClick={handleSearch} loading={searching}>{t('hotelEdit.map.searchButton')}</GlassButton>
+            </Tooltip>
+          </Col>
         </Row>
 
         {showResults && searchResults.length > 0 && (
@@ -889,7 +894,11 @@ function NearbyInfoEditor({ attractions = [], transport = [], malls = [], onChan
               style={{ width: 90 }}
             />
           </Col>
-          <Col><GlassButton onClick={handleSearch} loading={searching}>{t('hotelEdit.nearby.searchButton')}</GlassButton></Col>
+          <Col>
+            <Tooltip title={t('hotelEdit.tips.tooltip.nearbySearch')}>
+              <GlassButton onClick={handleSearch} loading={searching}>{t('hotelEdit.nearby.searchButton')}</GlassButton>
+            </Tooltip>
+          </Col>
         </Row>
         {searchResults.length > 0 && (
           <div style={{ marginTop: 12, maxHeight: 250, overflow: 'auto' }}>
@@ -901,7 +910,9 @@ function NearbyInfoEditor({ attractions = [], transport = [], malls = [], onChan
                   {item.distance !== t('hotelEdit.nearby.unknownDistance') && <Tag style={{ marginLeft: 4 }}>{item.distance}</Tag>}
                   {item.address && <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>{item.address}</div>}
                 </div>
-                <GlassButton type="link" size="small" onClick={() => handleAdd(item)}>{t('hotelEdit.nearby.addButton')}</GlassButton>
+                <Tooltip title={t('hotelEdit.tips.tooltip.nearbyAdd')}>
+                  <GlassButton type="link" size="small" onClick={() => handleAdd(item)}>{t('hotelEdit.nearby.addButton')}</GlassButton>
+                </Tooltip>
               </div>
             ))}
           </div>
@@ -1074,6 +1085,12 @@ export default function HotelEdit() {
   const [approvedFacilities, setApprovedFacilities] = useState([])
   const [approvedRoomTypes, setApprovedRoomTypes] = useState([])
   const [approvedPromotions, setApprovedPromotions] = useState([])
+  const [tourOpen, setTourOpen] = useState(false)
+  const headerRef = useRef(null)
+  const tabRef = useRef(null)
+  const addressSectionRef = useRef(null)
+  const roomTypeSectionRef = useRef(null)
+  const actionBarRef = useRef(null)
 
   // 预设数据 state
   const [presets, setPresets] = useState({
@@ -1086,6 +1103,42 @@ export default function HotelEdit() {
   const watchedValues = Form.useWatch([], form)
 
   const isEditing = !!id
+  const openTour = () => {
+    if (activeTab !== 'edit') setActiveTab('edit')
+    setTourOpen(true)
+  }
+
+  const tourSteps = useMemo(() => ([
+    {
+      title: t('hotelEdit.tips.tour.title'),
+      description: t('hotelEdit.tips.tour.description')
+    },
+    {
+      title: t('hotelEdit.tips.tour.steps.header.title'),
+      description: t('hotelEdit.tips.tour.steps.header.description'),
+      target: () => headerRef.current
+    },
+    {
+      title: t('hotelEdit.tips.tour.steps.tabs.title'),
+      description: t('hotelEdit.tips.tour.steps.tabs.description'),
+      target: () => tabRef.current
+    },
+    {
+      title: t('hotelEdit.tips.tour.steps.address.title'),
+      description: t('hotelEdit.tips.tour.steps.address.description'),
+      target: () => addressSectionRef.current
+    },
+    {
+      title: t('hotelEdit.tips.tour.steps.roomTypes.title'),
+      description: t('hotelEdit.tips.tour.steps.roomTypes.description'),
+      target: () => roomTypeSectionRef.current
+    },
+    {
+      title: t('hotelEdit.tips.tour.steps.save.title'),
+      description: t('hotelEdit.tips.tour.steps.save.description'),
+      target: () => actionBarRef.current
+    }
+  ]), [t])
 
   // 加载预设数据
   useEffect(() => {
@@ -1340,20 +1393,22 @@ export default function HotelEdit() {
       children: (
         <Spin spinning={loading}>
           <Form layout="vertical" form={form} initialValues={{ star_rating: 0 }} onValuesChange={handleFormChange}>
-          <Typography.Title level={5}>{t('hotelEdit.form.sectionAddress')}</Typography.Title>
-          <MapPicker onAddressChange={({ city, address }) => { form.setFieldsValue({ city, address }); handleFormChange() }} hotCities={presets.cities} />
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="city" label={t('hotelEdit.form.cityLabel')} rules={[{ required: true, message: t('hotelEdit.form.cityRequired') }]}>
-                <Select showSearch placeholder={t('hotelEdit.form.cityPlaceholder')} options={presets.cities.map(c => ({ value: c.name || c, label: c.name || c }))} filterOption={(input, option) => option.label.toLowerCase().includes(input.toLowerCase())} allowClear onChange={handleFormChange} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="address" label={t('hotelEdit.form.addressLabel')} rules={[{ required: true, message: t('hotelEdit.form.addressRequired') }]}>
-                <Input placeholder={t('hotelEdit.form.addressPlaceholder')} />
-              </Form.Item>
-            </Col>
-          </Row>
+          <div ref={addressSectionRef}>
+            <Typography.Title level={5}>{t('hotelEdit.form.sectionAddress')}</Typography.Title>
+            <MapPicker onAddressChange={({ city, address }) => { form.setFieldsValue({ city, address }); handleFormChange() }} hotCities={presets.cities} />
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item name="city" label={t('hotelEdit.form.cityLabel')} rules={[{ required: true, message: t('hotelEdit.form.cityRequired') }]}>
+                  <Select showSearch placeholder={t('hotelEdit.form.cityPlaceholder')} options={presets.cities.map(c => ({ value: c.name || c, label: c.name || c }))} filterOption={(input, option) => option.label.toLowerCase().includes(input.toLowerCase())} allowClear onChange={handleFormChange} />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="address" label={t('hotelEdit.form.addressLabel')} rules={[{ required: true, message: t('hotelEdit.form.addressRequired') }]}>
+                  <Input placeholder={t('hotelEdit.form.addressPlaceholder')} />
+                </Form.Item>
+              </Col>
+            </Row>
+          </div>
 
           <Divider />
           <Typography.Title level={5}>{t('hotelEdit.form.sectionBasic')}</Typography.Title>
@@ -1407,20 +1462,22 @@ export default function HotelEdit() {
           />
 
           <Divider />
-          <Typography.Title level={5}>{t('hotelEdit.form.sectionRoomTypes')}</Typography.Title>
-          <Form.Item
-            name="roomTypes"
-            valuePropName="value"
-            getValueFromEvent={(v) => v}
-          >
-            <RoomTypeManager
-              pendingRequests={pendingRoomTypes}
-              approvedRequests={approvedRoomTypes}
-              onRequestNew={handleRequestRoomType}
-              onReuseApproved={handleReuseRoomType}
-              presetRoomTypes={presets.roomTypes}
-            />
-          </Form.Item>
+          <div ref={roomTypeSectionRef}>
+            <Typography.Title level={5}>{t('hotelEdit.form.sectionRoomTypes')}</Typography.Title>
+            <Form.Item
+              name="roomTypes"
+              valuePropName="value"
+              getValueFromEvent={(v) => v}
+            >
+              <RoomTypeManager
+                pendingRequests={pendingRoomTypes}
+                approvedRequests={approvedRoomTypes}
+                onRequestNew={handleRequestRoomType}
+                onReuseApproved={handleReuseRoomType}
+                presetRoomTypes={presets.roomTypes}
+              />
+            </Form.Item>
+          </div>
 
           <Divider />
           <Typography.Title level={5}>{t('hotelEdit.form.sectionPromotions')}</Typography.Title>
@@ -1446,14 +1503,46 @@ export default function HotelEdit() {
 
   return (
     <>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div ref={headerRef} style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography.Title level={4} style={{ margin: 0 }}>{isEditing ? t('hotelEdit.form.titleEdit') : t('hotelEdit.form.titleNew')}</Typography.Title>
-        <Space>
-          <GlassButton onClick={() => navigate('/hotels')}>{t('hotelEdit.form.cancel')}</GlassButton>
-          <GlassButton type="primary" loading={saving} onClick={handleSubmit}>{isEditing ? t('hotelEdit.form.submitEdit') : t('hotelEdit.form.submitNew')}</GlassButton>
-        </Space>
+        <div ref={actionBarRef}>
+          <Space>
+            <Tooltip title={t('hotelEdit.tips.tooltip.cancel')}>
+              <GlassButton onClick={() => navigate('/hotels')}>{t('hotelEdit.form.cancel')}</GlassButton>
+            </Tooltip>
+            <Tooltip title={t('hotelEdit.tips.tooltip.submit')}>
+              <GlassButton type="primary" loading={saving} onClick={handleSubmit}>{isEditing ? t('hotelEdit.form.submitEdit') : t('hotelEdit.form.submitNew')}</GlassButton>
+            </Tooltip>
+          </Space>
+        </div>
       </div>
-      <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} destroyOnHidden={false} />
+      <div ref={tabRef}>
+        <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} destroyOnHidden={false} />
+      </div>
+
+      <Affix offsetBottom={24} style={{ position: 'fixed', right: 32, bottom: 24, zIndex: 1100 }}>
+        <Tooltip title={t('hotelEdit.tips.tooltip.tourTrigger')} placement="left">
+          <GlassButton
+            onClick={openTour}
+            icon={<QuestionCircleOutlined />}
+            aria-label={t('hotelEdit.tips.tooltip.tourTrigger')}
+            style={{
+              width: 48,
+              height: 48,
+              padding: 0,
+              borderRadius: '50%',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)'
+            }}
+          />
+        </Tooltip>
+      </Affix>
+
+      <Tour
+        open={tourOpen}
+        onClose={() => setTourOpen(false)}
+        steps={tourSteps}
+      />
     </>
   )
 }

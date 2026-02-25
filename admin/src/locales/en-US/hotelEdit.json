@@ -209,6 +209,42 @@
       "roomsEmpty": "No room types",
       "promotions": "Promotions"
     },
+    "tips": {
+      "tour": {
+        "title": "Hotel Edit Guide",
+        "description": "Follow the steps to understand core actions on this page.",
+        "steps": {
+          "header": {
+            "title": "Page Header",
+            "description": "This area shows whether you are creating or editing a hotel."
+          },
+          "tabs": {
+            "title": "Edit and Preview",
+            "description": "Switch between edit and preview tabs to verify changes quickly."
+          },
+          "address": {
+            "title": "Address Section",
+            "description": "Search the map first, then confirm city and detailed address."
+          },
+          "roomTypes": {
+            "title": "Room Types",
+            "description": "Maintain room inventory, pricing, and sellable room details here."
+          },
+          "save": {
+            "title": "Save and Submit",
+            "description": "After review, save updates or submit a new hotel for approval."
+          }
+        }
+      },
+      "tooltip": {
+        "tourTrigger": "Open hotel edit guide",
+        "cancel": "Back to hotel list without saving current changes",
+        "submit": "Save and submit current hotel information",
+        "mapSearch": "Search map locations and fill address fields",
+        "nearbySearch": "Search nearby attractions, transport, and malls",
+        "nearbyAdd": "Add this nearby item to hotel information"
+      }
+    },
     "form": {
       "fetchPresetsError": "Failed to load presets",
       "fetchApprovedError": "Failed to load approved requests",

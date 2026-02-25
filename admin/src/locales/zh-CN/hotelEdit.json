@@ -209,6 +209,42 @@
       "roomsEmpty": "暂无房型",
       "promotions": "优惠活动"
     },
+    "tips": {
+      "tour": {
+        "title": "酒店编辑页使用指南",
+        "description": "按步骤快速了解编辑酒店信息的核心操作。",
+        "steps": {
+          "header": {
+            "title": "页面头部",
+            "description": "这里显示当前是新增还是编辑酒店。"
+          },
+          "tabs": {
+            "title": "编辑与预览",
+            "description": "可在“编辑信息”和“预览效果”之间切换，边改边看。"
+          },
+          "address": {
+            "title": "地址信息",
+            "description": "先通过地图搜索定位，再确认城市和详细地址。"
+          },
+          "roomTypes": {
+            "title": "房型信息",
+            "description": "在此维护房型、库存、价格等关键售卖信息。"
+          },
+          "save": {
+            "title": "保存与提交",
+            "description": "确认无误后可保存修改，或提交新酒店进入审核。"
+          }
+        }
+      },
+      "tooltip": {
+        "tourTrigger": "打开酒店编辑使用指南",
+        "cancel": "返回我的酒店列表，不保存当前更改",
+        "submit": "保存当前酒店信息并提交",
+        "mapSearch": "按关键词搜索地图位置并回填地址",
+        "nearbySearch": "搜索周边景点、交通和商场信息",
+        "nearbyAdd": "将该条周边信息添加到酒店资料"
+      }
+    },
     "form": {
       "fetchPresetsError": "加载预设数据失败",
       "fetchApprovedError": "获取已通过申请失败",
