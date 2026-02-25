@@ -14,3 +14,4 @@ mobile/.swc/plugins/
 .trae/
 admin/package-lock.json
 docker.env
+docs/performance-pic/

@@ -1,4 +1,4 @@
-# 易宿酒店预订平台答辩PPT（V7）初稿 - 按你反馈重写版
+# 易宿酒店预订平台答辩PPT
 
 ## 1. 本稿目标
 - 每个技术段都带少量代码，避免空讲概念。
@@ -390,12 +390,12 @@ query.lt('check_in', normalizedCheckOut).gt('check_out', normalizedCheckIn)
 - **难点**：关键词"上海五星酒店"需跨城市、名称、设施多维度命中并合理排序
 
 ```mermaid
-flowchart TD
-  A["用户输入 keyword"] --> B["城市标准化\ncityLookup Map\n上海 → 上海市"]
-  B --> C["相关性评分\n命中标签数 + 名称/地址匹配"]
-  C --> D{有 keyword?}
-  D -- 是 --> E["按评分排序\n忽略 sort 参数"]
-  D -- 否 --> F["标签命中数 → sort\nprice_asc / star / recommend"]
+flowchart TB
+    A["用户输入 keyword"] --> B["城市标准化<br>cityLookup Map<br>上海 → 上海市"]
+    B --> C["相关性评分<br>命中标签数 + 名称/地址匹配"]
+    C --> D{"有 keyword?"}
+    D -- 是 --> E["按评分排序<br>忽略 sort 参数"]
+    D -- 否 --> F["标签命中数 → sort<br>price_asc / star / recommend"]
 ```
 
 ### 底部成果面板（4个数据卡片）
@@ -404,20 +404,10 @@ flowchart TD
 - 状态机守护：订单 **4** 种状态、酒店 **4** 种状态，Service 层统一拦截非法迁移
 - 接口兼容：全量 + 分页双模输出，旧调用**零改造**
 
-## 15 三大专项总结页
-- 性能优化：关键路径减负 + 请求时机优化 + 渲染减负
-- 组件抽象：列表、查询、详情页共享基座
-- 动效体系：统一入口、统一节奏、统一回退
-
-## 16 总结与下一步
-- 下一步：
-  - 管理端继续细分域路由和词典
-  - 移动端增加体验埋点（加载耗时、掉帧）
-  - 服务端完善错误码标准化和 i18n 映射
 
 ---
 
-## 4. 架构图产出方式（按你要求：PPT 直接绘制）
+## 4. 架构图产出方式
 
 ### 4.1 产出规范
 - 不再通过 HTML 截图导入图片，统一在 PPT 中用形状直接绘制。
@@ -427,22 +417,11 @@ flowchart TD
   - 连线统一 `#39A9FF` 且箭头方向明确
   - 单页控制在“主结构 + 关键说明 + 1段代码”三块
 
-### 4.2 当前四类架构图（PPT直绘）
+### 4.2 当前四类架构图
 - 三端协同总架构（含技术栈）
 - 三端系统分层架构图（企业常见分层范式）
 - 管理端分层架构（性能/复用/权限）
 - 服务端分层架构（Router/Controller/Service/Data）
-
-### 4.3 状态机绘图约束（强制）
-- 必须包含：状态节点、迁移箭头、事件标签。
-- 订单状态机至少展示：
-  - `pending_payment -> confirmed -> finished`
-  - `pending_payment -> cancelled`
-  - `confirmed -> cancelled`（业务允许时）
-- 酒店状态机至少展示：
-  - `pending -> approved/rejected`
-  - `approved <-> offline`
-  - 驳回后重提路径（虚线回路）
 
 ---
 
@@ -452,4 +431,4 @@ flowchart TD
 - 连线避免零长度与复杂虚线组合，统一实线箭头。
 - 卡片改为纯扁平，不使用阴影特效，降低不同 Office 版本渲染差异。
 - 每个文本框预留足够高度，避免自动换行挤出边界。
-- 导出后固定校验：`python -m markitdown docs/答辩PPT_v7_蓝色多巴胺版.pptx`，确认内容完整无缺失。
+- 导出后固定校验：`python -m markitdown docs/答辩PPT_v.pptx`，确认内容完整无缺失。
