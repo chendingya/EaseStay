@@ -17,8 +17,10 @@ export default function Login() {
   const { setUser, setIsLogin } = useUserContext()
   const [loading, setLoading] = useState(false)
   const [countdown, setCountdown] = useState(0)
+  const [sendingCode, setSendingCode] = useState(false)
   const [mode, setMode] = useState(LOGIN_MODE.CODE)
   const [form] = Form.useForm()
+  const sendingCodeRef = React.useRef(false)
 
   React.useEffect(() => {
     if (countdown <= 0) return undefined
@@ -29,6 +31,7 @@ export default function Login() {
   }, [countdown])
 
   const onGetCode = async () => {
+    if (sendingCodeRef.current || countdown > 0) return
     const username = String(form.getFieldValue('username') || '').trim()
     if (!username) {
       Toast.show({
@@ -38,6 +41,8 @@ export default function Login() {
       return
     }
     try {
+      sendingCodeRef.current = true
+      setSendingCode(true)
       const res = await sendCode(username)
       setCountdown(60)
       Toast.show({
@@ -50,7 +55,11 @@ export default function Login() {
         })
         form.setFieldsValue({ code: res.code })
       }
-    } catch (error) {}
+    } catch (error) {
+    } finally {
+      sendingCodeRef.current = false
+      setSendingCode(false)
+    }
   }
 
   const onFinish = async (values) => {
@@ -172,10 +181,10 @@ export default function Login() {
                     size='middle'
                     color='primary'
                     fill='outline'
-                    disabled={countdown > 0}
+                    disabled={countdown > 0 || sendingCode}
                     onClick={onGetCode}
                   >
-                    {countdown > 0 ? `${countdown}s` : '获取验证码'}
+                    {countdown > 0 ? `${countdown}s` : (sendingCode ? '发送中...' : '获取验证码')}
                   </Button>
                 </View>
               </Form.Item>
