@@ -78,12 +78,52 @@ router.use('/requests', authRequired, requestRoutes)
   - 鉴权与权限、性能优化、组件抽象、动效体系
 
 ## 5 移动端架构设计
-- 分层：Page Layer -> List Factory -> List Container -> Card Layer。
-- 明确职责：
-  - Page：数据请求与业务回调
-  - List Factory：根据 type 组装列表
-  - List Container：滚动/刷新/加载/骨架/空态/动效
-  - Card：纯展示（OrderCard/HotelCard/RoomTypeCard）
+
+**四层纵向分层 + 横切能力**
+
+### 分层结构（从外到内）
+
+**层一：App Shell（根容器，永不卸载）**
+- `App` 根组件持有全局用户状态（`UserContext` + `userStore`）
+- 切换 Tab 时子页面通过 `useUserContext()` 直接读取，无需重新请求
+- 挂载 `GlobalBottomNav`（底部导航栏持久显示）
+
+**层二：Page Layer（11个页面，各自独立）**
+- 首页（搜索入口）→ 列表页（搜索结果）→ 酒店详情 → 房型详情 → 支付
+- 订单列表 → 订单详情 / 收藏列表 / 账户页 / 登录 / 注册
+- 每个 Page 负责：数据请求、业务回调、组装下层组件
+
+**层三：组件层（按职责拆分三类）**
+- **布局型**：`PageTopBar`（顶部栏）/ `GlobalBottomNav`（底部导航）/ `BookingBottomBar`（预订操作栏）
+- **列表型**：List Factory → `ListContainer`（滚动/刷新/骨架/空态/动效）
+- **卡片型**：纯展示，`HotelCard` / `OrderCard` / `RoomTypeCard`（只接收数据和回调）
+
+**层四：服务层**
+- `auth.js`：登录 / 注册 / 获取当前用户
+- `favorites.js`：收藏查询 / 添加 / 删除
+- `request.js`：统一 `Taro.request` 封装（自动携带 token）
+
+### 横切能力
+- **全局鉴权**：`userStore.hasToken()` 判断，未登录页面跳转 `/login`
+- **列表抽象**：`createListByType(type)` 工厂函数，覆盖订单/收藏/搜索/房型四类列表页
+- **动效体系**：入场阶梯动画 / 骨架扫光 / 下拉三阶段反馈，统一在 `ListContainer` 内封装
+
+代码点缀（1段）：
+```js
+// App 根组件：全局 Context + 启动时静默校验 token
+useEffect(() => {
+  if (!userStore.hasToken()) return
+  getCurrentUser().then(res => { if (res?.id) { setUser(res); setIsLogin(true) } })
+}, [])
+return (
+  <UserContext.Provider value={{ user, isLogin, setUser, setIsLogin, logout }}>
+    <View className='app-shell'>
+      {props.children}
+      <GlobalBottomNav />
+    </View>
+  </UserContext.Provider>
+)
+```
 
 ## 6 移动端技术实现（组件抽象）
 
