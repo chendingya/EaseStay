@@ -6,8 +6,17 @@
   flex-direction: column;
 }
 
+.auth-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 12px;
+  gap: 14px;
+}
+
 .auth-hero {
-  padding: 16px 16px 10px;
+  text-align: center;
 }
 
 .auth-title {
@@ -24,11 +33,37 @@
 }
 
 .auth-card {
-  margin: 0 12px;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 440px;
   padding: 14px 12px 12px;
   border-radius: 16px;
   border: 1px solid #e6edf5;
   background: #fff;
+  box-shadow: 0 8px 24px rgba(21, 47, 88, 0.06);
+}
+
+.auth-mode-switch {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  background: #f2f6fc;
+}
+
+.auth-mode-btn {
+  flex: 1;
+  height: 36px;
+  --text-color: #60738d;
+  font-weight: 700;
+  border-radius: 10px;
+}
+
+.auth-mode-btn.is-active {
+  background: #ffffff;
+  color: #1b5fd2;
+  box-shadow: 0 4px 10px rgba(32, 74, 144, 0.12);
 }
 
 .auth-form .adm-form {
@@ -36,31 +71,62 @@
   --border-bottom: none;
 }
 
+.auth-form .adm-list,
+.auth-form .adm-list-body {
+  border: none;
+  background: transparent;
+}
+
 .auth-form .adm-form-item {
   --padding-left: 0;
   --padding-right: 0;
 }
 
+.auth-form .adm-list-item {
+  --border-top: none;
+  --border-inner: none;
+}
+
+.auth-form .adm-list-body::before,
+.auth-form .adm-list-body::after,
+.auth-form .adm-list-item::after {
+  display: none !important;
+}
+
 .auth-form .adm-form-item-label {
-  color: #5e6c84;
-  font-size: 13px;
-  font-weight: 600;
+  color: #1f3552;
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 8px;
 }
 
 .auth-input,
 .auth-form .adm-input {
+  min-height: 44px;
   padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid #e1e9f5;
   background: #f5f8fd;
 }
 
+.auth-code-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auth-code-row .adm-input,
+.auth-code-input {
+  flex: 1;
+}
+
 .auth-code-btn {
-  min-width: 84px;
-  height: 32px;
-  padding: 0 10px;
-  --border-radius: 10px;
-  font-size: 12px;
+  min-width: 110px;
+  height: 44px;
+  padding: 0 12px;
+  --border-radius: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .auth-submit-btn {

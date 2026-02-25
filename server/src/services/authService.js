@@ -5,6 +5,7 @@ const { verifyCode } = require('./smsService')
 const PHONE_REGEX = /^1\d{10}$/
 
 const normalizePhone = (value) => String(value || '').trim()
+const normalizeUsername = (value) => String(value || '').trim()
 
 const isValidPhone = (phone) => PHONE_REGEX.test(phone)
 
@@ -128,16 +129,21 @@ const registerByPhone = async ({ phone, code }) => {
   }
 }
 
-const loginByPhone = async ({ phone, code }) => {
+const loginByPhone = async ({ phone, username, code }) => {
   const normalizedPhone = normalizePhone(phone)
-  if (!normalizedPhone || !code) {
+  const normalizedUsername = normalizeUsername(username)
+  const targetUsername = normalizedPhone || normalizedUsername
+
+  if (!targetUsername || !code) {
     return { ok: false, status: 400, message: 'phone、code 为必填项' }
   }
-  if (!isValidPhone(normalizedPhone)) {
+  if (normalizedPhone && !isValidPhone(normalizedPhone)) {
     return { ok: false, status: 400, message: '手机号格式不正确' }
   }
 
-  const codeCheck = await verifyCode({ phone: normalizedPhone, code })
+  const codeCheck = normalizedPhone
+    ? await verifyCode({ phone: normalizedPhone, code })
+    : await verifyCode({ username: normalizedUsername, code })
   if (!codeCheck.ok) {
     return { ok: false, status: 400, message: codeCheck.message }
   }
@@ -145,11 +151,15 @@ const loginByPhone = async ({ phone, code }) => {
   const { data: user, error } = await supabase
     .from('users')
     .select('id, username, role')
-    .eq('username', normalizedPhone)
+    .eq('username', targetUsername)
     .single()
 
   if (error || !user) {
-    return { ok: false, status: 404, message: '手机号未注册，请先注册' }
+    return {
+      ok: false,
+      status: 404,
+      message: normalizedPhone ? '手机号未注册，请先注册' : '用户名未注册，请先注册'
+    }
   }
   if (user.role !== 'user') {
     return { ok: false, status: 403, message: '该账号不可用于移动端登录' }

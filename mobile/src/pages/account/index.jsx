@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { View } from '@tarojs/components'
 import { List, Button, Avatar, Toast } from 'antd-mobile'
@@ -10,12 +10,15 @@ import './index.css'
 export default function Account() {
   const [user, setUser] = useState(null)
   const [isLogin, setIsLogin] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
 
   const fetchUserInfo = async () => {
+    setAuthLoading(true)
     const token = Taro.getStorageSync('token')
     if (!token) {
       setIsLogin(false)
       setUser(null)
+      setAuthLoading(false)
       return
     }
 
@@ -32,8 +35,15 @@ export default function Account() {
       console.error(error)
       // 如果获取失败（如401），也视为未登录
       setIsLogin(false)
+      setUser(null)
+    } finally {
+      setAuthLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchUserInfo()
+  }, [])
 
   useDidShow(() => {
     fetchUserInfo()
@@ -55,6 +65,7 @@ export default function Account() {
   }
 
   const handleOpenOrders = () => {
+    if (authLoading) return
     if (!isLogin) {
       handleLogin()
       return
@@ -74,7 +85,9 @@ export default function Account() {
           <Avatar src='' style={{ '--size': '64px', '--border-radius': '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} fallback={<UserOutline fontSize={40} />} />
         </View>
         <View className='user-info'>
-          {isLogin ? (
+          {authLoading ? (
+            <View className='account-user-skeleton' />
+          ) : isLogin ? (
             <View className='username'>{user?.username || '用户'}</View>
           ) : (
             <Button color='primary' fill='outline' size='small' onClick={handleLogin}>
@@ -85,7 +98,7 @@ export default function Account() {
       </View>
 
       <List header='我的服务'>
-        <List.Item onClick={handleOpenOrders} description={isLogin ? '' : '登录后可查看'}>
+        <List.Item onClick={handleOpenOrders} description={authLoading ? '' : (isLogin ? '' : '登录后可查看')}>
           我的订单
         </List.Item>
         <List.Item onClick={handleOpenFavorites}>
@@ -93,7 +106,7 @@ export default function Account() {
         </List.Item>
       </List>
 
-      {isLogin && (
+      {!authLoading && isLogin && (
         <View className='logout-container'>
           <Button block color='danger' fill='outline' size='large' onClick={handleLogout}>
             退出登录

@@ -29,6 +29,15 @@
   text-align: center;
 }
 
+.account-user-skeleton {
+  width: 116px;
+  height: 30px;
+  border-radius: 15px;
+  background: linear-gradient(90deg, #e8eef7 20%, #f5f9ff 50%, #e8eef7 80%);
+  background-size: 200% 100%;
+  animation: account-skeleton 1.2s ease-in-out infinite;
+}
+
 .username {
   font-size: 18px;
   font-weight: bold;
@@ -38,4 +47,13 @@
 .logout-container {
   padding: 20px;
   margin-top: 20px;
+}
+
+@keyframes account-skeleton {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
 }

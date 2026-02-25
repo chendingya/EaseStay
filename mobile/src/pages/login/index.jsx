@@ -2,15 +2,19 @@ import React, { useState } from 'react'
 import Taro from '@tarojs/taro'
 import { View } from '@tarojs/components'
 import { Form, Input, Button, Toast, Modal } from 'antd-mobile'
-import { login, sendCode } from '../../services/auth'
+import { loginByCode, loginByPassword, sendCode } from '../../services/auth'
 import PageTopBar from '../../components/PageTopBar'
 import './index.css'
 
-const PHONE_REGEX = /^1\d{10}$/
+const LOGIN_MODE = {
+  CODE: 'code',
+  PASSWORD: 'password'
+}
 
 export default function Login() {
   const [loading, setLoading] = useState(false)
   const [countdown, setCountdown] = useState(0)
+  const [mode, setMode] = useState(LOGIN_MODE.CODE)
   const [form] = Form.useForm()
 
   React.useEffect(() => {
@@ -22,16 +26,16 @@ export default function Login() {
   }, [countdown])
 
   const onGetCode = async () => {
-    const phone = form.getFieldValue('phone')
-    if (!PHONE_REGEX.test(phone || '')) {
+    const username = String(form.getFieldValue('username') || '').trim()
+    if (!username) {
       Toast.show({
         icon: 'fail',
-        content: '请输入正确的手机号'
+        content: '请先输入用户名'
       })
       return
     }
     try {
-      const res = await sendCode(phone)
+      const res = await sendCode(username)
       setCountdown(60)
       Toast.show({
         icon: 'success',
@@ -49,7 +53,10 @@ export default function Login() {
   const onFinish = async (values) => {
     setLoading(true)
     try {
-      const res = await login(values)
+      const payload = { username: values.username }
+      const res = mode === LOGIN_MODE.CODE
+        ? await loginByCode({ ...payload, code: values.code })
+        : await loginByPassword({ ...payload, password: values.password })
       // request.js 会在错误时抛出异常，所以只要走到这里且 res 存在，就是成功
       if (res) {
         Toast.show({
@@ -85,66 +92,99 @@ export default function Login() {
 
   return (
     <View className='login-page'>
-      <PageTopBar title='手机号登录' onBack={handleBack} />
-      <View className='auth-hero'>
-        <View className='auth-title'>手机号登录</View>
-        <View className='auth-subtitle'>登录后可查看订单与收藏酒店</View>
-      </View>
+      <PageTopBar title='账号登录' onBack={handleBack} />
+      <View className='auth-main'>
+        <View className='auth-hero'>
+          <View className='auth-title'>账号登录</View>
+          <View className='auth-subtitle'>支持密码或验证码登录</View>
+        </View>
 
-      <View className='auth-card'>
-        <Form
-          form={form}
-          className='auth-form'
-          layout='vertical'
-          onFinish={onFinish}
-          footer={
+        <View className='auth-card'>
+          <View className='auth-mode-switch' role='tablist'>
             <Button
-              className='auth-submit-btn'
-              block
-              type='submit'
-              color='primary'
-              size='large'
-              loading={loading}
+              className={`auth-mode-btn ${mode === LOGIN_MODE.CODE ? 'is-active' : ''}`}
+              fill='none'
+              onClick={() => setMode(LOGIN_MODE.CODE)}
             >
-              登录
+              验证码登录
             </Button>
-          }
-        >
-          <Form.Item
-            name='phone'
-            label='手机号'
-            rules={[
-              { required: true, message: '请输入手机号' },
-              { pattern: PHONE_REGEX, message: '手机号格式不正确' }
-            ]}
-          >
-            <Input className='auth-input' placeholder='请输入手机号' maxLength={11} />
-          </Form.Item>
-          <Form.Item
-            name='code'
-            label='验证码'
-            rules={[{ required: true, message: '请输入验证码' }]}
-            extra={(
-              <Button
-                className='auth-code-btn'
-                size='small'
-                color='primary'
-                fill='outline'
-                disabled={countdown > 0}
-                onClick={onGetCode}
-              >
-                {countdown > 0 ? `${countdown}s` : '获取验证码'}
-              </Button>
-            )}
-          >
-            <Input className='auth-input' placeholder='请输入验证码' maxLength={6} />
-          </Form.Item>
-        </Form>
+            <Button
+              className={`auth-mode-btn ${mode === LOGIN_MODE.PASSWORD ? 'is-active' : ''}`}
+              fill='none'
+              onClick={() => setMode(LOGIN_MODE.PASSWORD)}
+            >
+              密码登录
+            </Button>
+          </View>
 
-        <View className='auth-footer-actions'>
-          <Button className='auth-link-btn' fill='none' onClick={() => Taro.navigateTo({ url: '/pages/register/index' })}>
-            没有账号？去注册
-          </Button>
+          <Form
+            form={form}
+            className='auth-form'
+            layout='vertical'
+            onFinish={onFinish}
+            footer={
+              <Button
+                className='auth-submit-btn'
+                block
+                type='submit'
+                color='primary'
+                size='large'
+                loading={loading}
+              >
+                {mode === LOGIN_MODE.CODE ? '验证码登录' : '密码登录'}
+              </Button>
+            }
+          >
+            <Form.Item
+              name='username'
+              label='用户名'
+              rules={[{ required: true, message: '请输入用户名' }]}
+            >
+              <Input className='auth-input' placeholder='请输入用户名' />
+            </Form.Item>
+
+            {mode === LOGIN_MODE.CODE ? (
+              <Form.Item
+                className='auth-code-form-item'
+                label='验证码'
+                required
+              >
+                <View className='auth-code-row'>
+                  <Form.Item
+                    name='code'
+                    noStyle
+                    rules={[{ required: true, message: '请输入验证码' }]}
+                  >
+                    <Input className='auth-input auth-code-input' placeholder='请输入验证码' maxLength={6} />
+                  </Form.Item>
+                  <Button
+                    className='auth-code-btn'
+                    size='middle'
+                    color='primary'
+                    fill='outline'
+                    disabled={countdown > 0}
+                    onClick={onGetCode}
+                  >
+                    {countdown > 0 ? `${countdown}s` : '获取验证码'}
+                  </Button>
+                </View>
+              </Form.Item>
+            ) : (
+              <Form.Item
+                name='password'
+                label='密码'
+                rules={[{ required: true, message: '请输入密码' }]}
+              >
+                <Input className='auth-input' placeholder='请输入密码' clearable type='password' />
+              </Form.Item>
+            )}
+          </Form>
+
+          <View className='auth-footer-actions'>
+            <Button className='auth-link-btn' fill='none' onClick={() => Taro.navigateTo({ url: '/pages/register/index' })}>
+              没有账号？去注册
+            </Button>
+          </View>
         </View>
       </View>
     </View>

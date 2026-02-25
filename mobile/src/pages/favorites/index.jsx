@@ -14,6 +14,7 @@ export default function Favorites() {
   const [loading, setLoading] = useState(true)
 
   const refresh = async () => {
+    setLoading(true)
     try {
       const next = await getFavoriteHotels()
       const sorted = next
@@ -86,16 +87,7 @@ export default function Favorites() {
       />
 
       <View className='favorites-content'>
-        {list.length === 0 ? (
-          <View className='favorites-empty-card'>
-            <Empty description='暂无收藏酒店' />
-            <View className='favorites-empty-action'>
-              <Button color='primary' size='small' onClick={goExplore}>
-                去逛逛酒店
-              </Button>
-            </View>
-          </View>
-        ) : (
+        {(loading || list.length > 0) ? (
           <View className='favorites-list-wrap'>
             {createListByType({
               type: 'favorite',
@@ -114,6 +106,15 @@ export default function Favorites() {
                 return [`收藏于 ${savedAt}`]
               }
             })}
+          </View>
+        ) : (
+          <View className='favorites-empty-card'>
+            <Empty description='暂无收藏酒店' />
+            <View className='favorites-empty-action'>
+              <Button color='primary' size='small' onClick={goExplore}>
+                去逛逛酒店
+              </Button>
+            </View>
           </View>
         )}
       </View>

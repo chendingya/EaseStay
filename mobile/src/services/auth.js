@@ -1,17 +1,22 @@
 import { api } from './request'
 
 // 发送验证码
-export const sendCode = (phone) => {
-  return api.post('/api/auth/sms/send', { phone })
+export const sendCode = (username) => {
+  return api.post('/api/auth/sms/send', { username })
 }
 
-// 手机号验证码注册（模拟）
-export const register = (data) => {
-  return api.post('/api/auth/phone/register', data)
+// 账号注册（用户名 + 密码 + 验证码）
+export const registerByPassword = (data) => {
+  return api.post('/api/auth/register', data)
 }
 
-// 手机号验证码登录（模拟）
-export const login = (data) => {
+// 用户名密码登录
+export const loginByPassword = (data) => {
+  return api.post('/api/auth/login', data)
+}
+
+// 用户名验证码登录（复用手机验证码登录接口）
+export const loginByCode = (data) => {
   return api.post('/api/auth/phone/login', data)
 }
 
