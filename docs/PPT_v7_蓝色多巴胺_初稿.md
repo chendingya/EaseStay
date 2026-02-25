@@ -86,74 +86,114 @@ router.use('/requests', authRequired, requestRoutes)
   - Card：纯展示（OrderCard/HotelCard/RoomTypeCard）
 
 ## 6 移动端技术实现（组件抽象）
-- 已抽象组件/能力：
-  - `ListContainer`（`mobile/src/components/OrderList/index.jsx`）
-  - `createListByType`（订单/收藏/房型/酒店四类列表工厂）
-  - `OrderCard`、`HotelCard`、`RoomTypeCard`
-  - 收藏滑删场景：`SwipeAction` 作为可选能力注入
-- 复用页面：
-  - `pages/detail`
-  - `pages/favorites`
-  - `pages/orders`
+
+**核心思路：一个 `ListContainer` + 一个工厂函数，覆盖四类列表页面**
+
+- `ListContainer`（通用滚动容器）：把下拉刷新 / 上拉加载更多 / 骨架屏 / 空态 / 入场动画全部封装在内，业务页面**不需要重复实现**这些能力
+- `createListByType`（列表工厂函数）：传入 `type` 参数，返回不同的列表装配结果
+  - `'order'` → `OrderCard` + 订单专用骨架屏
+  - `'favorite'` → `HotelCard` + `SwipeAction` 右滑取消收藏（`enableSwipe` 控制开关，不需要时不注入）
+  - `'room'` → `RoomTypeCard` + 售罄状态判定逻辑注入
+  - `'hotel'` → `HotelCard`（搜索结果列表）
+- 每个 Card 组件（`OrderCard` / `HotelCard` / `RoomTypeCard`）**纯展示**，只接收数据和回调，不感知外层滚动容器
+- **复用收益**：`pages/orders`（订单列表）、`pages/favorites`（收藏）、`pages/list`（搜索结果）三个页面均只需调用工厂函数，无需各自实现滚动刷新逻辑
 
 代码点缀（1段）：
 ```jsx
+// 收藏页：开启滑删 + 入场动画，只需传 type 和回调，无需关心滚动/刷新实现
 {createListByType({
   type: 'favorite',
   items,
-  onOpen,
-  onRemove,
-  animate: true
+  onOpen,       // 点击跳详情
+  onRemove,     // 右滑 → 取消收藏
+  animate: true // 启用入场动效
 })}
 ```
 
 ## 7 移动端技术实现（动效详细版）
-- 动效触发：
-  - 只有 `animate=true` 时启用入场动画
-  - 列表项级别注入 `list-stagger-enter`
-- 动效编排：
-  - `delay = Math.min(index, 10) * 20ms`
-  - 前 10 项阶梯入场，避免长列表后段过慢
-- 动效执行：
-  - 时长 `0.22s`
-  - easing `ease-out`
-  - 关键帧：`translateY(6px) + scale(0.995) -> 0 + 1`
-- 下拉反馈动效：
-  - `list-pull-dot` 循环缩放（0.9s）
-  - `ready` 状态点颜色变化，提供触发阈值反馈
 
-代码点缀（1段）：
+**三类动效，全部封装在 `ListContainer` 内，业务页面传 `animate=true` 即可开启，无需关心实现细节**
+
+### 动效一：列表项入场动画（阶梯错开进场）
+- **是什么**：页面数据加载完成后，卡片从"略微偏下 + 略微缩小 + 透明"的状态浮入正常位置
+- **怎么实现**：
+  - 每个列表项加 `list-stagger-enter` class，触发 `@keyframes list-item-enter`
+  - 关键帧：`opacity 0→1`，`translateY(6px)→0`，`scale(0.995)→1`，时长 0.22s，ease-out
+  - 每项延迟 = `Math.min(index, 10) × 20ms`：第 0 项立即播，第 5 项延迟 100ms……**第 10 项之后全部固定 200ms**，避免列表很长时后面的卡片等很久才出现
+
+### 动效二：骨架屏流光扫描
+- **是什么**：数据加载中时，卡片区域显示灰色占位条，占位条上有光从左向右扫过的效果
+- **怎么实现**：占位条用 CSS 横向渐变背景（`#edf1f6 → #f8fbff → #edf1f6`），通过 `@keyframes` 把 `background-position` 从 `100%→0%` 循环移动，产生"扫光"视觉，1.2s 无限循环
+- **覆盖两个场景**：初次加载（全页骨架）和上拉加载更多（底部追加 2 条骨架），复用同一套样式
+
+### 动效三：下拉刷新三阶段反馈
+- **拖拽中**：指示小圆点实时跟随拉距放大，`scale = 0.6 + (拉距/阈值) × 0.6`；容器高度随拖动距离增长，给用户弹性拉伸感
+- **已达阈值（ready）**：拉距 ≥ 72px 时圆点颜色加深（`#1677ff → #1a6dff`），告知用户"松手就会刷新"
+- **刷新中（loading）**：松手后圆点进入 pulse 动画，`scale(1) → scale(1.4) → scale(1)` 循环，0.9s 无限，直到数据返回
+
+代码点缀（1段，入场动画核心逻辑）：
 ```jsx
+// 前 10 项错开进场，第 11 项起同时出现，避免等待时间随列表变长
 const delay = animate ? `${Math.min(index, 10) * 20}ms` : '0ms'
-<View className={`list-item${animate ? ' list-stagger-enter' : ''}`} style={{ animationDelay: delay }} />
+<View
+  className={`list-item${animate ? ' list-stagger-enter' : ''}`}
+  style={animate ? { animationDelay: delay } : undefined}
+/>
+// CSS keyframe:
+// from { opacity:0; transform: translateY(6px) scale(0.995) }
+// to   { opacity:1; transform: translateY(0)   scale(1)     }
 ```
 
 ## 8 管理端架构设计
-- 架构分层：
-  - Route Layer：`React.lazy` 路由分包（15处）
-  - Query Layer：`useRemoteTableQuery + TableFilterBar`
-  - Feature Layer：共享基座与业务页装配
-- 页面权限分域：
-  - merchant 路由组
-  - admin 路由组
+
+**三层结构，各自解决一个核心问题**
+
+### 路由层（Route Layer）—— 解决"重组件拖慢首屏"
+- 15 个页面组件全部 `React.lazy` 按需加载，用户访问哪个页面才下载对应 JS，首屏只加载登录/工作台代码
+- 页面内的大体积子组件（图表、批量操作弹窗、审核大表格）同样独立拆包，进入对应页面才加载
+- 路由树**分角色嵌套**，权限在路由层统一收口：
+  - 所有已登录路由 → `RequireAuth`（无 token 强跳 `/login`）
+  - 商户路由组（`/hotels/*`）→ `RequireRole allow="merchant"`
+  - 管理员路由组（`/audit/*` `/requests/*` 等）→ `RequireRole allow="admin"`
+
+### 查询层（Query Layer）—— 解决"每个列表页重复写查询逻辑"
+- `useRemoteTableQuery`：统一管理关键词 / 页码 / 每页条数 / 总条数 + 搜索防抖，一行 Hook 调用替代约 20 行重复的 `useState/useEffect`
+- `TableFilterBar`：统一搜索框 + 筛选下拉 + 操作按钮的布局，所有列表页复用同一组件
+
+### 功能层（Feature Layer）—— 解决"商户/管理员页面大量重复"
+- `RoomsTabBase` / `OrdersTabBase`：商户和管理员的房型表、订单表共用同一套基座，通过 props 注入差异（翻译 key 前缀、是否显示状态列、操作回调）
+- 工作台、酒店详情等页面按角色装配不同的功能模块（商户看销售数据，管理员看审核数据）
 
 ## 9 管理端技术实现（性能优化怎么做）
-- 路由与模块懒加载：
-  - 页面路由懒加载（`App.jsx`）
-  - 重组件懒加载：`DashboardBatchModals`、`AuditTable`、`RoomsTab/OrdersTab`、`echarts-for-react`
-- 请求时机优化：
-  - 低优先级信息改为空闲或延后请求
-  - 仅在 tab 激活时拉取对应数据
-- 渲染减负：
-  - 长列表分页
-  - `memo` 收口列定义与映射对象
-  - `content-visibility` 用于消息列表条目
+
+**三类优化手段，对应三种性能瓶颈**
+
+### 手段一：代码分割（解决 JS bundle 过大）
+- **页面级**：15 个页面组件全部 `React.lazy`，路由切换时才下载对应 chunk
+- **组件级**：页面内大体积组件单独拆包，不随页面一起加载：
+  - `DashboardBatchModals`：工作台批量操作弹窗，只在打开弹窗时才加载
+  - `AuditTable`：审核大表格，进入审核页才加载
+  - `echarts-for-react`：ECharts 图表库（体积较大），进入订单统计页才加载
+
+### 手段二：请求时机优化（解决非关键请求抢占首屏）
+- 未读消息数、管理员待审任务数 → 通过 `requestIdleCallback`（不支持时降级 `setTimeout 400ms`）在浏览器**空闲时**才发起请求，首屏渲染期间不占网络
+- 酒店详情页的「房型」「订单」tab → **Tab 激活时才发起对应数据请求**，默认只加载首个 Tab 的数据
+
+### 手段三：渲染减负（解决大量 DOM 渲染卡顿）
+- **分页**：所有列表页服务端分页，默认每页 10 条，不一次性渲染全部数据
+- **`useMemo` 稳定引用**：列定义数组、状态映射对象用 `useMemo` 包裹，父组件重渲染时表格结构不重建
+- **`content-visibility: auto`**：消息列表每条通知滚出视口后，浏览器跳过其布局与绘制
 
 代码点缀（1段）：
 ```jsx
+// 三个重组件独立拆包，进入对应页面/触发对应操作时才加载
 const DashboardBatchModals = lazy(() => import('../components/DashboardBatchModals.jsx'))
-const AuditTable = lazy(() => import('../components/audit/AuditTable.jsx'))
-const ReactECharts = lazy(() => import('echarts-for-react'))
+const AuditTable           = lazy(() => import('../components/audit/AuditTable.jsx'))
+const ReactECharts         = lazy(() => import('echarts-for-react'))
+// 非关键数据用 requestIdleCallback 延迟请求
+scheduleIdleTask(async () => {
+  setUnreadCount(await getUnreadCount())
+}, { timeout: 1500, fallbackDelay: 400 })
 ```
 
 性能实测汇总（来自 `docs/performance-pic`）：
@@ -171,17 +211,45 @@ const ReactECharts = lazy(() => import('echarts-for-react'))
 | 账户管理（管理员） | `/account` | `image.png` | 98 | 92 | 100 | 73 | 0.7 | 1.0 | 50 | 0.027 | 0.7 |
 
 ## 10 管理端技术实现（页面与组件复用怎么做）
-- 查询态复用：
-  - `useRemoteTableQuery` 统一 `keyword/page/pageSize/total` 和防抖
-  - `TableFilterBar` 统一筛选区结构
-- 详情页复用：
-  - `RoomsTabBase` 作为商户/管理员房型表基座
-  - `OrdersTabBase` 作为商户/管理员订单表基座
-  - 差异通过 props 和 i18n key 前缀注入
+
+**复用点一：查询状态 Hook（`useRemoteTableQuery`）**
+
+所有列表页都需要关键词搜索、分页、防抖这一套逻辑。没有 Hook 时，每个页面自己写 `useState + useEffect + setTimeout`，约 20 行代码重复 10 次。
+
+Hook 内部做了两件事：
+1. 搜索框输入变化后，等待 350ms 无新输入才更新 `keyword`（防抖），同时把页码重置为第 1 页
+2. 换页时如果 `pageSize` 也变了，自动重置到第 1 页，避免页码越界
+
+业务页面只需一行：`const { keyword, page, pageSize, total, setTotal, handlePageChange, setSearchInput } = useRemoteTableQuery()`
+
+---
+
+**复用点二：筛选栏组件（`TableFilterBar`）**
+
+统一搜索框 + 多个 Select 筛选 + 重置/刷新按钮的布局。传入 `filterItems` 数组配置每个筛选项，不用每个页面手写 `<Row><Col>` 栅格布局。
+
+---
+
+**复用点三：房型表 / 订单表共享基座（`RoomsTabBase` / `OrdersTabBase`）**
+
+商户端酒店详情和管理员端酒店详情的房型表，表格列结构完全相同，只有以下差异：
+- 管理员可看"上架/下架状态"列，商户看不到
+- 管理员有"设置折扣 / 取消折扣"操作列，商户没有
+- 按钮文案、翻译 key 前缀不同
+
+抽取 `RoomsTabBase` 后，差异全部通过 props 注入，不需要维护两份几乎一样的表格代码。
 
 代码点缀（1段）：
-```js
-export const useRemoteTableQuery = ({ initialPageSize = 10, debounceMs = 350 } = {}) => { ... }
+```jsx
+// 商户端：隐藏状态列和操作列
+<RoomsTabBase roomTypes={rooms} i18nPrefix="merchant.room"
+  showStatusColumn={false} showActionColumn={false} />
+
+// 管理员端：多出状态列 + 折扣操作列
+<RoomsTabBase roomTypes={rooms} i18nPrefix="admin.room"
+  showStatusColumn={true} showActionColumn={true}
+  onOpenDiscount={handleOpenDiscount}
+  onCancelDiscount={handleCancelDiscount} />
 ```
 
 ## 11 管理端技术实现（鉴权与权限管理怎么做）
