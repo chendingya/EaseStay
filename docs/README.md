@@ -8,8 +8,10 @@
 - 移动端动效指南（Motion Guide）：[MotionGuide.md](./MotionGuide.md)
 - 前端性能优化复用手册（Frontend Performance Playbook）：[FrontendPerformancePlaybook.md](./FrontendPerformancePlaybook.md)
 - 前端性能优化组件台账（Frontend Performance Change Log）：[FrontendPerformanceChangeLog.md](./FrontendPerformanceChangeLog.md)
+- Docker 部署指南：[Docker部署指南.md](./Docker部署指南.md)
 
 ## 最近更新（2026-02）
+- Docker 部署文档：新增《Docker 部署指南》，统一三端容器化部署与环境变量说明
 - 前端性能台账上线：新增《前端性能优化组件台账》，按“组件/方法/指标/验证”记录每次优化
 - Admin 前端性能规则沉淀：新增《前端性能优化复用手册》，固化跨页面可复用的拆分、请求、渲染与验收规则
 - Admin 国际化工程化升级：词典 namespace 拆分、路由级按需加载、语言切换懒加载

@@ -32,3 +32,30 @@
 
 ## 文档
 - 文档索引见 [docs/README.md](./docs/README.md)
+
+## Docker 部署（三端）
+- 已提供：
+  - `docker-compose.yml`
+  - `server/Dockerfile`
+  - `admin/Dockerfile`
+  - `mobile/Dockerfile`
+  - `docker.env.example`
+- 启动前先准备环境变量（可复制 `docker.env.example` 并按实际值填写）：
+  - `PUBLIC_API_BASE`：前端构建时注入的后端地址，必须是浏览器可访问地址
+  - `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY`
+  - `JWT_SECRET` / `AMAP_KEY`
+- 启动：
+  - Linux/macOS: `set -a && source docker.env && set +a && docker compose up -d --build`
+  - PowerShell: 
+    ```powershell
+    Get-Content .\docker.env | ForEach-Object {
+      if ($_ -match '^\s*#' -or $_ -notmatch '=') { return }
+      $name, $value = $_ -split '=', 2
+      [System.Environment]::SetEnvironmentVariable($name, $value)
+    }
+    docker compose up -d --build
+    ```
+- 访问：
+  - 服务端：`http://localhost:4100`
+  - 管理端：`http://localhost:4101`
+  - 移动端 H5：`http://localhost:10086`

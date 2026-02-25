@@ -22,6 +22,25 @@ export default function Login() {
   const [form] = Form.useForm()
   const sendingCodeRef = React.useRef(false)
 
+  const navigateAfterLogin = () => {
+    const pages = Taro.getCurrentPages ? Taro.getCurrentPages() : []
+    const prevPage = pages.length > 1 ? pages[pages.length - 2] : null
+    const prevRoute = String(
+      prevPage?.route
+      || prevPage?.$component?.$router?.path
+      || prevPage?.$taroPath
+      || ''
+    )
+
+    // If previous page is another auth page (or missing), force a clean jump.
+    if (!prevRoute || prevRoute.includes('/pages/login/index') || prevRoute.includes('/pages/register/index')) {
+      Taro.reLaunch({ url: '/pages/account/index' })
+      return
+    }
+
+    Taro.navigateBack({ fail: () => Taro.reLaunch({ url: '/pages/account/index' }) })
+  }
+
   React.useEffect(() => {
     if (countdown <= 0) return undefined
     const timer = setInterval(() => {
@@ -87,8 +106,8 @@ export default function Login() {
           }
         } catch (e) {}
 
-        // 跳转回个人中心或上一页
-        Taro.navigateBack({ fail: () => Taro.reLaunch({ url: '/pages/account/index' }) })
+        // Prefer back-navigation, but avoid returning to stacked auth pages.
+        navigateAfterLogin()
       }
     } catch (error) {
       Toast.show({

@@ -13,3 +13,4 @@ package-lock.json
 mobile/.swc/plugins/
 .trae/
 admin/package-lock.json
+docker.env

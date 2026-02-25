@@ -1,0 +1,45 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    container_name: yisu-server
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      AMAP_KEY: ${AMAP_KEY}
+      HOST: 0.0.0.0
+      PORT: 4100
+      IMAGE_PROXY_ALLOW_ALL: ${IMAGE_PROXY_ALLOW_ALL:-true}
+      IMAGE_PROXY_ALLOW_HOSTS: ${IMAGE_PROXY_ALLOW_HOSTS:-}
+    ports:
+      - "4100:4100"
+    restart: unless-stopped
+
+  admin:
+    build:
+      context: .
+      dockerfile: admin/Dockerfile
+      args:
+        VITE_API_BASE: ${PUBLIC_API_BASE:-http://localhost:4100}
+    container_name: yisu-admin
+    ports:
+      - "4101:80"
+    depends_on:
+      - server
+    restart: unless-stopped
+
+  mobile:
+    build:
+      context: .
+      dockerfile: mobile/Dockerfile
+      args:
+        TARO_APP_API_BASE: ${PUBLIC_API_BASE:-http://localhost:4100}
+    container_name: yisu-mobile
+    ports:
+      - "10086:80"
+    depends_on:
+      - server
+    restart: unless-stopped
