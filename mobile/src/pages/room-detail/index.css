@@ -46,8 +46,35 @@
   padding: 4px 10px;
 }
 
+.room-banner-info {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0));
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.room-banner-name {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 12px;
+}
+
 .room-detail-content {
-  padding: 12px;
+  padding: 16px 12px 12px 12px;
 }
 
 .room-detail-hero-card,
@@ -61,7 +88,7 @@
 }
 
 .room-detail-hero-card {
-  margin: -24px 0 12px;
+  margin: 0 0 12px 0;
   padding: 16px;
   position: relative;
   z-index: 10;

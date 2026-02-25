@@ -2093,6 +2093,7 @@ const getPublicHotel = async ({ hotelId, query }) => {
     })
     return {
       ...room,
+      images: normalizeArray(room.images),
       display_price: pricing.finalPrice,
       base_price: pricing.basePrice,
       promotion_price: pricing.promotionAdjustedPrice,
@@ -2104,13 +2105,21 @@ const getPublicHotel = async ({ hotelId, query }) => {
 
   const lowestPrice = pricedRoomTypes.length > 0 ? normalizeNumber(pricedRoomTypes[0].display_price) : null
 
+  // 所有房型的图片数据（不受库存/激活状态过滤），供幻灯片使用
+  const allRoomTypeSlides = (roomTypes || []).map((room) => ({
+    id: room.id,
+    name: room.name,
+    images: normalizeArray(room.images)
+  }))
+
   return {
     ok: true,
     status: 200,
     data: {
       ...hotel,
       lowestPrice,
-      roomTypes: pricedRoomTypes
+      roomTypes: pricedRoomTypes,
+      allRoomTypeSlides
     }
   }
 }

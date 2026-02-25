@@ -255,34 +255,53 @@ export default function Detail() {
     return priceA - priceB
   })
 
-  // 合并酒店图片 + 各房型图片，构成统一幻灯片列表（全局去重）
+  // 所有房型（含库存=0的）的图片数据，用于幻灯片
+  const allRoomTypeSlides = safeHotel.allRoomTypeSlides
+
+  // 合并酒店图片 + 各房型图片，构成统一幻灯片列表
+  // 去重规则：
+  //   - 酒店主图组内去重
+  //   - 每个房型组内去重
+  //   - 但不同房型之间、房型与酒店主图之间不做全局去重
+  //     （保证每个房型在幻灯片中完整出现，即使 URL 与其他分组相同）
   const allSlides = useMemo(() => {
-    const seenSrc = new Set()
     const slides = []
 
-    // 酒店图片
+    // 酒店主图（组内去重）
+    const hotelSeen = new Set()
     ;(images || []).filter(Boolean).forEach((src) => {
-      if (seenSrc.has(src)) return
-      seenSrc.add(src)
+      if (hotelSeen.has(src)) return
+      hotelSeen.add(src)
       slides.push({ src, label: null, labelSub: null })
     })
 
-    // 各房型图片（room.image 与 room.images[0] 视为同一张，优先用 images 数组）
-    roomTypes.forEach((room) => {
+    // 优先使用 allRoomTypeSlides（后端返回的全量房型），否则回退到已过滤的 roomTypes
+    const roomsForSlides = Array.isArray(allRoomTypeSlides) && allRoomTypeSlides.length > 0
+      ? allRoomTypeSlides
+      : roomTypes
+
+    roomsForSlides.forEach((room) => {
       const roomImgs = Array.isArray(room.images) && room.images.length > 0
         ? room.images.filter(Boolean)
-        : room.image ? [room.image] : []
-      const price = Number(room.display_price)
+        : []
+      if (!roomImgs.length) return
+
+      // 从已过滤的 roomTypes 中查找该房型的价格（供幻灯片标注）
+      const matched = roomTypes.find((r) => String(r.id) === String(room.id))
+      const price = Number(matched?.display_price)
       const priceTxt = Number.isFinite(price) ? `¥${price}/晚` : ''
+
+      // 每个房型组内去重，但不与其他组交叉去重
+      const roomSeen = new Set()
       roomImgs.forEach((src) => {
-        if (seenSrc.has(src)) return
-        seenSrc.add(src)
+        if (roomSeen.has(src)) return
+        roomSeen.add(src)
         slides.push({ src, label: room.name || '客房', labelSub: priceTxt })
       })
     })
 
     return slides
-  }, [images, roomTypes])
+  }, [images, roomTypes, allRoomTypeSlides])
 
   const normalizePositiveInt = (value) => {
     const num = Number(value)

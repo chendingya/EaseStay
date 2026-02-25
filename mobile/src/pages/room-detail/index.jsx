@@ -264,7 +264,10 @@ export default function RoomDetail() {
               </SwiperItem>
             )}
           </Swiper>
-          <View className='room-banner-count'>{images.length || 1} 张</View>
+          <View className='room-banner-info'>
+            <View className='room-banner-name'>{room?.name || '标准房型'}</View>
+            <View className='room-banner-count'>{bannerIndex + 1} / {images.length || 1}</View>
+          </View>
         </View>
 
         <View className='room-detail-content'>
