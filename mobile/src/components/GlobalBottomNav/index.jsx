@@ -18,6 +18,9 @@ const navItems = [
 
 const INVALID_ROUTES = new Set(['/undefined', '/null', '/nan'])
 
+// 这些页面不显示底部导航栏
+const HIDDEN_ROUTES = new Set(['/pages/map/index'])
+
 const normalizePath = (rawPath) => {
   let path = String(rawPath || '')
   if (!path) return '/pages/index/index'
@@ -143,6 +146,9 @@ export default function GlobalBottomNav() {
     if (isNavActive(currentPath, target)) return
     Taro.reLaunch({ url: target })
   }
+
+  // 地图页等特殊页面不显示底部导航
+  if (HIDDEN_ROUTES.has(normalizePath(currentPath))) return null
 
   return (
     <View className='global-bottom-nav' role='navigation' aria-label='主导航'>

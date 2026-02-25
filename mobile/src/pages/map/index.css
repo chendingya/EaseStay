@@ -1,0 +1,535 @@
+/* =============================================
+   地图找房页面
+   ============================================= */
+.map-search-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: #f5f7fb;
+  position: relative;
+}
+
+/* ─── 顶部搜索栏 ─── */
+.map-top-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.map-back-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #f5f7fb;
+  font-size: 18px;
+  color: #333;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.map-search-input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: #f5f7fb;
+  border-radius: 20px;
+  padding: 0 12px;
+  height: 36px;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.map-search-icon {
+  font-size: 16px;
+  color: #999;
+  flex-shrink: 0;
+}
+
+.map-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: #333;
+  outline: none;
+  min-width: 0;
+}
+
+.map-search-input::placeholder {
+  color: #bbb;
+}
+
+.map-search-clear {
+  font-size: 16px;
+  color: #bbb;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.map-city-tag {
+  display: flex;
+  align-items: center;
+  background: #e8f1ff;
+  color: #0086F6;
+  border-radius: 12px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+/* ─── 状态提示条 ─── */
+.map-poi-tip,
+.map-city-tip {
+  display: flex;
+  align-items: center;
+  padding: 6px 14px;
+  background: #fff;
+  border-bottom: 1px solid #f0f2f6;
+  flex-shrink: 0;
+  gap: 2px;
+}
+
+.map-poi-tip-text {
+  font-size: 12px;
+  color: #0086F6;
+}
+
+.map-city-tip {
+  justify-content: space-between;
+}
+
+.map-city-tip-text {
+  font-size: 12px;
+  color: #555;
+  font-weight: 600;
+}
+
+.map-city-tip-hint {
+  font-size: 11px;
+  color: #aaa;
+}
+
+/* ─── 筛选条 ─── */
+.map-filter-dropdown {
+  background: #fff;
+  border-bottom: 1px solid #f0f2f6;
+  flex-shrink: 0;
+  --adm-dropdown-item-title-font-size: 13px;
+}
+
+.map-dropdown-content {
+  padding: 16px 16px 12px;
+  background: #fff;
+  max-height: 60vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.active-filter-label {
+  color: #0086F6;
+  font-weight: 700;
+}
+
+.map-dropdown-content .adm-checkbox-icon {
+  border-radius: 4px;
+}
+
+/* ─── POI 搜索建议下拉 ─── */
+.map-suggestions {
+  position: absolute;
+  top: 56px; /* just below the top search bar */
+  left: 0;
+  right: 0;
+  background: #fff;
+  z-index: 500;
+  max-height: 300px;
+  overflow-y: auto;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  border-radius: 0 0 12px 12px;
+}
+
+.map-suggestion-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f5f5f5;
+  cursor: pointer;
+}
+
+.map-suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.map-suggestion-item:active {
+  background: #f5f8ff;
+}
+
+.map-sug-icon {
+  font-size: 16px;
+  color: #0086F6;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.map-sug-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.map-sug-name {
+  font-size: 14px;
+  color: #1d2c3e;
+  font-weight: 600;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-sug-addr {
+  font-size: 12px;
+  color: #999;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* ─── 地图主体 ─── */
+.map-view-area {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #e8edf2;
+}
+
+.map-native-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 14px;
+}
+
+/* AMap 价格气泡 */
+.map-price-bubble {
+  display: inline-flex;
+  align-items: center;
+  background: #1061C5;
+  color: #fff;
+  border-radius: 14px;
+  padding: 5px 11px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.15s, background 0.15s;
+}
+
+.map-price-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #1061C5;
+  border-bottom: none;
+}
+
+.map-price-bubble-active {
+  background: #E14B4B !important;
+  transform: scale(1.1);
+  z-index: 300;
+}
+
+.map-price-bubble-active::after {
+  border-top-color: #E14B4B !important;
+}
+
+/* AMap POI 标记 */
+.map-poi-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+
+.map-poi-marker-pin {
+  font-size: 28px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.map-poi-marker-label {
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  white-space: nowrap;
+  margin-top: 3px;
+}
+
+/* 回到目的地按钮 */
+.map-recenter-btn {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  font-size: 18px;
+  color: #0086F6;
+  z-index: 200;
+}
+
+/* 加载遮罩 */
+.map-loading-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+}
+
+.map-loading-text {
+  font-size: 14px;
+  color: #0086F6;
+  background: #fff;
+  padding: 8px 20px;
+  border-radius: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* ─── 底部酒店卡片列表 ─── */
+.map-hotel-list-wrap {
+  background: #fff;
+  border-top: 1px solid #eef0f5;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.07);
+  flex-shrink: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.map-hotel-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px 6px;
+}
+
+.map-hotel-list-count {
+  font-size: 13px;
+  color: #555;
+  font-weight: 600;
+}
+
+.map-hotel-list-count-num {
+  font-size: 12px;
+  color: #aaa;
+}
+
+.map-hotel-list {
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  gap: 12px;
+  padding: 2px 16px 14px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.map-hotel-list::-webkit-scrollbar {
+  display: none;
+}
+
+.map-hotel-empty {
+  width: 100%;
+  text-align: center;
+  padding: 20px 0;
+  color: #999;
+  font-size: 13px;
+}
+
+/* ─── 单张酒店卡片 ─── */
+.map-hotel-card {
+  flex-shrink: 0;
+  width: 224px;
+  height: 240px;
+  border-radius: 12px;
+  background: #fff;
+  border: 2px solid #eef0f5;
+  overflow: hidden;
+  scroll-snap-align: start;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+
+.map-hotel-card-active {
+  border-color: #0086F6 !important;
+  box-shadow: 0 4px 16px rgba(0, 134, 246, 0.2) !important;
+}
+
+.map-card-img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  display: block;
+  flex-shrink: 0;
+}
+
+.map-card-img-placeholder {
+  width: 100%;
+  height: 100px;
+  background: linear-gradient(135deg, #e8edf2 0%, #d6dde8 100%);
+  flex-shrink: 0;
+}
+
+.map-card-body {
+  padding: 8px 10px 8px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 文字信息区：吸收剩余高度，超出裁切 */
+.map-card-info {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.map-card-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1d2c3e;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.map-card-name-en {
+  font-size: 11px;
+  color: #999;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 1px;
+}
+
+.map-card-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.map-card-star {
+  font-size: 11px;
+  color: #F5A623;
+  letter-spacing: 1px;
+}
+
+.map-card-dist {
+  font-size: 12px;
+  color: #fff;
+  background: #0086F6;
+  border-radius: 8px;
+  padding: 1px 7px;
+  font-weight: 600;
+}
+
+.map-card-addr {
+  font-size: 12px;
+  color: #999;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 3px;
+}
+
+.map-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #f0f2f5;
+}
+
+.map-card-price-wrap {
+  display: flex;
+  align-items: baseline;
+  color: #ff4d4f;
+  font-weight: 700;
+}
+
+.map-card-price-sym {
+  font-size: 12px;
+}
+
+.map-card-price-val {
+  font-size: 18px;
+  line-height: 1;
+  margin: 0 2px;
+}
+
+.map-card-price-sfx {
+  font-size: 12px;
+  color: #8a97a8;
+  font-weight: 500;
+}
+
+.map-card-price-empty {
+  font-size: 13px;
+  color: #9aa6b2;
+  font-weight: 500;
+}
+
+.map-card-book-btn {
+  background: #0086F6;
+  border-radius: 6px;
+  padding: 4px 12px;
+}
+
+.map-card-book-text {
+  font-size: 12px;
+  color: #fff;
+  font-weight: 600;
+}
