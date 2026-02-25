@@ -28,6 +28,45 @@ const formatPeriodLabel = (periods) => {
   }).filter(Boolean).join('，')
 }
 
+const formatDiscountLabel = (value) => {
+  if (value === null || value === undefined || value === '') return ''
+  const num = Number(value)
+  if (Number.isFinite(num)) {
+    if (num > 0 && num <= 10) return `${num}折`
+    if (num < 0) return `减¥${Math.abs(num)}`
+  }
+  const text = String(value).trim()
+  if (!text) return ''
+  const matched = text.match(/([1-9](?:\.\d+)?折|减¥?\s*\d+(?:\.\d+)?)/)
+  const discountText = matched?.[0] ? matched[0] : text
+  const normalized = discountText.replace(/\s+/g, '')
+  return normalized.startsWith('减') && !normalized.startsWith('减¥')
+    ? normalized.replace(/^减/, '减¥')
+    : normalized
+}
+
+const getPromotionDisplay = (promotion) => {
+  if (typeof promotion === 'string') {
+    const raw = promotion.trim()
+    if (!raw) return { name: '优惠', discount: '折扣待定', period: '' }
+    const matched = raw.match(/([1-9](?:\.\d+)?折|减¥?\s*\d+(?:\.\d+)?)/)
+    const discount = formatDiscountLabel(matched?.[0]) || '折扣待定'
+    const name = matched?.[0] ? raw.replace(matched[0], '').trim() : raw
+    return { name: name || '优惠', discount, period: '' }
+  }
+
+  const name = String(promotion?.title || promotion?.name || promotion?.type || '优惠').trim() || '优惠'
+  const discount = formatDiscountLabel(
+    promotion?.value ??
+    promotion?.discount ??
+    promotion?.discount_rate ??
+    promotion?.count ??
+    promotion?.discount_label
+  ) || '折扣待定'
+  const period = formatPeriodLabel(promotion?.periods)
+  return { name, discount, period }
+}
+
 const defaultRoomFilters = {
   roomTypeId: 'all',
   rooms: '',
@@ -144,6 +183,10 @@ export default function Detail() {
 
   const handleBook = async (room) => {
     if (!room || bookingRoomId) return
+    if (getAvailableCount(room) <= 0) {
+      Taro.showToast({ title: '该房型已售罄', icon: 'none' })
+      return
+    }
     const token = Taro.getStorageSync('token')
     if (!token) {
       Taro.showToast({ title: '请先登录后下单', icon: 'none' })
@@ -360,6 +403,8 @@ export default function Detail() {
   }, [roomTypes, hasActiveRoomFilter, hasRoomTypeFilter, roomFilters.roomTypeId, normalizedRoomCount, normalizedGuestCount])
 
   const displayRoomTypes = hasActiveRoomFilter && matchedRooms.length > 0 ? [...matchedRooms, ...otherRooms] : roomTypes
+  const firstBookableRoom = displayRoomTypes.find((room) => getAvailableCount(room) > 0) || null
+  const hasBookableRoom = Boolean(firstBookableRoom)
 
   const minRoomPrice = Number(safeHotel?.lowestPrice)
   const hasMinRoomPrice = Number.isFinite(minRoomPrice)
@@ -429,6 +474,7 @@ export default function Detail() {
       listClassName: 'room-list',
       bookingRoomId,
       roomMetaResolver: getRoomMeta,
+      roomSoldOutResolver: (room) => getAvailableCount(room) <= 0,
       onBook: handleBook,
       onOpen: handleOpenRoomDetail
     })
@@ -577,22 +623,12 @@ export default function Detail() {
           <View className="promo-section glass-card">
             <Text className="section-title">优惠活动</Text>
             {hotel.promotions.map((promo, idx) => {
-              if (typeof promo === 'string') {
-                return (
-                  <View key={idx} className="promo-item">
-                    <Text className="promo-tag">惠</Text>
-                    <Text className="promo-text">{promo}</Text>
-                  </View>
-                )
-              }
-              const label = promo.title || promo.type || '优惠'
-              const valNum = Number(promo.value) || 0
-              const value = valNum > 0 && valNum <= 10 ? `${valNum}折` : valNum < 0 ? `减¥${Math.abs(valNum)}` : ''
-              const periodLabel = formatPeriodLabel(promo.periods)
+              const { name, discount, period } = getPromotionDisplay(promo)
+              const text = period ? `${name} ${discount} 有效期 ${period}` : `${name} ${discount}`
               return (
                 <View key={idx} className="promo-item">
                   <Text className="promo-tag">惠</Text>
-                  <Text className="promo-text">{label} {value} 有效期 {periodLabel}</Text>
+                  <Text className="promo-text">{text}</Text>
                 </View>
               )
             })}
@@ -746,10 +782,12 @@ export default function Detail() {
         emptyText='暂无房型可订'
         showAction={hasMinRoomPrice}
         loading={isBooking}
+        actionText={hasBookableRoom ? '立即预订' : '已售罄'}
+        disabled={isBooking || !hasBookableRoom}
         actionClassName='main-book-btn'
         onAction={() => {
-          if (!isBooking && displayRoomTypes.length > 0) {
-            handleBook(displayRoomTypes[0])
+          if (!isBooking && firstBookableRoom) {
+            handleBook(firstBookableRoom)
           }
         }}
       />
