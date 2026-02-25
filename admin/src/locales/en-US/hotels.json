@@ -9,6 +9,42 @@
       "export": "Export Hotels",
       "new": "New Hotel"
     },
+    "tips": {
+      "tour": {
+        "title": "My Hotels Guide",
+        "description": "Walk through the key actions on this page in a few steps.",
+        "steps": {
+          "actions": {
+            "title": "Top Quick Actions",
+            "description": "Use these buttons to import, export, or create hotel records."
+          },
+          "filters": {
+            "title": "Search & Filters",
+            "description": "Filter by name, status, and city, then reset or refresh to update results."
+          },
+          "table": {
+            "title": "Hotel List",
+            "description": "This table shows hotel data, status, and paginated results."
+          },
+          "rowActions": {
+            "title": "Row Actions",
+            "description": "For each hotel, you can view details, take it offline, edit it, or submit a delete request."
+          }
+        }
+      },
+      "tooltip": {
+        "tourTrigger": "Open usage guide",
+        "import": "Import hotel data in batch",
+        "export": "Export hotels with current filters",
+        "new": "Create a new hotel record",
+        "reset": "Reset search and filters",
+        "refresh": "Refresh hotel list and city options",
+        "view": "View hotel details",
+        "offline": "Take hotel offline and stop bookings",
+        "edit": "Edit hotel information",
+        "delete": "Submit a hotel deletion request"
+      }
+    },
     "filter": {
       "searchPlaceholder": "Search hotel name",
       "allStatus": "All Status",

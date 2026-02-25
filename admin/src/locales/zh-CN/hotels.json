@@ -9,6 +9,42 @@
       "export": "导出酒店",
       "new": "新增酒店"
     },
+    "tips": {
+      "tour": {
+        "title": "我的酒店使用指南",
+        "description": "通过几个步骤快速了解此页面的常用操作。",
+        "steps": {
+          "actions": {
+            "title": "顶部快捷操作",
+            "description": "在这里可以批量导入、导出酒店数据，或创建新酒店。"
+          },
+          "filters": {
+            "title": "搜索与筛选",
+            "description": "可按名称、状态、城市筛选酒店，并使用重置和刷新获取最新数据。"
+          },
+          "table": {
+            "title": "酒店列表",
+            "description": "这里展示酒店信息、状态和分页结果，便于集中管理。"
+          },
+          "rowActions": {
+            "title": "单条酒店操作",
+            "description": "在每条数据右侧可以查看详情、下架、编辑或提交删除申请。"
+          }
+        }
+      },
+      "tooltip": {
+        "tourTrigger": "打开页面使用指南",
+        "import": "批量导入酒店数据",
+        "export": "按当前筛选条件导出酒店数据",
+        "new": "创建新的酒店信息",
+        "reset": "重置搜索和筛选条件",
+        "refresh": "刷新酒店列表和城市选项",
+        "view": "查看酒店详情",
+        "offline": "下架酒店，停止对外预订",
+        "edit": "编辑酒店资料",
+        "delete": "提交删除酒店申请"
+      }
+    },
     "filter": {
       "searchPlaceholder": "搜索酒店名称",
       "allStatus": "全部状态",

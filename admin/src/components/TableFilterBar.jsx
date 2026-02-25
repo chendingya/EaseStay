@@ -1,4 +1,4 @@
-import { Row, Col, Input, Select, Space } from 'antd'
+import { Row, Col, Input, Select, Space, Tooltip } from 'antd'
 import SearchOutlined from '@ant-design/icons/es/icons/SearchOutlined'
 import { GlassButton } from './GlassButton'
 
@@ -13,7 +13,9 @@ export default function TableFilterBar({
   onRefresh,
   resetText,
   refreshText,
-  refreshLoading = false
+  refreshLoading = false,
+  resetTooltip,
+  refreshTooltip
 }) {
   return (
     <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -43,11 +45,17 @@ export default function TableFilterBar({
       <Col flex='auto' style={{ textAlign: 'right' }}>
         <Space>
           {summaryNode}
-          {onReset ? <GlassButton onClick={onReset}>{resetText}</GlassButton> : null}
+          {onReset ? (
+            <Tooltip title={resetTooltip}>
+              <GlassButton onClick={onReset}>{resetText}</GlassButton>
+            </Tooltip>
+          ) : null}
           {onRefresh ? (
-            <GlassButton type='primary' onClick={onRefresh} loading={refreshLoading}>
-              {refreshText}
-            </GlassButton>
+            <Tooltip title={refreshTooltip}>
+              <GlassButton type='primary' onClick={onRefresh} loading={refreshLoading}>
+                {refreshText}
+              </GlassButton>
+            </Tooltip>
           ) : null}
         </Space>
       </Col>

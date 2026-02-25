@@ -1,11 +1,12 @@
-import { Card, Table, Tag, Space, Typography, Modal, Upload, Alert, Popconfirm, Input } from 'antd'
-import { useCallback, useEffect, useState, useMemo } from 'react'
+import { Card, Table, Tag, Space, Typography, Modal, Upload, Alert, Popconfirm, Input, Tooltip, Tour, Affix } from 'antd'
+import { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import UploadOutlined from '@ant-design/icons/es/icons/UploadOutlined'
 import DownloadOutlined from '@ant-design/icons/es/icons/DownloadOutlined'
 import InboxOutlined from '@ant-design/icons/es/icons/InboxOutlined'
 import StopOutlined from '@ant-design/icons/es/icons/StopOutlined'
 import CheckCircleOutlined from '@ant-design/icons/es/icons/CheckCircleOutlined'
+import QuestionCircleOutlined from '@ant-design/icons/es/icons/QuestionCircleOutlined'
 import { GlassButton, TableFilterBar, glassMessage as message } from '../components'
 import { api } from '../services'
 import { useTranslation } from 'react-i18next'
@@ -132,6 +133,11 @@ export default function Hotels() {
   const [deleteNameSecond, setDeleteNameSecond] = useState('')
   const [deleting, setDeleting] = useState(false)
   const templateFields = useMemo(() => getTemplateFields(t), [t])
+  const [tourOpen, setTourOpen] = useState(false)
+  const headerActionsRef = useRef(null)
+  const filterBarRef = useRef(null)
+  const tableRef = useRef(null)
+  const rowActionsRef = useRef(null)
 
   const fetchCityOptions = useCallback(async () => {
     try {
@@ -338,6 +344,34 @@ export default function Hotels() {
     rejected: { color: 'red', label: t('status.rejected') },
     offline: { color: 'default', label: t('status.offline') }
   }
+  const firstHotelId = hotels[0]?.id
+
+  const tourSteps = useMemo(() => ([
+    {
+      title: t('hotels.tips.tour.title'),
+      description: t('hotels.tips.tour.description')
+    },
+    {
+      title: t('hotels.tips.tour.steps.actions.title'),
+      description: t('hotels.tips.tour.steps.actions.description'),
+      target: () => headerActionsRef.current
+    },
+    {
+      title: t('hotels.tips.tour.steps.filters.title'),
+      description: t('hotels.tips.tour.steps.filters.description'),
+      target: () => filterBarRef.current
+    },
+    {
+      title: t('hotels.tips.tour.steps.table.title'),
+      description: t('hotels.tips.tour.steps.table.description'),
+      target: () => tableRef.current
+    },
+    {
+      title: t('hotels.tips.tour.steps.rowActions.title'),
+      description: t('hotels.tips.tour.steps.rowActions.description'),
+      target: () => rowActionsRef.current
+    }
+  ]), [t])
 
   const actionColumnWidth = useMemo(() => {
     const actionRows = hotels.map((record) => {
@@ -398,29 +432,39 @@ export default function Hotels() {
       width: actionColumnWidth,
       fixed: 'right',
       render: (_, record) => (
-        <Space size={[4, 4]} wrap>
-          {record.status === 'approved' && (
-            <>
-              <GlassButton type="link" size="small" onClick={() => navigate(`/hotels/${record.id}`)}>{t('common.view')}</GlassButton>
-              <Popconfirm
-                title={t('hotels.offline.confirmTitle')}
-                description={t('hotels.offline.confirmDesc')}
-                onConfirm={() => handleUpdateStatus(record.id, 'offline')}
-                okText={t('common.confirm')}
-                cancelText={t('common.cancel')}
-              >
-                <GlassButton type="link" size="small" danger icon={<StopOutlined />}>{t('hotels.action.offline')}</GlassButton>
-              </Popconfirm>
-            </>
-          )}
-          {record.status === 'offline' && (
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              {t('hotels.offline.note')}
-            </Typography.Text>
-          )}
-          <GlassButton type="link" size="small" onClick={() => navigate(`/hotels/edit/${record.id}`)}>{t('common.edit')}</GlassButton>
-          <GlassButton type="link" size="small" danger onClick={() => openDeleteModal(record)}>{t('common.delete')}</GlassButton>
-        </Space>
+        <div ref={record.id === firstHotelId ? rowActionsRef : null}>
+          <Space size={[4, 4]} wrap>
+            {record.status === 'approved' && (
+              <>
+                <Tooltip title={t('hotels.tips.tooltip.view')}>
+                  <GlassButton type="link" size="small" onClick={() => navigate(`/hotels/${record.id}`)}>{t('common.view')}</GlassButton>
+                </Tooltip>
+                <Tooltip title={t('hotels.tips.tooltip.offline')}>
+                  <Popconfirm
+                    title={t('hotels.offline.confirmTitle')}
+                    description={t('hotels.offline.confirmDesc')}
+                    onConfirm={() => handleUpdateStatus(record.id, 'offline')}
+                    okText={t('common.confirm')}
+                    cancelText={t('common.cancel')}
+                  >
+                    <GlassButton type="link" size="small" danger icon={<StopOutlined />}>{t('hotels.action.offline')}</GlassButton>
+                  </Popconfirm>
+                </Tooltip>
+              </>
+            )}
+            {record.status === 'offline' && (
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {t('hotels.offline.note')}
+              </Typography.Text>
+            )}
+            <Tooltip title={t('hotels.tips.tooltip.edit')}>
+              <GlassButton type="link" size="small" onClick={() => navigate(`/hotels/edit/${record.id}`)}>{t('common.edit')}</GlassButton>
+            </Tooltip>
+            <Tooltip title={t('hotels.tips.tooltip.delete')}>
+              <GlassButton type="link" size="small" danger onClick={() => openDeleteModal(record)}>{t('common.delete')}</GlassButton>
+            </Tooltip>
+          </Space>
+        </div>
       )
     }
   ]
@@ -436,65 +480,80 @@ export default function Hotels() {
   ]
 
   return (
-    <Card
-      title={<Typography.Title level={5} style={{ margin: 0 }}>{t('hotels.title')}</Typography.Title>}
-      extra={
-        <Space>
-          <GlassButton icon={<UploadOutlined />} onClick={() => setImportModalOpen(true)}>{t('hotels.actions.import')}</GlassButton>
-          <GlassButton icon={<DownloadOutlined />} onClick={exportHotels}>{t('hotels.actions.export')}</GlassButton>
-          <GlassButton type="primary" onClick={() => navigate('/hotels/new')}>{t('hotels.actions.new')}</GlassButton>
-        </Space>
-      }
-    >
+    <>
+      <Card
+        title={<Typography.Title level={5} style={{ margin: 0 }}>{t('hotels.title')}</Typography.Title>}
+        extra={(
+          <div ref={headerActionsRef}>
+            <Space>
+              <Tooltip title={t('hotels.tips.tooltip.import')}>
+                <GlassButton icon={<UploadOutlined />} onClick={() => setImportModalOpen(true)}>{t('hotels.actions.import')}</GlassButton>
+              </Tooltip>
+              <Tooltip title={t('hotels.tips.tooltip.export')}>
+                <GlassButton icon={<DownloadOutlined />} onClick={exportHotels}>{t('hotels.actions.export')}</GlassButton>
+              </Tooltip>
+              <Tooltip title={t('hotels.tips.tooltip.new')}>
+                <GlassButton type="primary" onClick={() => navigate('/hotels/new')}>{t('hotels.actions.new')}</GlassButton>
+              </Tooltip>
+            </Space>
+          </div>
+        )}
+      >
       {/* 搜索筛选区 */}
-      <TableFilterBar
-        searchPlaceholder={t('hotels.filter.searchPlaceholder')}
-        searchValue={searchInput}
-        onSearchChange={setSearchInput}
-        filterItems={[
-          {
-            key: 'status',
-            value: statusFilter,
-            onChange: handleStatusChange,
-            options: [
-              { value: 'all', label: t('hotels.filter.allStatus') },
-              { value: 'pending', label: t('status.pending') },
-              { value: 'approved', label: t('status.approved') },
-              { value: 'rejected', label: t('status.rejected') },
-              { value: 'offline', label: t('status.offline') }
-            ]
-          },
-          {
-            key: 'city',
-            value: cityFilter,
-            onChange: handleCityChange,
-            options: cityOptions
-          }
-        ]}
-        summaryNode={<Typography.Text type="secondary">{t('hotels.total', { count: total })}</Typography.Text>}
-        onReset={handleResetFilters}
-        onRefresh={handleRefresh}
-        refreshLoading={loading}
-        resetText={t('hotels.filter.reset')}
-        refreshText={t('common.refresh')}
-      />
+        <div ref={filterBarRef}>
+          <TableFilterBar
+            searchPlaceholder={t('hotels.filter.searchPlaceholder')}
+            searchValue={searchInput}
+            onSearchChange={setSearchInput}
+            filterItems={[
+              {
+                key: 'status',
+                value: statusFilter,
+                onChange: handleStatusChange,
+                options: [
+                  { value: 'all', label: t('hotels.filter.allStatus') },
+                  { value: 'pending', label: t('status.pending') },
+                  { value: 'approved', label: t('status.approved') },
+                  { value: 'rejected', label: t('status.rejected') },
+                  { value: 'offline', label: t('status.offline') }
+                ]
+              },
+              {
+                key: 'city',
+                value: cityFilter,
+                onChange: handleCityChange,
+                options: cityOptions
+              }
+            ]}
+            summaryNode={<Typography.Text type="secondary">{t('hotels.total', { count: total })}</Typography.Text>}
+            onReset={handleResetFilters}
+            onRefresh={handleRefresh}
+            refreshLoading={loading}
+            resetText={t('hotels.filter.reset')}
+            refreshText={t('common.refresh')}
+            resetTooltip={t('hotels.tips.tooltip.reset')}
+            refreshTooltip={t('hotels.tips.tooltip.refresh')}
+          />
+        </div>
 
-      <Table
-        columns={columns}
-        dataSource={hotels}
-        rowKey="id"
-        loading={loading}
-        pagination={{
-          current: page,
-          pageSize,
-          total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          onChange: handlePageChange
-        }}
-        size="middle"
-        scroll={{ x: 'max-content' }}
-      />
+        <div ref={tableRef}>
+          <Table
+            columns={columns}
+            dataSource={hotels}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              current: page,
+              pageSize,
+              total,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              onChange: handlePageChange
+            }}
+            size="middle"
+            scroll={{ x: 'max-content' }}
+          />
+        </div>
 
       {/* 导入弹窗 */}
       <Modal
@@ -572,40 +631,65 @@ export default function Hotels() {
         )}
       </Modal>
 
-      <Modal
-        title={t('hotels.delete.title')}
-        open={deleteModalOpen}
-        onCancel={closeDeleteModal}
-        onOk={handleDeleteRequest}
-        okText={t('hotels.delete.submit')}
-        okButtonProps={{ danger: true, disabled: deleting }}
-        confirmLoading={deleting}
-      >
-        <Alert
-          type="warning"
-          showIcon
-          style={{ marginBottom: 12 }}
-          title={t('hotels.delete.warning')}
-        />
-        <Typography.Text>
-          {t('hotels.delete.inputLabel')}
-        </Typography.Text>
-        <Input
-          style={{ marginTop: 8 }}
-          placeholder={t('hotels.delete.placeholderFirst')}
-          value={deleteNameFirst}
-          onChange={(e) => setDeleteNameFirst(e.target.value)}
-        />
-        <Input
-          style={{ marginTop: 8 }}
-          placeholder={t('hotels.delete.placeholderSecond')}
-          value={deleteNameSecond}
-          onChange={(e) => setDeleteNameSecond(e.target.value)}
-        />
-        <Typography.Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-          {t('hotels.delete.hint')}
-        </Typography.Text>
-      </Modal>
-    </Card>
+        <Modal
+          title={t('hotels.delete.title')}
+          open={deleteModalOpen}
+          onCancel={closeDeleteModal}
+          onOk={handleDeleteRequest}
+          okText={t('hotels.delete.submit')}
+          okButtonProps={{ danger: true, disabled: deleting }}
+          confirmLoading={deleting}
+        >
+          <Alert
+            type="warning"
+            showIcon
+            style={{ marginBottom: 12 }}
+            title={t('hotels.delete.warning')}
+          />
+          <Typography.Text>
+            {t('hotels.delete.inputLabel')}
+          </Typography.Text>
+          <Input
+            style={{ marginTop: 8 }}
+            placeholder={t('hotels.delete.placeholderFirst')}
+            value={deleteNameFirst}
+            onChange={(e) => setDeleteNameFirst(e.target.value)}
+          />
+          <Input
+            style={{ marginTop: 8 }}
+            placeholder={t('hotels.delete.placeholderSecond')}
+            value={deleteNameSecond}
+            onChange={(e) => setDeleteNameSecond(e.target.value)}
+          />
+          <Typography.Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
+            {t('hotels.delete.hint')}
+          </Typography.Text>
+        </Modal>
+      </Card>
+
+      <Affix offsetBottom={24} style={{ position: 'fixed', right: 32, bottom: 24, zIndex: 1100 }}>
+        <Tooltip title={t('hotels.tips.tooltip.tourTrigger')} placement="left">
+          <GlassButton
+            onClick={() => setTourOpen(true)}
+            icon={<QuestionCircleOutlined />}
+            aria-label={t('hotels.tips.tooltip.tourTrigger')}
+            style={{
+              width: 48,
+              height: 48,
+              padding: 0,
+              borderRadius: '50%',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)'
+            }}
+          />
+        </Tooltip>
+      </Affix>
+
+      <Tour
+        open={tourOpen}
+        onClose={() => setTourOpen(false)}
+        steps={tourSteps}
+      />
+    </>
   )
 }
