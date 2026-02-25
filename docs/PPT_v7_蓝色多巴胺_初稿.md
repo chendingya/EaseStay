@@ -156,6 +156,20 @@ const AuditTable = lazy(() => import('../components/audit/AuditTable.jsx'))
 const ReactECharts = lazy(() => import('echarts-for-react'))
 ```
 
+性能实测汇总（来自 `docs/performance-pic`）：
+
+| 页面 | 路由 | 截图文件 | Performance | Accessibility | Best Practices | SEO | FCP(s) | LCP(s) | TBT(ms) | CLS | Speed Index(s) |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 工作台（商户） | `/` | `979479909c9bc65e4922352cfc458264.png` | 97 | 89 | 100 | 73 | 0.7 | 1.1 | 70 | 0 | 1.0 |
+| 我的酒店（商户） | `/hotels` | `ab20950a86a5fc78cbfb5aa9b0392545.png` | 98 | 92 | 100 | 73 | 0.7 | 0.9 | 30 | 0.001 | 1.1 |
+| 订单统计（商户） | `/hotels/2/stats` | `a759ad12eadf4397fec3e675fbe8ab8a.png` | 94 | 92 | 100 | 73 | 0.6 | 1.5 | 70 | 0 | 1.0 |
+| 账户管理（商户） | `/account` | `0545e0d9fdd6832a4d6f90f682fa7570.png` | 99 | 92 | 100 | 73 | 0.6 | 0.8 | 90 | 0.024 | 0.8 |
+| 酒店管理（管理员） | `/admin-hotels` | `2263dccd42b25e4a60f676ee14788e68.png` | 97 | 92 | 100 | 73 | 0.6 | 1.1 | 60 | 0.009 | 0.8 |
+| 酒店审核（管理员） | `/audit` | `604c6218-fd74-4eee-ba59-24286038da05.png` | 99 | 92 | 100 | 73 | 0.6 | 0.8 | 30 | 0.002 | 0.7 |
+| 申请审核（管理员） | `/requests` | `8f4a93d0-90db-4645-af73-f991071c0f72.png` | 99 | 92 | 100 | 73 | 0.7 | 0.9 | 40 | 0 | 0.8 |
+| 商户管理（管理员） | `/merchants` | `1b251d6d-d57a-4b4a-92b4-abc0bb164f09.png` | 95 | 88 | 100 | 73 | 0.7 | 0.8 | 170 | 0 | 0.9 |
+| 账户管理（管理员） | `/account` | `image.png` | 98 | 92 | 100 | 73 | 0.7 | 1.0 | 50 | 0.027 | 0.7 |
+
 ## 10 管理端技术实现（页面与组件复用怎么做）
 - 查询态复用：
   - `useRemoteTableQuery` 统一 `keyword/page/pageSize/total` 和防抖

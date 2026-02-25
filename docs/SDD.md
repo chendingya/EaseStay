@@ -215,6 +215,45 @@
 }
 ```
 
+#### POST /api/auth/phone/login
+请求（移动端验证码登录，支持 username 或 phone）：
+```json
+{
+  "username": "user001",
+  "code": "123456"
+}
+```
+或：
+```json
+{
+  "phone": "13800000000",
+  "code": "123456"
+}
+```
+响应：
+```json
+{
+  "token": "jwt-token",
+  "userRole": "user"
+}
+```
+
+#### POST /api/auth/phone/register
+请求（兼容保留）：
+```json
+{
+  "phone": "13800000000",
+  "code": "123456"
+}
+```
+响应：
+```json
+{
+  "token": "jwt-token",
+  "userRole": "user"
+}
+```
+
 ### 4.3 商户酒店管理（PC 端 - 商户）
 #### GET /api/merchant/hotels
 Query：`status`、`keyword`、`city`（可选），`page`、`pageSize`（分页模式可选）
@@ -621,6 +660,9 @@ Query：`keyword`（可选），`page`、`pageSize`（分页模式可选）
 
 ## 5. 前后端接口对齐清单
 - 认证：注册需要验证码，登录返回 userRole 用于前端自动跳转
+- 移动端认证页：登录支持验证码/密码切换；注册字段为用户名、密码、确认密码、验证码
+- 验证码交互：发送按钮防抖（发送中锁定）+ 60s 倒计时；开发联调场景支持自动回填模拟验证码
+- 登录态同步：登录/注册成功后写入 token + userRole，并同步到 UserContext / userStore
 - 商户端：酒店创建/更新后状态统一为 pending
 - 管理端：审核支持 approve/reject/offline/restore
 - 移动端：列表仅展示 approved 酒店，详情房型价格升序

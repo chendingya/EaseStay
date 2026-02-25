@@ -26,6 +26,7 @@ function RoomTypeCard({
   onBook,
   onOpen,
   booking = false,
+  soldOut = false,
   metaResolver
 }) {
   const imageSrc = (Array.isArray(room?.images) && room.images[0]) || room?.image || ''
@@ -48,6 +49,7 @@ function RoomTypeCard({
   const hasPrice = Number.isFinite(finalPrice)
   const hasDiscount = hasPrice && Number.isFinite(basePrice) && finalPrice < basePrice
   const discountLabel = room?.room_discount_label || ''
+  const roomDiscountText = discountLabel ? `房型优惠 ${discountLabel}` : ''
   const tags = [
     room?.breakfast || room?.breakfast_included ? '含早' : '',
     room?.cancelable ? '免费取消' : '',
@@ -103,21 +105,21 @@ function RoomTypeCard({
           {hasDiscount ? (
             <>
               <Text className='room-type-card-origin'>¥{basePrice}</Text>
-              {discountLabel ? <Text className='room-type-card-discount'>{discountLabel}</Text> : null}
+              {roomDiscountText ? <Text className='room-type-card-discount'>{roomDiscountText}</Text> : null}
             </>
           ) : null}
         </View>
 
         <View
-          className={`room-type-card-book-btn${booking ? ' is-loading' : ''}`}
+          className={`room-type-card-book-btn${booking ? ' is-loading' : ''}${soldOut ? ' is-disabled' : ''}`}
           onClick={(event) => {
             event?.stopPropagation?.()
-            if (!booking && onBook) {
+            if (!booking && !soldOut && onBook) {
               onBook()
             }
           }}
         >
-          <Text className='room-type-card-book-text'>{booking ? '预订中' : '预订'}</Text>
+          <Text className='room-type-card-book-text'>{booking ? '预订中' : (soldOut ? '已售罄' : '预订')}</Text>
         </View>
       </View>
     </View>

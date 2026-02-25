@@ -319,23 +319,37 @@ export const createListByType = ({
   }
 
   if (type === 'room') {
-    const bookingRoomId = rest.bookingRoomId
+    const {
+      bookingRoomId,
+      roomMetaResolver,
+      roomSoldOutResolver,
+      ...listRest
+    } = rest
     return (
       <ListContainer
         items={items}
         showSummary={false}
         emptyText={emptyText || '该酒店暂无上架房型'}
         animate={animate}
-        renderItem={(room) => (
-          <RoomTypeCard
-            room={room}
-            booking={bookingRoomId !== undefined && bookingRoomId !== null && String(bookingRoomId) === String(room?.id)}
-            onBook={() => (onBook || onPay) && (onBook || onPay)(room)}
-            onOpen={() => onOpen && onOpen(room)}
-            metaResolver={rest.roomMetaResolver}
-          />
-        )}
-        {...rest}
+        renderItem={(room) => {
+          const booking = bookingRoomId !== undefined &&
+            bookingRoomId !== null &&
+            String(bookingRoomId) === String(room?.id)
+          const soldOut = typeof roomSoldOutResolver === 'function'
+            ? Boolean(roomSoldOutResolver(room))
+            : Number(room?.available_count) <= 0
+          return (
+            <RoomTypeCard
+              room={room}
+              booking={booking}
+              soldOut={soldOut}
+              onBook={() => (onBook || onPay) && (onBook || onPay)(room)}
+              onOpen={() => onOpen && onOpen(room)}
+              metaResolver={roomMetaResolver}
+            />
+          )
+        }}
+        {...listRest}
       />
     )
   }
