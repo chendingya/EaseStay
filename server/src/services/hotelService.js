@@ -2378,5 +2378,6 @@ module.exports = {
   listHotelOrders,
   getHotelOrderStats,
   getMerchantOverview,
-  applyPromotionsToRooms
+  applyPromotionsToRooms,
+  getLowestPrices
 }

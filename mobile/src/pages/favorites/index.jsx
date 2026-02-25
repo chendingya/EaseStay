@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { View, Text } from '@tarojs/components'
 import { Empty, Dialog, Button } from 'antd-mobile'
@@ -11,7 +11,9 @@ import './index.css'
 
 export default function Favorites() {
   const [list, setList] = useState([])
+  // loading=true 仅用于首次骨架屏；重进页面时保留旧列表，不重置 loading
   const [loading, setLoading] = useState(true)
+  const isFirstLoad = useRef(true)
 
   const refresh = async () => {
     setLoading(true)
@@ -26,13 +28,19 @@ export default function Favorites() {
         })
       setList(sorted)
     } catch (error) {
-      setList([])
+      if (isFirstLoad.current) setList([])
     } finally {
       setLoading(false)
+      isFirstLoad.current = false
     }
   }
 
   useDidShow(() => {
+    // 首次加载：loading 初始值已是 true，骨架屏自动展示
+    // 重进页面：列表为空时重新展示骨架，有旧数据时保留旧列表静默刷新
+    if (!isFirstLoad.current && list.length === 0) {
+      setLoading(true)
+    }
     refresh()
   })
 
@@ -87,7 +95,16 @@ export default function Favorites() {
       />
 
       <View className='favorites-content'>
-        {(loading || list.length > 0) ? (
+        {!loading && list.length === 0 ? (
+          <View className='favorites-empty-card'>
+            <Empty description='暂无收藏酒店' />
+            <View className='favorites-empty-action'>
+              <Button color='primary' size='small' onClick={goExplore}>
+                去逛逛酒店
+              </Button>
+            </View>
+          </View>
+        ) : (
           <View className='favorites-list-wrap'>
             {createListByType({
               type: 'favorite',
@@ -106,15 +123,6 @@ export default function Favorites() {
                 return [`收藏于 ${savedAt}`]
               }
             })}
-          </View>
-        ) : (
-          <View className='favorites-empty-card'>
-            <Empty description='暂无收藏酒店' />
-            <View className='favorites-empty-action'>
-              <Button color='primary' size='small' onClick={goExplore}>
-                去逛逛酒店
-              </Button>
-            </View>
           </View>
         )}
       </View>

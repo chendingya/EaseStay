@@ -3,6 +3,8 @@ import Taro from '@tarojs/taro'
 import { View } from '@tarojs/components'
 import { Form, Input, Button, Toast, Modal } from 'antd-mobile'
 import { loginByCode, loginByPassword, sendCode } from '../../services/auth'
+import { useUserContext } from '../../services/UserContext'
+import { getCurrentUser } from '../../services/auth'
 import PageTopBar from '../../components/PageTopBar'
 import './index.css'
 
@@ -12,6 +14,7 @@ const LOGIN_MODE = {
 }
 
 export default function Login() {
+  const { setUser, setIsLogin } = useUserContext()
   const [loading, setLoading] = useState(false)
   const [countdown, setCountdown] = useState(0)
   const [mode, setMode] = useState(LOGIN_MODE.CODE)
@@ -65,9 +68,16 @@ export default function Login() {
         })
         // 存储 Token
         Taro.setStorageSync('token', res.token)
-        // 存储用户角色（可选）
         Taro.setStorageSync('userRole', res.userRole)
-        
+        // 获取并写入全局 Context， account 页面返回后直接显示登录状态
+        try {
+          const userRes = await getCurrentUser()
+          if (userRes && userRes.id) {
+            setUser(userRes)
+            setIsLogin(true)
+          }
+        } catch (e) {}
+
         // 跳转回个人中心或上一页
         Taro.navigateBack({ fail: () => Taro.reLaunch({ url: '/pages/account/index' }) })
       }

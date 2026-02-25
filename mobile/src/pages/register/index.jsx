@@ -3,10 +3,13 @@ import Taro from '@tarojs/taro'
 import { View } from '@tarojs/components'
 import { Form, Input, Button, Toast, Modal } from 'antd-mobile'
 import { loginByPassword, registerByPassword, sendCode } from '../../services/auth'
+import { useUserContext } from '../../services/UserContext'
+import { getCurrentUser } from '../../services/auth'
 import PageTopBar from '../../components/PageTopBar'
 import './index.css'
 
 export default function Register() {
+  const { setUser, setIsLogin } = useUserContext()
   const [loading, setLoading] = useState(false)
   const [countdown, setCountdown] = useState(0)
   const [form] = Form.useForm()
@@ -63,11 +66,16 @@ export default function Register() {
       if (loginRes?.token) {
         Taro.setStorageSync('token', loginRes.token)
         Taro.setStorageSync('userRole', loginRes.userRole || 'user')
+        // 获取并写入全局 Context
+        try {
+          const userRes = await getCurrentUser()
+          if (userRes && userRes.id) {
+            setUser(userRes)
+            setIsLogin(true)
+          }
+        } catch (e) {}
       }
-      Toast.show({
-        icon: 'success',
-        content: '注册成功',
-      })
+      Toast.show({ icon: 'success', content: '注册成功' })
       Taro.reLaunch({ url: '/pages/account/index' })
     } catch (error) {
       Toast.show({

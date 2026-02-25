@@ -1,4 +1,5 @@
 import { api } from './request'
+import { userStore } from './userStore'
 
 // 发送验证码
 export const sendCode = (username) => {
@@ -20,9 +21,13 @@ export const loginByCode = (data) => {
   return api.post('/api/auth/phone/login', data)
 }
 
-// 获取当前用户信息
-export const getCurrentUser = () => {
-  return api.get('/api/user/me')
+// 获取当前用户信息，并同步写入本地缓存
+export const getCurrentUser = async () => {
+  const res = await api.get('/api/user/me')
+  if (res && res.id) {
+    userStore.set(res)
+  }
+  return res
 }
 
 // 获取当前用户订单

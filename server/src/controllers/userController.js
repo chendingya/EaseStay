@@ -4,6 +4,7 @@
 
 const supabase = require('../config/supabase')
 const { hashPassword, verifyPassword } = require('../middleware/auth')
+const { getLowestPrices } = require('../services/hotelService')
 
 const buildHotelMapByOrders = async (orders = []) => {
   const hotelIds = [...new Set((orders || [])
@@ -29,11 +30,14 @@ const buildHotelMapByIds = async (hotelIds = []) => {
 
   const { data: hotels } = await supabase
     .from('hotels')
-    .select('id, name, name_en, city, address, images, star_rating, opening_time')
+    .select('id, name, name_en, city, address, images, star_rating, opening_time, facilities')
     .in('id', ids)
 
+  // 查询每家酒店的最低房价（复用 hotelService 的完整折扣逻辑）
+  const priceMap = await getLowestPrices(ids).catch(() => ({}))
+
   return (hotels || []).reduce((acc, item) => {
-    acc[String(item.id)] = item
+    acc[String(item.id)] = { ...item, lowestPrice: priceMap[item.id] ?? null }
     return acc
   }, {})
 }
