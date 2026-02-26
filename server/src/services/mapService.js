@@ -1,6 +1,7 @@
 const AMAP_KEY = process.env.AMAP_KEY || ''
 const supabase = require('../config/supabase')
 const { getMockByCity, getMockAddressPool } = require('../data/mockHotelLocations')
+const { calculateRoomPrice } = require('./pricingService')
 
 // 内存缓存：地址 → { lng, lat }，避免重复 geocode 同一地址
 const geocodeCache = new Map()
@@ -143,23 +144,33 @@ async function getHotelLocations(city, targetCoords, filters = {}) {
 
   const { data: hotels, error } = await dbQuery
 
-  // ── 2. 查各酒店最低价格 ────────────────────────────────────
+  // ── 2. 查各酒店最低价格（考虑折扣与促销，与 hotelService 保持一致） ───
   let priceMap = {}
   if (!error && hotels && hotels.length > 0) {
     const hotelIds = hotels.map(h => h.id)
+
+    // 构建酒店 promotions map（hotels 查询已包含 promotions 字段）
+    const promotionsMap = {}
+    hotels.forEach(h => {
+      promotionsMap[h.id] = Array.isArray(h.promotions) ? h.promotions : []
+    })
+
     const { data: roomTypes } = await supabase
       .from('room_types')
-      .select('hotel_id, price')
+      .select('hotel_id, price, discount_rate, discount_quota, discount_periods, stock, used_stock, offline_stock')
       .in('hotel_id', hotelIds)
       .eq('is_active', true)
 
     if (roomTypes) {
       roomTypes.forEach(rt => {
-        const price = parseFloat(rt.price)
-        if (!Number.isFinite(price)) return
+        const available = (rt.stock ?? 0) - (rt.used_stock ?? 0) - (rt.offline_stock ?? 0)
+        if (available <= 0) return
+        const promotions = promotionsMap[rt.hotel_id] || []
+        const { finalPrice } = calculateRoomPrice({ room: rt, promotions })
+        if (!Number.isFinite(finalPrice)) return
         const cur = priceMap[rt.hotel_id]
-        if (cur == null || price < cur) {
-          priceMap[rt.hotel_id] = Math.round(price)
+        if (cur == null || finalPrice < cur) {
+          priceMap[rt.hotel_id] = Math.round(finalPrice)
         }
       })
     }

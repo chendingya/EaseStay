@@ -182,7 +182,7 @@ export default function MapSearch() {
     hotels.forEach(hotel => {
       if (!hotel.lng || !hotel.lat) return
       const isActive = hotel.id === activeId
-      const price = hotel.lowestPrice ? `￥${hotel.lowestPrice}` : null
+      const price = Number.isFinite(Number(hotel.lowestPrice)) ? `￥${hotel.lowestPrice}` : null
       if (!price) return  // 暂无价格的不展示标记
       const el = buildBubbleEl(price, isActive)
       const marker = new window.AMap.Marker({
@@ -642,7 +642,7 @@ export default function MapSearch() {
                   </View>
                   {/* footer 始终固定在底部，flex-shrink:0 */}
                   <View className="map-card-footer">
-                    {hotel.lowestPrice ? (
+                    {Number.isFinite(Number(hotel.lowestPrice)) ? (
                       <View className="map-card-price-wrap">
                         <Text className="map-card-price-sym">¥</Text>
                         <Text className="map-card-price-val">{hotel.lowestPrice}</Text>
