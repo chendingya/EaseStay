@@ -13,6 +13,8 @@
     "basic": {
       "city": "城市",
       "address": "地址",
+      "lat": "纬度",
+      "lng": "经度",
       "star": "星级",
       "starValue": "{{value}} 星级",
       "unrated": "未评级",

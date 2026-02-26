@@ -1007,6 +1007,9 @@ function HotelPreview({ data }) {
     if (val > 0) return t('hotelEdit.preview.promotionValueDiscount', { value: val })
     return ''
   }
+  const formatCoordinate = (value) => (
+    value === null || value === undefined || value === '' ? '-' : value
+  )
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 16 }}>
@@ -1031,6 +1034,8 @@ function HotelPreview({ data }) {
         <Descriptions column={2} size="small">
           <Descriptions.Item label={<><EnvironmentOutlined /> {t('hotelEdit.preview.city')}</>}>{data.city || '-'}</Descriptions.Item>
           <Descriptions.Item label={t('hotelEdit.preview.address')}>{data.address || '-'}</Descriptions.Item>
+          <Descriptions.Item label={t('hotelEdit.preview.lat')}>{formatCoordinate(data.lat)}</Descriptions.Item>
+          <Descriptions.Item label={t('hotelEdit.preview.lng')}>{formatCoordinate(data.lng)}</Descriptions.Item>
           <Descriptions.Item label={<><StarFilled style={{ color: '#faad14' }} /> {t('hotelEdit.preview.star')}</>}>{data.star_rating ? t('hotelEdit.preview.starValue', { value: data.star_rating }) : t('hotelEdit.preview.unrated')}</Descriptions.Item>
           <Descriptions.Item label={<><CalendarOutlined /> {t('hotelEdit.preview.openingTime')}</>}>{data.opening_time ? (typeof data.opening_time === 'object' ? data.opening_time.format?.('YYYY-MM-DD') : data.opening_time) : t('hotelEdit.preview.openingNotSet')}</Descriptions.Item>
         </Descriptions>
@@ -1189,6 +1194,8 @@ export default function HotelEdit() {
           console.log('[HotelEdit][FetchHotel]', { id, roomTypes: data?.roomTypes, promotions: data?.promotions })
           form.setFieldsValue({
             ...data,
+            lat: data.lat === null || data.lat === undefined || data.lat === '' ? null : Number(data.lat),
+            lng: data.lng === null || data.lng === undefined || data.lng === '' ? null : Number(data.lng),
             opening_time: data.opening_time ? dayjs(data.opening_time) : null,
             roomTypes: (data.roomTypes || []).map((rt) => ({
               ...rt,
@@ -1364,6 +1371,8 @@ export default function HotelEdit() {
       const payload = {
         ...values,
         star_rating: Number(values.star_rating || 0),
+        lat: values.lat === null || values.lat === undefined || values.lat === '' ? null : Number(values.lat),
+        lng: values.lng === null || values.lng === undefined || values.lng === '' ? null : Number(values.lng),
         opening_time: values.opening_time ? values.opening_time.format('YYYY-MM-DD') : '',
         nearby_attractions: Array.isArray(nearbyAttractions) ? nearbyAttractions : [],
         nearby_transport: Array.isArray(nearbyTransport) ? nearbyTransport : [],
@@ -1395,7 +1404,7 @@ export default function HotelEdit() {
           <Form layout="vertical" form={form} initialValues={{ star_rating: 0 }} onValuesChange={handleFormChange}>
           <div ref={addressSectionRef}>
             <Typography.Title level={5}>{t('hotelEdit.form.sectionAddress')}</Typography.Title>
-            <MapPicker onAddressChange={({ city, address }) => { form.setFieldsValue({ city, address }); handleFormChange() }} hotCities={presets.cities} />
+            <MapPicker onAddressChange={({ city, address, lat, lng }) => { form.setFieldsValue({ city, address, lat, lng }); handleFormChange() }} hotCities={presets.cities} />
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="city" label={t('hotelEdit.form.cityLabel')} rules={[{ required: true, message: t('hotelEdit.form.cityRequired') }]}>
@@ -1405,6 +1414,38 @@ export default function HotelEdit() {
               <Col span={12}>
                 <Form.Item name="address" label={t('hotelEdit.form.addressLabel')} rules={[{ required: true, message: t('hotelEdit.form.addressRequired') }]}>
                   <Input placeholder={t('hotelEdit.form.addressPlaceholder')} />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="lat"
+                  label={t('hotelEdit.form.latLabel')}
+                  rules={[
+                    { type: 'number', min: -90, max: 90, message: t('hotelEdit.form.latRange') }
+                  ]}
+                >
+                  <InputNumber
+                    style={{ width: '100%' }}
+                    precision={7}
+                    step={0.000001}
+                    placeholder={t('hotelEdit.form.latPlaceholder')}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="lng"
+                  label={t('hotelEdit.form.lngLabel')}
+                  rules={[
+                    { type: 'number', min: -180, max: 180, message: t('hotelEdit.form.lngRange') }
+                  ]}
+                >
+                  <InputNumber
+                    style={{ width: '100%' }}
+                    precision={7}
+                    step={0.000001}
+                    placeholder={t('hotelEdit.form.lngPlaceholder')}
+                  />
                 </Form.Item>
               </Col>
             </Row>

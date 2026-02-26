@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>易宿酒店预订平台 | 三端系统总架构图</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+
+    :root {
+      --bg-0: #060b1a;
+      --bg-1: #0b1430;
+      --glass: rgba(12, 20, 42, 0.72);
+      --line: rgba(181, 201, 255面向平台管理员, 0.22);
+      --text: #f5f8ff;
+      --sub: #b6c0de;
+      --c-cyan: #00e5ff;
+      --c-orange: #ff7a00;
+      --c-lime: #b7ff00;
+      --c-pink: #ff2ba6;
+      --c-yellow: #ffd43b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "IBM Plex Sans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 15%, rgba(0, 229, 255, 0.22), transparent 34%),
+        radial-gradient(circle at 84% 20%, rgba(255, 122, 0, 0.2), transparent 30%),
+        radial-gradient(circle at 80% 82%, rgba(183, 255, 0, 0.15), transparent 35%),
+        radial-gradient(circle at 10% 78%, rgba(255, 43, 166, 0.15), transparent 32%),
+        linear-gradient(150deg, var(--bg-0), var(--bg-1) 58%, #10173b);
+      overflow-x: hidden;
+    }
+
+    .page {
+      width: min(1500px, 95vw);
+      margin: 26px auto 48px;
+    }
+
+    .hero {
+      padding: 22px 22px 14px;
+      border: 1px solid var(--line);
+      background: rgba(9, 15, 31, 0.52);
+      backdrop-filter: blur(9px);
+      border-radius: 18px;
+      box-shadow: 0 20px 55px rgba(0, 0, 0, 0.34);
+    }
+
+    .hero h1 {
+      margin: 0;
+      line-height: 1;
+      letter-spacing: 0.6px;
+      font-family: "IBM Plex Sans", "Noto Sans SC", sans-serif;
+      font-weight: 700;
+      font-size: clamp(2.5rem, 5vw, 3.8rem);
+      text-transform: none;
+      background: linear-gradient(92deg, var(--c-cyan), var(--c-lime), var(--c-orange), var(--c-pink));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .hero p {
+      margin: 8px 0 0;
+      font-size: 1.28rem;
+      color: var(--sub);
+    }
+
+    .architecture {
+      margin-top: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .layer {
+      border: 1px solid var(--line);
+      background: var(--glass);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+      animation: reveal 0.8s ease both;
+    }
+
+    .layer-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin: 0 0 14px;
+      font-weight: 700;
+      font-size: 1.22rem;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: #e6ecff;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .node {
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 14px;
+      padding: 18px 18px 16px;
+      background: rgba(7, 12, 26, 0.82);
+      min-height: 0;
+      overflow: hidden;
+      animation: floaty 8.5s ease-in-out infinite;
+    }
+
+    .node:nth-child(2n) {
+      animation-delay: 0.8s;
+    }
+
+    .node:nth-child(3n) {
+      animation-delay: 1.3s;
+    }
+
+    .node::before {
+      content: "";
+      position: absolute;
+      left: -24%;
+      top: -55%;
+      width: 150%;
+      height: 220%;
+      background: linear-gradient(110deg, transparent 38%, rgba(255, 255, 255, 0.12), transparent 62%);
+      transform: rotate(7deg);
+      opacity: 0.55;
+      pointer-events: none;
+    }
+
+    .node h3 {
+      margin: 0;
+      display: flex;
+      align-items: baseline;
+      gap: 7px;
+      font-family: "IBM Plex Sans", "Noto Sans SC", sans-serif;
+      font-size: 1.72rem;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      text-transform: none;
+    }
+
+    .node small {
+      color: var(--sub);
+      font-size: 1rem;
+      letter-spacing: 0.2px;
+      text-transform: none;
+    }
+
+    .node p {
+      margin: 8px 0 0;
+      color: #d7dff8;
+      font-size: 1.26rem;
+      line-height: 1.5;
+    }
+
+    .code {
+      margin-top: 8px;
+      display: none;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 0.72rem;
+      color: #cae4ff;
+      background: rgba(121, 188, 255, 0.15);
+      border: 1px solid rgba(121, 188, 255, 0.28);
+      border-radius: 8px;
+      padding: 4px 6px;
+    }
+
+    .tags {
+      margin-top: 11px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tag {
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 1rem;
+      color: #e8eeff;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .cyan {
+      border-color: rgba(0, 229, 255, 0.58);
+      box-shadow: inset 0 0 0 1px rgba(0, 229, 255, 0.16), 0 0 25px rgba(0, 229, 255, 0.14);
+    }
+
+    .orange {
+      border-color: rgba(255, 122, 0, 0.56);
+      box-shadow: inset 0 0 0 1px rgba(255, 122, 0, 0.16), 0 0 24px rgba(255, 122, 0, 0.15);
+    }
+
+    .lime {
+      border-color: rgba(183, 255, 0, 0.5);
+      box-shadow: inset 0 0 0 1px rgba(183, 255, 0, 0.13), 0 0 22px rgba(183, 255, 0, 0.14);
+    }
+
+    .pink {
+      border-color: rgba(255, 43, 166, 0.56);
+      box-shadow: inset 0 0 0 1px rgba(255, 43, 166, 0.16), 0 0 22px rgba(255, 43, 166, 0.14);
+    }
+
+    .note {
+      margin-top: 12px;
+      font-size: 1.1rem;
+      color: #c8d2f1;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px dashed rgba(255, 255, 255, 0.24);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .connector {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 3px;
+    }
+
+    .connector .line {
+      height: 2px;
+      flex: 1;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(255, 43, 166, 0.1), rgba(0, 229, 255, 0.85), rgba(183, 255, 0, 0.85), rgba(255, 122, 0, 0.1));
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.28);
+    }
+
+    .connector span {
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 1.05rem;
+      letter-spacing: 0.5px;
+      color: #dce6ff;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      background: rgba(255, 255, 255, 0.06);
+      white-space: nowrap;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 10px;
+    }
+
+    .port-list {
+      margin: 8px 0 0;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .port {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .port strong {
+      display: block;
+      font-size: 1.12rem;
+      color: #f2f6ff;
+    }
+
+    .port span {
+      color: var(--sub);
+      font-size: 1.02rem;
+    }
+
+    @keyframes floaty {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-3px); }
+    }
+
+    @keyframes reveal {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Light readability theme override */
+    :root {
+      --bg-0: #f8fbff;
+      --bg-1: #eef4ff;
+      --glass: rgba(255, 255, 255, 0.9);
+      --line: rgba(33, 57, 115, 0.15);
+      --text: #12203f;
+      --sub: #4e618e;
+      --c-cyan: #009dff;
+      --c-orange: #ff7a00;
+      --c-lime: #59b300;
+      --c-pink: #e63f95;
+      --c-yellow: #f2b705;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 17% 14%, rgba(0, 157, 255, 0.18), transparent 34%),
+        radial-gradient(circle at 86% 20%, rgba(255, 122, 0, 0.16), transparent 30%),
+        radial-gradient(circle at 78% 84%, rgba(89, 179, 0, 0.15), transparent 35%),
+        radial-gradient(circle at 9% 80%, rgba(230, 63, 149, 0.14), transparent 32%),
+        linear-gradient(150deg, var(--bg-0), var(--bg-1) 58%, #f3f7ff);
+    }
+
+    .hero {
+      background: rgba(255, 255, 255, 0.82);
+      border-color: rgba(33, 57, 115, 0.14);
+      box-shadow: 0 16px 40px rgba(26, 54, 109, 0.1);
+    }
+
+    .hero p {
+      color: #4f6492;
+    }
+
+    .layer {
+      background: var(--glass);
+      border-color: rgba(33, 57, 115, 0.14);
+      box-shadow: 0 10px 28px rgba(28, 54, 110, 0.08);
+    }
+
+    .layer-title {
+      color: #1c2d56;
+      border-color: rgba(33, 57, 115, 0.2);
+      background: rgba(12, 34, 82, 0.04);
+    }
+
+    .node {
+      background: rgba(255, 255, 255, 0.95);
+      border-color: rgba(34, 63, 125, 0.2);
+      box-shadow: 0 8px 24px rgba(23, 48, 102, 0.08);
+    }
+
+    .node::before {
+      background: linear-gradient(110deg, transparent 38%, rgba(57, 92, 170, 0.08), transparent 62%);
+    }
+
+    .node h3 {
+      color: #102247;
+    }
+
+    .node small {
+      color: #60729e;
+    }
+
+    .node p {
+      color: #354b78;
+    }
+
+    .code {
+      color: #1f3f84;
+      background: rgba(0, 157, 255, 0.08);
+      border-color: rgba(0, 157, 255, 0.24);
+    }
+
+    .tag {
+      color: #2c4370;
+      border-color: rgba(37, 64, 122, 0.2);
+      background: rgba(0, 0, 0, 0.02);
+    }
+
+    .note {
+      color: #3d5586;
+      border-color: rgba(29, 52, 110, 0.25);
+      background: rgba(29, 52, 110, 0.03);
+    }
+
+    .connector .line {
+      background: linear-gradient(90deg, rgba(230, 63, 149, 0.06), rgba(0, 157, 255, 0.55), rgba(89, 179, 0, 0.5), rgba(255, 122, 0, 0.06));
+      box-shadow: 0 0 8px rgba(0, 157, 255, 0.15);
+    }
+
+    .connector span {
+      color: #3a4f7c;
+      border-color: rgba(33, 57, 115, 0.2);
+      background: rgba(255, 255, 255, 0.8);
+    }
+
+    .port {
+      border-color: rgba(34, 63, 125, 0.2);
+      background: rgba(26, 60, 133, 0.03);
+    }
+
+    .port strong {
+      color: #1c2e57;
+    }
+
+    .port span {
+      color: #5a6f99;
+    }
+
+    .cyan {
+      border-color: rgba(0, 157, 255, 0.46);
+      box-shadow: inset 0 0 0 1px rgba(0, 157, 255, 0.12), 0 8px 24px rgba(0, 157, 255, 0.1);
+    }
+
+    .orange {
+      border-color: rgba(255, 122, 0, 0.5);
+      box-shadow: inset 0 0 0 1px rgba(255, 122, 0, 0.12), 0 8px 24px rgba(255, 122, 0, 0.1);
+    }
+
+    .lime {
+      border-color: rgba(89, 179, 0, 0.45);
+      box-shadow: inset 0 0 0 1px rgba(89, 179, 0, 0.1), 0 8px 24px rgba(89, 179, 0, 0.08);
+    }
+
+    .pink {
+      border-color: rgba(230, 63, 149, 0.48);
+      box-shadow: inset 0 0 0 1px rgba(230, 63, 149, 0.11), 0 8px 24px rgba(230, 63, 149, 0.08);
+    }
+
+    @media (max-width: 1100px) {
+      .cols-3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .footer-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        width: 95vw;
+      }
+
+      .cols-3,
+      .cols-2,
+      .port-list {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        padding: 16px 16px 12px;
+      }
+
+      .layer {
+        padding: 14px;
+      }
+
+      .node {
+        padding: 16px;
+        min-height: 0;
+      }
+
+      .node h3 {
+        font-size: 1.78rem;
+      }
+
+      .node p {
+        font-size: 1.3rem;
+      }
+
+      .connector span {
+        font-size: 0.98rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <h1>三端系统总架构图</h1>
+      <p>简版视图：三端入口、服务层、数据层与部署关系</p>
+    </header>
+
+    <section class="architecture">
+      <article class="layer">
+        <h2 class="layer-title">01 终端入口层</h2>
+        <div class="grid cols-3">
+          <section class="node cyan">
+            <h3>C-End <small>用户端</small></h3>
+            <p>面向用户，覆盖搜索、下单和订单管理。</p>
+            <span class="code">mobile/src/app.config.js</span>
+            <div class="tags">
+              <span class="tag">搜索</span>
+              <span class="tag">预订</span>
+              <span class="tag">订单</span>
+            </div>
+          </section>
+
+          <section class="node orange">
+            <h3>Merchant-End <small>商户端</small></h3>
+            <p>面向商户，负责酒店与房型维护。</p>
+            <span class="code">admin/src/App.jsx</span>
+            <div class="tags">
+              <span class="tag">酒店管理</span>
+              <span class="tag">房型管理</span>
+              <span class="tag">申请提交</span>
+            </div>
+          </section>
+
+          <section class="node pink">
+            <h3>Admin-End <small>平台管理端</small></h3>
+            <p>面向管理员，负责审核、商户管理与运营控制。</p>
+            <span class="code">server/src/middleware/auth.js</span>
+            <div class="tags">
+              <span class="tag">审核</span>
+              <span class="tag">商户管理</span>
+              <span class="tag">RBAC</span>
+            </div>
+          </section>
+        </div>
+        <p class="note">商户端与管理员端共用同一前端工程，通过角色权限进行菜单与路由分流。</p>
+      </article>
+
+      <div class="connector" aria-hidden="true">
+        <div class="line"></div>
+        <span>HTTPS / REST + JWT</span>
+        <div class="line"></div>
+      </div>
+
+      <article class="layer">
+        <h2 class="layer-title">02 接入与安全层</h2>
+        <div class="grid cols-2">
+          <section class="node cyan">
+            <h3>API Gateway <small>Express</small></h3>
+            <p>统一接口入口，负责请求接入与服务编排。</p>
+            <span class="code">server/src/app.js / server/src/routes/index.js</span>
+          </section>
+          <section class="node lime">
+            <h3>Auth + RBAC <small>安全域</small></h3>
+            <p>提供 JWT 鉴权与角色权限控制。</p>
+            <span class="code">authRequired + requireRole</span>
+          </section>
+        </div>
+      </article>
+
+      <div class="connector" aria-hidden="true">
+        <div class="line"></div>
+        <span>Domain Services / Route Aggregation</span>
+        <div class="line"></div>
+      </div>
+
+      <article class="layer">
+        <h2 class="layer-title">03 业务服务层</h2>
+        <div class="grid cols-3">
+          <section class="node cyan">
+            <h3>Auth & User</h3>
+            <p>账号登录、用户资料与个人业务入口。</p>
+            <span class="code">routes/auth.js + routes/user.js</span>
+          </section>
+          <section class="node orange">
+            <h3>Hotel & Room</h3>
+            <p>酒店与房型的查询、管理与状态流转。</p>
+            <span class="code">routes/publicHotels.js / merchantHotels.js / adminHotels.js</span>
+          </section>
+          <section class="node lime">
+            <h3>Request & Preset</h3>
+            <p>预设能力与申请审核流程中心。</p>
+            <span class="code">routes/requests.js + adminRequests.js + presets.js</span>
+          </section>
+          <section class="node pink">
+            <h3>Order & Availability</h3>
+            <p>订单生命周期与库存可用性控制。</p>
+            <span class="code">services/roomAvailabilityService.js + pricingService.js</span>
+          </section>
+          <section class="node cyan">
+            <h3>Notifications</h3>
+            <p>消息通知、未读计数与已读同步。</p>
+            <span class="code">routes/notifications.js + notificationService.js</span>
+          </section>
+          <section class="node orange">
+            <h3>Map & Image Proxy</h3>
+            <p>地图检索与图片代理支撑。</p>
+            <span class="code">routes/map.js + routes/image.js</span>
+          </section>
+        </div>
+      </article>
+
+      <div class="connector" aria-hidden="true">
+        <div class="line"></div>
+        <span>PostgreSQL / External API / CDN</span>
+        <div class="line"></div>
+      </div>
+
+      <article class="layer">
+        <h2 class="layer-title">04 数据与外部依赖层</h2>
+        <div class="grid cols-3">
+          <section class="node lime">
+            <h3>Supabase PostgreSQL</h3>
+            <p>核心业务数据存储。</p>
+            <span class="code">server/src/config/supabase.js</span>
+          </section>
+          <section class="node cyan">
+            <h3>AMap Service</h3>
+            <p>提供地理编码与位置检索。</p>
+            <span class="code">AMAP_KEY + mapService.js</span>
+          </section>
+          <section class="node pink">
+            <h3>Image Sources</h3>
+            <p>图片资源与访问安全控制。</p>
+            <span class="code">IMAGE_PROXY_ALLOW_HOSTS</span>
+          </section>
+        </div>
+      </article>
+
+      <article class="layer">
+        <h2 class="layer-title">05 部署与运行视角</h2>
+        <div class="footer-grid">
+          <section class="node orange">
+            <h3>Docker Compose</h3>
+            <p>三端服务统一部署与运行。</p>
+            <span class="code">docker-compose.yml</span>
+            <div class="port-list">
+              <div class="port"><strong>server</strong><span>4100</span></div>
+              <div class="port"><strong>admin</strong><span>4101</span></div>
+              <div class="port"><strong>mobile</strong><span>10086</span></div>
+            </div>
+          </section>
+          <section class="node cyan">
+            <h3>Engineering Guards</h3>
+            <p>文档、规范与测试保障交付质量。</p>
+            <span class="code">docs/Architecture.md + docs/SDD.md</span>
+          </section>
+        </div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

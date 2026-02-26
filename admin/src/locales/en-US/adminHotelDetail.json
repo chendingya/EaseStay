@@ -3,6 +3,8 @@
     "basic": {
       "address": "Address",
       "city": "City",
+      "lat": "Latitude",
+      "lng": "Longitude",
       "openingTime": "Opening Time",
       "star": "Star",
       "starValue": "{{value}} stars",

@@ -12,6 +12,8 @@
     "basic": {
       "address": "Address",
       "city": "City",
+      "lat": "Latitude",
+      "lng": "Longitude",
       "createdAt": "Created At",
       "description": "Description",
       "name": "Hotel Name",
