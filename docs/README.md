@@ -14,6 +14,7 @@
 - Admin 业务流程图文档：[admin-business-flow.md](./admin/admin-business-flow.md)
 - Admin 组件架构图文档：[admin-component-architecture.md](./admin/admin-component-architecture.md)
 - Admin 状态管理与 API 接口文档：[admin-state-api.md](./admin/admin-state-api.md)
+- Admin Playwright 自动化测试沉淀文档：[admin-playwright-e2e.md](./admin/admin-playwright-e2e.md)
 
 ### Server 端文档
 - Server 数据流图文档：[server-dataflow.md](./server/server-dataflow.md)
@@ -26,6 +27,8 @@
 - Mobile 组件架构与状态管理文档：[mobile-component-architecture.md](./mobile/mobile-component-architecture.md)
 
 ## 最近更新（2026-02）
+- Admin 自动化测试基线：新增 Playwright 本地 E2E 方案与 smoke 用例（登录 + 酒店经纬度链路），沉淀《Admin Playwright 自动化测试沉淀文档》
+- Admin 状态管理升级：新增 `stores/`（`sessionStore`/`notificationStore`/`adminPendingStore`），全局认证、未读数、待审数由 Zustand 承载，移除 `admin-pending-update` 事件链路
 - Mobile 文档体系补齐：新增《Mobile 数据流图文档》《Mobile 业务流程图文档》《Mobile 组件架构与状态管理文档》
 - Server 文档体系补齐：新增《Server 数据流图文档》《Server 业务流程图文档》《Server 架构与 API 接口文档》
 - Admin 文档体系补齐：新增《Admin 数据流图文档》《Admin 业务流程图文档》《Admin 组件架构图文档》《Admin 状态管理与 API 接口文档》

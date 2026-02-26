@@ -10,9 +10,9 @@ graph TB
         UI["页面组件<br/>Dashboard / Hotels / Audit ..."]
         Hook["useRemoteTableQuery<br/>搜索防抖 + 分页态"]
         ServiceAPI["services/request.js → api 对象<br/>请求去重 + 拦截器"]
-        NotifySvc["notificationService<br/>通知发布-订阅"]
+        NotifySvc["notificationStore + notificationService<br/>未读数状态 + API 调用"]
         I18N["i18n Loader<br/>语言 + namespace 懒加载"]
-        LocalStorage["localStorage<br/>token / role / username / cache"]
+        LocalStorage["persist + localStorage<br/>admin-session + 业务缓存"]
     end
 
     subgraph Server["Express 后端"]
@@ -37,11 +37,11 @@ graph TB
     Services --> DB
     Controllers -->|"POI/地理编码"| MapAPI
     ServiceAPI -->|"响应数据"| UI
-    UI -->|"markAsRead / getUnreadCount"| NotifySvc
-    NotifySvc -->|"onUnreadCountChange"| UI
+    UI -->|"refreshUnreadCount / markAsRead / deleteNotification"| NotifySvc
+    NotifySvc -->|"store unreadCount 响应式更新"| UI
     UI -->|"路由切换"| I18N
     I18N -->|"namespace 就绪"| UI
-    UI <-->|"token / cache 读写"| LocalStorage
+    UI <-->|"session 持久化 / cache 读写"| LocalStorage
 ```
 
 ## 2. 认证数据流
@@ -53,7 +53,7 @@ sequenceDiagram
     participant API as api 对象
     participant Server as POST /api/auth/*
     participant DB as PostgreSQL
-    participant LS as localStorage
+    participant SessionStore as useSessionStore
     participant App as App.jsx
 
     Note over U,App: 登录流程
@@ -64,9 +64,9 @@ sequenceDiagram
     DB-->>Server: 用户记录
     Server-->>API: {token, userRole}
     API-->>Login: 业务数据
-    Login->>LS: 写入 token / userRole / username
+    Login->>SessionStore: setSession({token, role, username})
     Login->>App: onLoggedIn({token, role, username})
-    App->>App: setAuth → 渲染侧边栏
+    App->>App: 读取 sessionStore → 渲染侧边栏
 
     Note over U,App: 注册流程
     U->>Login: 输入用户名 + 密码 + 角色 + 验证码
@@ -245,8 +245,8 @@ sequenceDiagram
         Server->>DB: 更新 hotels.status = 'offline'
     end
 
-    AuditDetail->>AuditDetail: window.dispatchEvent('admin-pending-update')
-    Note over AuditDetail: App.jsx 监听事件 → 刷新顶部待审数量
+    AuditDetail->>AuditDetail: 调用 useAdminPendingStore.refreshPending()
+    Note over AuditDetail: App Header 待审徽标同步刷新
 ```
 
 ### 4.2 申请审核数据流（RequestAudit.jsx）
@@ -323,11 +323,11 @@ graph TB
         RequestReject["申请审核拒绝"]
     end
 
-    subgraph NotificationService["notificationService（前端）"]
+    subgraph NotificationService["notificationStore + notificationService（前端）"]
         GetNotifs["getNotifications()"]
-        GetUnread["getUnreadCount()"]
-        MarkRead["markAsRead(id?)"]
-        PubSub["订阅-发布<br/>listeners Set"]
+        RefreshUnread["refreshUnreadCount()"]
+        MarkRead["markAsRead(id?) / deleteNotification(id)"]
+        UnreadState["store.unreadCount"]
     end
 
     subgraph UI["页面展示"]
@@ -341,11 +341,11 @@ graph TB
     RequestReject -->|INSERT notifications| DB
 
     DB --> GetNotifs
-    DB --> GetUnread
-    GetUnread --> PubSub
-    PubSub -->|onUnreadCountChange| Badge
+    DB --> RefreshUnread
+    RefreshUnread --> UnreadState
+    UnreadState --> Badge
     GetNotifs --> MsgPage
-    MarkRead -->|更新后重新拉取| PubSub
+    MarkRead -->|成功后刷新| RefreshUnread
 ```
 
 ## 6. 工作台数据流（Dashboard.jsx）
@@ -431,7 +431,7 @@ graph TB
     end
 
     subgraph 拦截器
-        ReqInterceptor["请求拦截器<br/>① localStorage 读取 token<br/>② 注入 Authorization: Bearer"]
+        ReqInterceptor["请求拦截器<br/>① 优先 sessionStore 读取 token<br/>② 回退 localStorage 旧键<br/>③ 注入 Authorization: Bearer"]
         ResInterceptor["响应拦截器<br/>① 检查 data.success===false → reject<br/>② 检查 data.warning → 弹警告<br/>③ DEV 环境记录性能"]
         ErrHandler["错误处理<br/>① 懒加载 glassMessage<br/>② 弹出错误提示<br/>③ 401 → 跳转登录"]
     end

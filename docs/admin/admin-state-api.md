@@ -4,34 +4,50 @@
 
 ## 1. 状态管理方案
 
-Admin 端采用 **纯 React State + localStorage** 方案，不依赖 Redux / Zustand / MobX 等外部状态库。
+Admin 端采用 **Zustand（全局）+ React State（页面局部）+ localStorage（兼容）** 方案。
 
 | 状态层级 | 载体 | 说明 |
 |---------|------|------|
-| 全局认证状态 | `App.jsx` state + `localStorage` | token / role / username |
-| 全局未读数 | `App.jsx` state + `notificationService` 订阅 | unreadCount |
-| 全局待审数 | `App.jsx` state + 30s 轮询 + 自定义事件 | adminPending（仅 admin） |
+| 全局认证状态 | `useSessionStore`（persist） | token / role / username，兼容旧 localStorage 键 |
+| 全局未读数 | `useNotificationStore` | unreadCount，统一刷新/已读/删除动作 |
+| 全局待审数 | `useAdminPendingStore` | pendingHotels / pendingRequests（仅 admin） |
 | 路由级 i18n | `App.jsx` state | routeNamespacesReady |
 | 页面级业务状态 | 各页面组件 `useState` | 列表、详情、表单等 |
 | 表格搜索/分页 | `useRemoteTableQuery` hook | 搜索防抖 + 分页态 |
-| 通知发布-订阅 | `notificationService` listeners | 跨组件未读数同步 |
+| 兼容层 | `notificationService` listeners | 保留 `onUnreadCountChange` 兼容旧测试/旧调用 |
 
 ### 1.1 全局状态结构
 
 ```typescript
-// App.jsx 中的全局状态
-interface AppState {
-  auth: {
-    token: string | null;
-    role: 'merchant' | 'admin' | null;
-    username: string | null;
-  };
-  routeNamespacesReady: boolean;
+interface SessionStoreState {
+  token: string;
+  role: 'merchant' | 'admin' | '';
+  username: string;
+  setSession(payload: { token?: string; role?: string; username?: string }): void;
+  clearSession(): void;
+}
+
+interface NotificationStoreState {
   unreadCount: number;
-  adminPending: {           // 仅 admin 角色
-    pendingHotels: number;
-    pendingRequests: number;
-  };
+  loadingUnread: boolean;
+  setUnreadCount(count: number): void;
+  refreshUnreadCount(): Promise<number>;
+  markAsRead(notificationId?: number): Promise<boolean>;
+  deleteNotification(notificationId: number): Promise<boolean>;
+  clear(): void;
+}
+
+interface AdminPendingStoreState {
+  pendingHotels: number;
+  pendingRequests: number;
+  loading: boolean;
+  refreshPending(): Promise<{ pendingHotels: number; pendingRequests: number }>;
+  clearPending(): void;
+}
+
+// App.jsx 中仍保留的路由/视图级状态
+interface AppViewState {
+  routeNamespacesReady: boolean;
 }
 ```
 
@@ -39,11 +55,16 @@ interface AppState {
 
 ```mermaid
 stateDiagram-v2
-    [*] --> 未登录: App 初始化<br/>localStorage 无 token
-    [*] --> 已登录: App 初始化<br/>localStorage 有 token
+    [*] --> 未登录: App 初始化<br/>sessionStore token 为空
+    [*] --> 已登录: App 初始化<br/>persist 恢复 token
 
-    未登录 --> 已登录: handleLoggedIn()<br/>写入 localStorage
-    已登录 --> 未登录: handleLogout()<br/>清除 localStorage
+    未登录 --> 已登录: handleLoggedIn()<br/>setSession()
+    已登录 --> 未登录: handleLogout()<br/>clearSession()
+    note right of 已登录
+      sessionStore 持久化到 admin-session；
+      同步旧键 token/role/username
+      保证与旧逻辑兼容
+    end note
 
     已登录 --> 商户模式: role === 'merchant'
     已登录 --> 管理员模式: role === 'admin'
@@ -54,29 +75,58 @@ stateDiagram-v2
 ```mermaid
 graph TB
     subgraph 触发源
-        MarkRead["markAsRead(id)"]
-        MarkAll["markAsRead()"]
-        DeleteNotif["deleteNotification(id)"]
+        AppPoll["App.jsx 30s 轮询<br/>refreshUnreadCount()"]
+        MsgRead["Messages.jsx<br/>store.markAsRead(id?)"]
+        MsgDelete["Messages.jsx<br/>store.deleteNotification(id)"]
     end
 
-    subgraph 发布层["notificationService"]
-        NotifyUpdate["notifyUnreadUpdate()"]
-        FetchCount["getUnreadCount()"]
-        Listeners["listeners Set<br/>回调函数集合"]
+    subgraph 通知 Store
+        Refresh["refreshUnreadCount()"]
+        StoreCount["unreadCount"]
     end
 
-    subgraph 订阅方
-        AppBadge["App.jsx → Header 徽标"]
-        MsgPage["Messages.jsx → 未读计数"]
+    subgraph 服务层与兼容层
+        Service["notificationService API"]
+        Legacy["onUnreadCountChange() 兼容监听"]
     end
 
-    MarkRead --> NotifyUpdate
-    MarkAll --> NotifyUpdate
-    DeleteNotif --> NotifyUpdate
-    NotifyUpdate --> FetchCount
-    FetchCount --> Listeners
-    Listeners --> AppBadge
-    Listeners --> MsgPage
+    subgraph 消费方
+        Header["App Header 徽标"]
+        Messages["Messages 页面"]
+    end
+
+    AppPoll --> Refresh
+    MsgRead --> Service --> Refresh
+    MsgDelete --> Service --> Refresh
+    Refresh --> StoreCount
+    StoreCount --> Header
+    StoreCount --> Messages
+    Service --> Legacy
+```
+
+### 1.4 管理员待审数同步机制
+
+```mermaid
+graph TB
+    subgraph 触发源
+        AppPollPending["App.jsx 30s 轮询<br/>refreshPending()"]
+        AuditDetailAction["AuditDetail 审核通过/驳回/下线后<br/>refreshPending()"]
+        RequestAuditAction["RequestAudit 审批后<br/>refreshPending()"]
+    end
+
+    subgraph PendingStore["useAdminPendingStore"]
+        FetchPending["并发请求 pending hotels + requests"]
+        PendingState["pendingHotels / pendingRequests"]
+    end
+
+    subgraph UI["消费方"]
+        HeaderBadge["Header Bell dot + Tooltip"]
+    end
+
+    AppPollPending --> FetchPending
+    AuditDetailAction --> FetchPending
+    RequestAuditAction --> FetchPending
+    FetchPending --> PendingState --> HeaderBadge
 ```
 
 ## 2. 各页面状态结构
@@ -373,7 +423,7 @@ interface AccountState {
 
 | 能力 | 实现 | 说明 |
 |------|------|------|
-| 自动鉴权 | 请求拦截器注入 `Authorization: Bearer` | 从 localStorage 读取 token |
+| 自动鉴权 | 请求拦截器注入 `Authorization: Bearer` | 优先读取 `useSessionStore.getState().token`，回退 localStorage 旧键 |
 | 请求去重 | `inflightMap` + `buildDebounceKey` | 同一请求只发一次，复用 Promise |
 | 错误统一处理 | 响应拦截器 + `glassMessage` 懒加载 | 网络错误/业务异常自动提示 |
 | 警告展示 | 响应 `data.warning` 检查 | 自动弹出警告消息 |
@@ -420,16 +470,12 @@ const estimateActionColumnWidth = (lang, actionCount) => {
 // 兜底：scroll.x = 'max-content'
 ```
 
-## 6. 自定义事件通信
+## 6. 跨页面同步机制（当前实现）
 
-| 事件名 | 触发时机 | 监听方 | 作用 |
-|--------|---------|--------|------|
-| `admin-pending-update` | 审核/申请操作后 dispatch | App.jsx | 刷新侧边栏待审数量 |
+| 场景 | 触发时机 | 机制 | 消费方 |
+|------|---------|------|--------|
+| 管理员待审数刷新 | `AuditDetail` / `RequestAudit` 操作成功后 | 直接调用 `useAdminPendingStore.refreshPending()` | `App.jsx` Header 待审徽标 |
+| 未读消息刷新 | `Messages` 已读/删消息后 | `useNotificationStore` 动作内刷新未读数 | `App.jsx` Header、`Messages.jsx` |
+| 认证态同步 | 登录/退出 | `useSessionStore.setSession/clearSession` + persist | 路由守卫、菜单、请求拦截器 |
 
-```javascript
-// 触发（AuditDetail / RequestAudit）
-window.dispatchEvent(new Event('admin-pending-update'));
-
-// 监听（App.jsx）
-window.addEventListener('admin-pending-update', fetchAdminPending);
-```
+> 说明：`admin-pending-update` 自定义事件已移除。`notificationService.onUnreadCountChange` 仅作为兼容层保留，不再是主状态同步链路。

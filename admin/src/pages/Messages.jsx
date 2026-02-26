@@ -6,8 +6,9 @@ import CloseCircleOutlined from '@ant-design/icons/es/icons/CloseCircleOutlined'
 import InfoCircleOutlined from '@ant-design/icons/es/icons/InfoCircleOutlined'
 import WarningOutlined from '@ant-design/icons/es/icons/WarningOutlined'
 import { GlassButton, glassMessage as message } from '../components'
-import { getNotifications, markAsRead as markNotificationAsRead, formatNotificationTime } from '../services'
+import { getNotifications, formatNotificationTime } from '../services'
 import { useTranslation } from 'react-i18next'
+import { useNotificationStore } from '../stores'
 
 const PAGE_SIZE = 12
 
@@ -92,6 +93,8 @@ const NotificationItem = memo(function NotificationItem({ item, unreadTagText, o
 
 export default function Messages() {
   const { t } = useTranslation()
+  const refreshUnreadCount = useNotificationStore((state) => state.refreshUnreadCount)
+  const markNotificationAsRead = useNotificationStore((state) => state.markAsRead)
   const [loading, setLoading] = useState(false)
   const [notifications, setNotifications] = useState([])
   const [activeTab, setActiveTab] = useState('all')
@@ -106,6 +109,7 @@ export default function Messages() {
       try {
         const data = await getNotifications()
         if (!canceled) setNotifications(data)
+        await refreshUnreadCount()
       } catch (error) {
         console.error(error)
       } finally {
@@ -118,7 +122,7 @@ export default function Messages() {
     return () => {
       canceled = true
     }
-  }, [])
+  }, [refreshUnreadCount])
 
   const unreadCount = useMemo(
     () => notifications.reduce((sum, item) => sum + (item?.is_read ? 0 : 1), 0),

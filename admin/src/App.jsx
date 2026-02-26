@@ -11,12 +11,13 @@ import MenuFoldOutlined from '@ant-design/icons/es/icons/MenuFoldOutlined'
 import MenuUnfoldOutlined from '@ant-design/icons/es/icons/MenuUnfoldOutlined'
 import GlobalOutlined from '@ant-design/icons/es/icons/GlobalOutlined'
 import { Routes, Route, useLocation, useNavigate, Navigate, Outlet } from 'react-router-dom'
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import zhCN from 'antd/locale/zh_CN'
 import enUS from 'antd/locale/en_US'
 import { changeLanguage, hasLoadedNamespaces, loadNamespaces } from './locales'
 import { routeConfig, getRouteNamespaces } from './routes/routeConfig'
+import { useAdminPendingStore, useNotificationStore, useSessionStore } from './stores'
 
 const appPerfStart = import.meta.env.DEV ? performance.now() : 0
 const Login = lazy(() => import('./pages/Login.jsx'))
@@ -34,14 +35,6 @@ const AdminHotels = lazy(() => import('./pages/AdminHotels.jsx'))
 const AdminHotelDetail = lazy(() => import('./pages/AdminHotelDetail.jsx'))
 const MerchantDetail = lazy(() => import('./pages/MerchantDetail.jsx'))
 const OrderStats = lazy(() => import('./pages/OrderStats.jsx'))
-let servicesModulePromise = null
-
-function loadServicesModule() {
-  if (!servicesModulePromise) {
-    servicesModulePromise = import('./services')
-  }
-  return servicesModulePromise
-}
 
 function LazyRoute({ children, routeNamespacesReady = true }) {
   if (!routeNamespacesReady) return null
@@ -281,16 +274,22 @@ function App() {
   const navigate = useNavigate()
   const location = useLocation()
   const { i18n, t } = useTranslation()
-  const [auth, setAuth] = useState(() => ({
-    token: localStorage.getItem('token'),
-    role: localStorage.getItem('role'),
-    username: localStorage.getItem('username')
-  }))
+  const token = useSessionStore((state) => state.token)
+  const role = useSessionStore((state) => state.role)
+  const username = useSessionStore((state) => state.username)
+  const setSession = useSessionStore((state) => state.setSession)
+  const clearSession = useSessionStore((state) => state.clearSession)
+  const unreadCount = useNotificationStore((state) => state.unreadCount)
+  const refreshUnreadCount = useNotificationStore((state) => state.refreshUnreadCount)
+  const clearUnread = useNotificationStore((state) => state.clear)
+  const pendingHotels = useAdminPendingStore((state) => state.pendingHotels)
+  const pendingRequests = useAdminPendingStore((state) => state.pendingRequests)
+  const refreshAdminPending = useAdminPendingStore((state) => state.refreshPending)
+  const clearAdminPending = useAdminPendingStore((state) => state.clearPending)
+  const auth = useMemo(() => ({ token, role, username }), [role, token, username])
   const [routeNamespacesReady, setRouteNamespacesReady] = useState(() =>
     hasLoadedNamespaces(getRouteNamespaces(location.pathname))
   )
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [adminPending, setAdminPending] = useState({ pendingHotels: 0, pendingRequests: 0 })
   
   const antdLocale = i18n.language === 'en-US' ? enUS : zhCN
 
@@ -326,86 +325,66 @@ function App() {
     }
   }, [location.pathname, i18n.language])
 
-  // Fetch unread count and subscribe to changes
   useEffect(() => {
-    if (!auth.token) return
+    if (!auth.token) {
+      clearUnread()
+      return
+    }
 
     let canceled = false
-    let unsubscribe = () => {}
-    const cleanupIdle = scheduleIdleTask(async () => {
+    const run = async () => {
       try {
-        const { getUnreadCount, onUnreadCountChange } = await loadServicesModule()
-        if (canceled) return
-
-        const count = await getUnreadCount()
-        if (!canceled) setUnreadCount(count)
-
-        unsubscribe = onUnreadCountChange((nextCount) => {
-          if (!canceled) setUnreadCount(nextCount)
-        })
+        await refreshUnreadCount()
       } catch (error) {
         console.error(error)
       }
+    }
+    const cleanupIdle = scheduleIdleTask(() => {
+      if (!canceled) run()
     }, { timeout: 1500, fallbackDelay: 400 })
-
+    const timerId = setInterval(run, 30000)
     return () => {
       canceled = true
       cleanupIdle()
-      unsubscribe()
+      clearInterval(timerId)
     }
-  }, [auth.token]) // Remove location.pathname dependency as we now have real-time updates via subscription
-
-  const fetchAdminPending = useCallback(async () => {
-    if (!auth.token || auth.role !== 'admin') return
-    try {
-      const { api } = await loadServicesModule()
-      const [hotels, requests] = await Promise.all([
-        api.get('/api/admin/hotels?status=pending'),
-        api.get('/api/admin/requests?status=pending')
-      ])
-      setAdminPending({
-        pendingHotels: Array.isArray(hotels) ? hotels.length : 0,
-        pendingRequests: Array.isArray(requests) ? requests.length : 0
-      })
-    } catch (error) {
-      console.error(error)
-    }
-  }, [auth.role, auth.token])
+  }, [auth.token, clearUnread, refreshUnreadCount])
 
   useEffect(() => {
-    if (!(auth.token && auth.role === 'admin')) return
+    if (!(auth.token && auth.role === 'admin')) {
+      clearAdminPending()
+      return
+    }
 
-    const cleanupIdle = scheduleIdleTask(fetchAdminPending, { timeout: 2000, fallbackDelay: 700 })
-    const timerId = setInterval(fetchAdminPending, 30000)
+    const run = async () => {
+      try {
+        await refreshAdminPending()
+      } catch (error) {
+        console.error(error)
+      }
+    }
+    const cleanupIdle = scheduleIdleTask(run, { timeout: 2000, fallbackDelay: 700 })
+    const timerId = setInterval(run, 30000)
 
     return () => {
       cleanupIdle()
       clearInterval(timerId)
     }
-  }, [auth.token, auth.role, fetchAdminPending])
+  }, [auth.token, auth.role, clearAdminPending, refreshAdminPending])
 
-  useEffect(() => {
-    if (auth.role !== 'admin') return
-    const handler = () => {
-      fetchAdminPending()
-    }
-    window.addEventListener('admin-pending-update', handler)
-    return () => window.removeEventListener('admin-pending-update', handler)
-  }, [auth.role, fetchAdminPending])
-
-  const pendingTotal = adminPending.pendingHotels + adminPending.pendingRequests
+  const pendingTotal = pendingHotels + pendingRequests
   const adminTooltipTitle = (
     <div>
-      <div>{t('header.pendingHotels')}：{adminPending.pendingHotels} {t('header.items')}</div>
-      <div>{t('header.pendingRequests')}：{adminPending.pendingRequests} {t('header.items')}</div>
+      <div>{t('header.pendingHotels')}：{pendingHotels} {t('header.items')}</div>
+      <div>{t('header.pendingRequests')}：{pendingRequests} {t('header.items')}</div>
     </div>
   )
   const handleAdminNotificationClick = () => {
-    if (adminPending.pendingHotels > 0) {
+    if (pendingHotels > 0) {
       navigate('/audit')
       return
     }
-    if (adminPending.pendingRequests > 0) {
+    if (pendingRequests > 0) {
       navigate('/requests')
       return
     }
@@ -446,17 +425,13 @@ function App() {
                 : 'dashboard'
 
   const handleLoggedIn = ({ token, role, username }) => {
-    localStorage.setItem('token', token)
-    localStorage.setItem('role', role)
-    localStorage.setItem('username', username || '')
-    setAuth({ token, role, username })
+    setSession({ token, role, username })
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('role')
-    localStorage.removeItem('username')
-    setAuth({ token: '', role: '', username: '' })
+    clearSession()
+    clearUnread()
+    clearAdminPending()
     navigate('/login')
   }
 

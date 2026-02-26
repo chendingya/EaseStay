@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { useSessionStore } from '../stores/sessionStore'
 
 const apiBase = import.meta.env.VITE_API_BASE || '/'
 const defaultErrorMessage = 'Request failed'
@@ -32,7 +33,7 @@ const showMessage = (type, content) => {
 }
 
 request.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
+  const token = useSessionStore.getState().token || localStorage.getItem('token')
   if (import.meta.env.DEV) {
     config.metadata = { start: performance.now() }
   }
