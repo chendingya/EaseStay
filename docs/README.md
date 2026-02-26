@@ -9,8 +9,26 @@
 - 前端性能优化复用手册（Frontend Performance Playbook）：[FrontendPerformancePlaybook.md](./FrontendPerformancePlaybook.md)
 - 前端性能优化组件台账（Frontend Performance Change Log）：[FrontendPerformanceChangeLog.md](./FrontendPerformanceChangeLog.md)
 - Docker 部署指南：[Docker部署指南.md](./Docker部署指南.md)
+### Admin 端文档
+- Admin 数据流图文档：[admin-dataflow.md](./admin/admin-dataflow.md)
+- Admin 业务流程图文档：[admin-business-flow.md](./admin/admin-business-flow.md)
+- Admin 组件架构图文档：[admin-component-architecture.md](./admin/admin-component-architecture.md)
+- Admin 状态管理与 API 接口文档：[admin-state-api.md](./admin/admin-state-api.md)
+
+### Server 端文档
+- Server 数据流图文档：[server-dataflow.md](./server/server-dataflow.md)
+- Server 业务流程图文档：[server-business-flow.md](./server/server-business-flow.md)
+- Server 架构与 API 接口文档：[server-architecture-api.md](./server/server-architecture-api.md)
+
+### Mobile 端文档
+- Mobile 数据流图文档：[mobile-dataflow.md](./mobile/mobile-dataflow.md)
+- Mobile 业务流程图文档：[mobile-business-flow.md](./mobile/mobile-business-flow.md)
+- Mobile 组件架构与状态管理文档：[mobile-component-architecture.md](./mobile/mobile-component-architecture.md)
 
 ## 最近更新（2026-02）
+- Mobile 文档体系补齐：新增《Mobile 数据流图文档》《Mobile 业务流程图文档》《Mobile 组件架构与状态管理文档》
+- Server 文档体系补齐：新增《Server 数据流图文档》《Server 业务流程图文档》《Server 架构与 API 接口文档》
+- Admin 文档体系补齐：新增《Admin 数据流图文档》《Admin 业务流程图文档》《Admin 组件架构图文档》《Admin 状态管理与 API 接口文档》
 - Docker 部署文档：新增《Docker 部署指南》，统一三端容器化部署与环境变量说明
 - 前端性能台账上线：新增《前端性能优化组件台账》，按“组件/方法/指标/验证”记录每次优化
 - Admin 前端性能规则沉淀：新增《前端性能优化复用手册》，固化跨页面可复用的拆分、请求、渲染与验收规则
