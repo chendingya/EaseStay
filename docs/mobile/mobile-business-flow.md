@@ -330,15 +330,26 @@ flowchart TD
 
     UserActions --> SearchPOI["搜索 POI"]
     SearchPOI --> Debounce["400ms 防抖"]
+    SearchPOI --> CloseDropdown["关闭筛选下拉<br/>互斥逻辑"]
     Debounce --> SearchAPI["GET /api/map/search<br/>?keywords="]
-    SearchAPI --> Suggestions["展示搜索建议"]
+    SearchAPI --> Suggestions["展示搜索建议<br/>遮罩层隔离下层交互"]
     Suggestions --> SelectPOI["选择 POI"]
     SelectPOI --> MoveTo["地图移动到 POI"]
+    SelectPOI --> UnlockDist["解锁距离排序选项"]
     SelectPOI --> ReloadHotels["重新加载酒店<br/>以 POI 为中心"]
 
     UserActions --> ChangeFilter["更改筛选条件<br/>sort / stars / tags / price"]
+    ChangeFilter --> CloseSuggestions["关闭搜索建议<br/>互斥逻辑"]
     ChangeFilter --> ReloadHotels
+    ChangeFilter --> ScrollReset["底部卡片列表<br/>滚回起点"]
     ReloadHotels --> RenderMarkers
+
+    UserActions --> SortDistance["选择距离排序<br/>需先搜索目的地"]
+    SortDistance --> ReloadHotels
+
+    UserActions --> ClearSearch["清除搜索"]
+    ClearSearch --> FallbackSort["如当前为距离排序<br/>自动回退到推荐"]
+    ClearSearch --> ReloadHotels
 
     UserActions --> ClickMarker["点击价格气泡"]
     ClickMarker --> Highlight["高亮标记 + 居中"]

@@ -108,6 +108,18 @@ export default function MapSearch() {
   }, [city, selectedPOI, sort, selectedStars, selectedTags, minPrice, maxPrice])
 
   // ───────────────────────────────────────────
+  // 2.5 酒店列表数据更新后，底部卡片列表滚回起点
+  // ───────────────────────────────────────────
+  useEffect(() => {
+    // hotels 变化说明排序/筛选/城市等条件发生了改变，列表应回到起始
+    requestAnimationFrame(() => {
+      if (listRef.current) {
+        listRef.current.scrollLeft = 0
+      }
+    })
+  }, [hotels])
+
+  // ───────────────────────────────────────────
   // 3. 当酒店数据准备好且地图已初始化，渲染标记
   // ───────────────────────────────────────────
   useEffect(() => {
@@ -342,6 +354,7 @@ export default function MapSearch() {
         if (res && res.success && Array.isArray(res.data)) {
           setSuggestions(res.data.slice(0, 8))
           setShowSuggestions(true)
+          dropdownRef.current?.close()
         }
       } catch (e) {
         setSuggestions([])
@@ -371,6 +384,8 @@ export default function MapSearch() {
     setSuggestions([])
     setShowSuggestions(false)
     setSelectedPOI(null)
+    // 清除 POI 后，如果当前是距离排序则回退到推荐
+    if (sort === 'distance') setSort('recommend')
   }
 
   function goBack() {
@@ -399,7 +414,7 @@ export default function MapSearch() {
             value={searchText}
             placeholder="搜索景点、车站、商圈…"
             onChange={e => onSearchInput(e.target.value)}
-            onFocus={() => searchText && setShowSuggestions(true)}
+            onFocus={() => { if (searchText) { setShowSuggestions(true); dropdownRef.current?.close() } }}
           />
           {searchText ? (
             <View className="map-search-clear" onClick={clearSearch}>
@@ -414,16 +429,19 @@ export default function MapSearch() {
       </View>
 
       {/* ── 筛选条（替代标题栏）── */}
-      <Dropdown ref={dropdownRef} className="map-filter-dropdown">
+      <Dropdown ref={dropdownRef} className="map-filter-dropdown" onClick={() => setShowSuggestions(false)}>
         <Dropdown.Item key="sort" title={
           <span className={sort !== 'recommend' ? 'active-filter-label' : ''}>
-            {sort === 'price_asc' ? '价格↑' : sort === 'price_desc' ? '价格↓' : sort === 'star' ? '星级' : '推荐'}
+            {sort === 'distance' ? '距离' : sort === 'price_asc' ? '价格↑' : sort === 'price_desc' ? '价格↓' : sort === 'star' ? '星级' : '推荐'}
           </span>
         }>
           <View className="map-dropdown-content">
             <Radio.Group value={sort} onChange={val => { setSort(val); dropdownRef.current?.close() }}>
               <Space direction="vertical" block>
                 <Radio value="recommend">推荐排序</Radio>
+                <Radio value="distance" disabled={!selectedPOI}>
+                  距离从近到远{!selectedPOI ? <Text style={{ color: '#999', fontSize: 12, marginLeft: 6 }}>需先搜索目的地</Text> : null}
+                </Radio>
                 <Radio value="price_asc">价格低到高</Radio>
                 <Radio value="price_desc">价格高到低</Radio>
                 <Radio value="star">星级高到低</Radio>
@@ -539,23 +557,26 @@ export default function MapSearch() {
 
       {/* ── POI 搜索建议下拉 ── */}
       {showSuggestions && suggestions.length > 0 && (
-        <View className="map-suggestions">
-          {suggestions.map((poi, idx) => (
-            <View
-              key={idx}
-              className="map-suggestion-item"
-              onClick={() => onSelectSuggestion(poi)}
-            >
-              <EnvironmentOutline className="map-sug-icon" />
-              <View className="map-sug-info">
-                <Text className="map-sug-name">{poi.name}</Text>
-                <Text className="map-sug-addr">
-                  {[poi.cityname, poi.adname, poi.address].filter(Boolean).join(' ')}
-                </Text>
+        <>
+          <View className="map-suggestions-backdrop" onClick={() => setShowSuggestions(false)} />
+          <View className="map-suggestions">
+            {suggestions.map((poi, idx) => (
+              <View
+                key={idx}
+                className="map-suggestion-item"
+                onClick={() => onSelectSuggestion(poi)}
+              >
+                <EnvironmentOutline className="map-sug-icon" />
+                <View className="map-sug-info">
+                  <Text className="map-sug-name">{poi.name}</Text>
+                  <Text className="map-sug-addr">
+                    {[poi.cityname, poi.adname, poi.address].filter(Boolean).join(' ')}
+                  </Text>
+                </View>
               </View>
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
+        </>
       )}
 
       {/* ── 地图主体 ── */}

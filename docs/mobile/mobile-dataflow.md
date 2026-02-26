@@ -366,7 +366,7 @@ graph TB
 
     subgraph APIs["API 调用"]
         SearchPOI["GET /api/map/search<br/>?keywords="]
-        FetchHotels["GET /api/map/hotel-locations<br/>?city&targetLng&targetLat<br/>&sort&stars&tags<br/>&minPrice&maxPrice"]
+        FetchHotels["GET /api/map/hotel-locations<br/>?city&targetLng&targetLat<br/>&sort(recommend|distance|<br/>price_asc|price_desc|star)<br/>&stars&tags<br/>&minPrice&maxPrice"]
         FetchTags["GET /api/presets/facilities"]
     end
 
@@ -376,6 +376,7 @@ graph TB
     FilterBar & POIMarker -->|筛选 + 坐标| FetchHotels
     FetchHotels -->|酒店坐标列表| HotelMarkers
     FetchHotels -->|酒店数据| CardList
+    FetchHotels -->|数据更新| ScrollReset["列表滚回起点"]
     FetchTags -->|设施列表| FilterBar
 
     HotelMarkers -->|点击气泡| ActiveId

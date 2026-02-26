@@ -254,14 +254,17 @@ async function getHotelLocations(city, targetCoords, filters = {}) {
   }
 
   // 排序
-  if (sort === 'price_asc') {
+  if (sort === 'distance' && targetCoords) {
+    // 按距离从近到远
+    results.sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999))
+  } else if (sort === 'price_asc') {
     results.sort((a, b) => (a.lowestPrice ?? 99999) - (b.lowestPrice ?? 99999))
   } else if (sort === 'price_desc') {
     results.sort((a, b) => (b.lowestPrice ?? 0) - (a.lowestPrice ?? 0))
   } else if (sort === 'star') {
     results.sort((a, b) => (b.star_rating || 0) - (a.star_rating || 0))
   } else if (targetCoords) {
-    // 登预设为 recommend 且有 POI 时，按距离排序
+    // 默认为 recommend 且有 POI 时，按距离排序
     results.sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999))
   }
 
