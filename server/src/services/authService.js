@@ -6,58 +6,84 @@ const PHONE_REGEX = /^1\d{10}$/
 
 const normalizePhone = (value) => String(value || '').trim()
 const normalizeUsername = (value) => String(value || '').trim()
-const resolveAuthIdentifier = ({ phone, username }) => {
-  const normalizedPhone = normalizePhone(phone)
-  const normalizedUsername = normalizeUsername(username)
-  return {
-    normalizedPhone,
-    targetUsername: normalizedPhone || normalizedUsername
-  }
-}
+const normalizeCode = (value) => String(value || '').trim()
 
 const isValidPhone = (phone) => PHONE_REGEX.test(phone)
 
-const register = async ({ phone, username, password, role, code }) => {
-  const { normalizedPhone, targetUsername } = resolveAuthIdentifier({ phone, username })
-  if (!targetUsername || !password || !role || !code) {
-    return { ok: false, status: 400, message: 'phone(或username)、password、role、code 为必填项' }
+const findUserByUsername = async (username, columns = '*') => {
+  const { data, error } = await supabase
+    .from('users')
+    .select(columns)
+    .eq('username', username)
+    .maybeSingle()
+
+  if (error) {
+    return { ok: false, error }
+  }
+
+  return { ok: true, data }
+}
+
+const findUserByPhone = async (phone, columns = '*') => {
+  const { data, error } = await supabase
+    .from('users')
+    .select(columns)
+    .eq('phone', phone)
+    .maybeSingle()
+
+  if (error) {
+    return { ok: false, error }
+  }
+
+  return { ok: true, data }
+}
+
+const register = async ({ username, phone, password, role, code }) => {
+  const normalizedUsername = normalizeUsername(username)
+  const normalizedPhone = normalizePhone(phone)
+  const normalizedCode = normalizeCode(code)
+
+  if (!normalizedUsername || !normalizedPhone || !password || !role || !normalizedCode) {
+    return { ok: false, status: 400, message: 'username、phone、password、role、code 为必填项' }
   }
   if (!['merchant', 'admin', 'user'].includes(role)) {
     return { ok: false, status: 400, message: 'role 必须是 merchant, admin 或 user' }
   }
-  if (normalizedPhone && !isValidPhone(normalizedPhone)) {
+  if (!isValidPhone(normalizedPhone)) {
     return { ok: false, status: 400, message: '手机号格式不正确' }
   }
 
-  // 验证验证码
-  const codeCheck = normalizedPhone
-    ? await verifyCode({ phone: normalizedPhone, code })
-    : await verifyCode({ username: targetUsername, code })
+  const codeCheck = await verifyCode({ phone: normalizedPhone, code: normalizedCode })
   if (!codeCheck.ok) {
     return { ok: false, status: 400, message: codeCheck.message }
   }
 
-  // 检查用户是否已存在
-  const { data: existingUser } = await supabase
-    .from('users')
-    .select('id')
-    .eq('username', targetUsername)
-    .single()
-
-  if (existingUser) {
+  const usernameCheck = await findUserByUsername(normalizedUsername, 'id')
+  if (!usernameCheck.ok) {
+    return { ok: false, status: 500, message: '注册失败：' + usernameCheck.error.message }
+  }
+  if (usernameCheck.data) {
     return { ok: false, status: 409, message: '用户名已存在' }
   }
 
-  // 创建新用户
+  const phoneCheck = await findUserByPhone(normalizedPhone, 'id')
+  if (!phoneCheck.ok) {
+    return { ok: false, status: 500, message: '注册失败：' + phoneCheck.error.message }
+  }
+  if (phoneCheck.data) {
+    return { ok: false, status: 409, message: '手机号已存在' }
+  }
+
   const passwordHash = await hashPassword(password)
   const { data: newUser, error } = await supabase
     .from('users')
     .insert({
-      username: targetUsername,
+      username: normalizedUsername,
+      phone: normalizedPhone,
       password_hash: passwordHash,
       role
     })
-    .select('id, username, role')
+    .select('id, username, phone, role')
     .single()
 
   if (error) {
@@ -68,21 +94,33 @@ const register = async ({ phone, username, password, role, code }) => {
 }
 
 const login = async ({ phone, username, password }) => {
-  const { normalizedPhone, targetUsername } = resolveAuthIdentifier({ phone, username })
-  if (!targetUsername || !password) {
+  const normalizedUsername = normalizeUsername(username)
+  const normalizedPhone = normalizePhone(phone)
+  const identifier = normalizedUsername || normalizedPhone
+
+  if (!identifier || !password) {
     return { ok: false, status: 400, message: 'phone(或username)、password 为必填项' }
   }
   if (normalizedPhone && !isValidPhone(normalizedPhone)) {
     return { ok: false, status: 400, message: '手机号格式不正确' }
   }
+  const phoneCandidate = normalizedPhone || (isValidPhone(identifier) ? identifier : '')
 
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('username', targetUsername)
-    .single()
+  const usernameResult = await findUserByUsername(identifier, '*')
+  if (!usernameResult.ok) {
+    return { ok: false, status: 500, message: '登录失败：' + usernameResult.error.message }
+  }
+  let user = usernameResult.data
 
-  if (error || !user) {
+  if (!user && phoneCandidate) {
+    const phoneResult = await findUserByPhone(phoneCandidate, '*')
+    if (!phoneResult.ok) {
+      return { ok: false, status: 500, message: '登录失败：' + phoneResult.error.message }
+    }
+    user = phoneResult.data
+  }
+
+  if (!user) {
     return { ok: false, status: 401, message: '账号或密码错误' }
   }
 
@@ -92,30 +130,38 @@ const login = async ({ phone, username, password }) => {
   }
 
   const token = signToken({ id: user.id, role: user.role })
-  return { ok: true, status: 200, data: { token, userRole: user.role } }
+  return { ok: true, status: 200, data: { token, userRole: user.role, username: user.username } }
 }
 
 const registerByPhone = async ({ phone, code }) => {
   const normalizedPhone = normalizePhone(phone)
-  if (!normalizedPhone || !code) {
+  const normalizedCode = normalizeCode(code)
+
+  if (!normalizedPhone || !normalizedCode) {
     return { ok: false, status: 400, message: 'phone、code 为必填项' }
   }
   if (!isValidPhone(normalizedPhone)) {
     return { ok: false, status: 400, message: '手机号格式不正确' }
   }
 
-  const codeCheck = await verifyCode({ phone: normalizedPhone, code })
+  const codeCheck = await verifyCode({ phone: normalizedPhone, code: normalizedCode })
   if (!codeCheck.ok) {
     return { ok: false, status: 400, message: codeCheck.message }
   }
 
-  const { data: existingUser } = await supabase
-    .from('users')
-    .select('id')
-    .eq('username', normalizedPhone)
-    .single()
+  const phoneResult = await findUserByPhone(normalizedPhone, 'id')
+  if (!phoneResult.ok) {
+    return { ok: false, status: 500, message: '注册失败：' + phoneResult.error.message }
+  }
+  if (phoneResult.data) {
+    return { ok: false, status: 409, message: '手机号已注册，请直接登录' }
+  }
 
-  if (existingUser) {
+  const legacyUsernameResult = await findUserByUsername(normalizedPhone, 'id')
+  if (!legacyUsernameResult.ok) {
+    return { ok: false, status: 500, message: '注册失败：' + legacyUsernameResult.error.message }
+  }
+  if (legacyUsernameResult.data) {
     return { ok: false, status: 409, message: '手机号已注册，请直接登录' }
   }
 
@@ -124,10 +170,11 @@ const registerByPhone = async ({ phone, code }) => {
     .from('users')
     .insert({
       username: normalizedPhone,
+      phone: normalizedPhone,
       password_hash: passwordHash,
       role: 'user'
     })
-    .select('id, username, role')
+    .select('id, username, phone, role')
     .single()
 
   if (error) {
@@ -148,35 +195,40 @@ const registerByPhone = async ({ phone, code }) => {
 }
 
 const loginByPhone = async ({ phone, username, code }) => {
-  const normalizedPhone = normalizePhone(phone)
-  const normalizedUsername = normalizeUsername(username)
-  const targetUsername = normalizedPhone || normalizedUsername
+  const normalizedPhone = normalizePhone(phone || username)
+  const normalizedCode = normalizeCode(code)
 
-  if (!targetUsername || !code) {
+  if (!normalizedPhone || !normalizedCode) {
     return { ok: false, status: 400, message: 'phone、code 为必填项' }
   }
-  if (normalizedPhone && !isValidPhone(normalizedPhone)) {
+  if (!isValidPhone(normalizedPhone)) {
     return { ok: false, status: 400, message: '手机号格式不正确' }
   }
 
-  const codeCheck = normalizedPhone
-    ? await verifyCode({ phone: normalizedPhone, code })
-    : await verifyCode({ username: normalizedUsername, code })
+  const codeCheck = await verifyCode({ phone: normalizedPhone, code: normalizedCode })
   if (!codeCheck.ok) {
     return { ok: false, status: 400, message: codeCheck.message }
   }
 
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('id, username, role')
-    .eq('username', targetUsername)
-    .single()
+  const phoneResult = await findUserByPhone(normalizedPhone, 'id, username, phone, role')
+  if (!phoneResult.ok) {
+    return { ok: false, status: 500, message: '登录失败：' + phoneResult.error.message }
+  }
+  let user = phoneResult.data
 
-  if (error || !user) {
+  if (!user) {
+    const legacyUsernameResult = await findUserByUsername(normalizedPhone, 'id, username, role')
+    if (!legacyUsernameResult.ok) {
+      return { ok: false, status: 500, message: '登录失败：' + legacyUsernameResult.error.message }
+    }
+    user = legacyUsernameResult.data
+  }
+
+  if (!user) {
     return {
       ok: false,
       status: 404,
-      message: normalizedPhone ? '手机号未注册，请先注册' : '用户名未注册，请先注册'
+      message: '手机号未注册，请先注册'
     }
   }
   if (user.role !== 'user') {

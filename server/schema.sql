@@ -2,6 +2,7 @@
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   username VARCHAR(100) NOT NULL UNIQUE,
+  phone VARCHAR(20) UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   role VARCHAR(20) NOT NULL CHECK (role IN ('merchant', 'admin', 'user')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -365,6 +366,8 @@ ALTER TABLE preset_room_types ADD COLUMN IF NOT EXISTS breakfast_included BOOLEA
 
 ALTER TABLE users DROP CONSTRAINT users_role_check;
 ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('merchant', 'admin', 'user'));
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS user_id INT REFERENCES users(id) ON DELETE CASCADE;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_no VARCHAR(40);
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP WITH TIME ZONE;

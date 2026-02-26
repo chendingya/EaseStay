@@ -18,6 +18,7 @@ module.exports = {
     schemas: {
       AuthSmsSend: {
         type: 'object',
+        required: ['phone'],
         properties: {
           phone: { type: 'string' },
           username: { type: 'string' }
@@ -25,7 +26,7 @@ module.exports = {
       },
       AuthRegister: {
         type: 'object',
-        required: ['password', 'role', 'code'],
+        required: ['username', 'phone', 'password', 'role', 'code'],
         properties: {
           phone: { type: 'string' },
           username: { type: 'string' },
