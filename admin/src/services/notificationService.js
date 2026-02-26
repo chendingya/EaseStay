@@ -4,14 +4,9 @@
 
 import { api } from './request'
 
-// 存储监听器
+// 兼容旧页面/测试：保留未读变化监听机制
 const listeners = []
 
-/**
- * 监听未读数量变化
- * @param {Function} callback - 回调函数，接收新的未读数量
- * @returns {Function} 取消监听函数
- */
 export const onUnreadCountChange = (callback) => {
   listeners.push(callback)
   return () => {
@@ -20,13 +15,10 @@ export const onUnreadCountChange = (callback) => {
   }
 }
 
-/**
- * 触发未读数量更新通知
- */
 const notifyUnreadUpdate = async () => {
   try {
     const count = await getUnreadCount()
-    listeners.forEach(cb => cb(count))
+    listeners.forEach((cb) => cb(count))
   } catch (error) {
     console.error(error)
   }

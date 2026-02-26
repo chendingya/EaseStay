@@ -12,6 +12,7 @@ import { api } from '../services'
 import { useTranslation } from 'react-i18next'
 import { estimateActionColumnWidth } from '../utils/tableWidth'
 import { useRemoteTableQuery } from '../hooks/useRemoteTableQuery'
+import { useSessionStore } from '../stores'
 
 const getTemplateFields = (t) => [
   { field: 'name', label: t('hotels.template.name'), required: true, example: t('hotels.template.example.name') },
@@ -104,7 +105,7 @@ export default function Hotels() {
   const { t } = useTranslation()
   const [hotels, setHotels] = useState([])
   const [loading, setLoading] = useState(false)
-  const role = localStorage.getItem('role')
+  const role = useSessionStore((state) => state.role)
   const [statusFilter, setStatusFilter] = useState('all')
   const [cityFilter, setCityFilter] = useState('all')
   const [cityOptions, setCityOptions] = useState([{ value: 'all', label: t('hotels.filter.allCities') }])

@@ -7,6 +7,7 @@ import ShopOutlined from '@ant-design/icons/es/icons/ShopOutlined'
 import { GlassButton } from '../components'
 import { api } from '../services'
 import { useTranslation } from 'react-i18next'
+import { useSessionStore } from '../stores'
 
 const OVERVIEW_CACHE_KEY = 'dashboard_overview_cache_v1'
 const DashboardBatchModals = lazy(() => import('../components/DashboardBatchModals.jsx'))
@@ -70,7 +71,7 @@ async function fetchAllHotels(basePath) {
 export default function Dashboard() {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const role = localStorage.getItem('role')
+  const role = useSessionStore((state) => state.role)
   const [stats, setStats] = useState({ pending: 0, approved: 0, offline: 0, total: 0 })
   const [statsLoading, setStatsLoading] = useState(false)
   const [hotels, setHotels] = useState([])

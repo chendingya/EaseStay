@@ -19,11 +19,13 @@ import { GlassButton, GanttTimeline, glassMessage as message } from '../componen
 import { api } from '../services'
 import dayjs from 'dayjs'
 import { useTranslation } from 'react-i18next'
+import { useAdminPendingStore } from '../stores'
 
 export default function AuditDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const refreshAdminPending = useAdminPendingStore((state) => state.refreshPending)
   const [loading, setLoading] = useState(true)
   const [hotel, setHotel] = useState(null)
   const [pendingRequests, setPendingRequests] = useState([])
@@ -160,7 +162,9 @@ export default function AuditDetail() {
         : status === 'offline' ? t('auditDetail.action.offlineSuccess')
         : t('common.success')
       )
-      window.dispatchEvent(new Event('admin-pending-update'))
+      await refreshAdminPending().catch((error) => {
+        console.error(error)
+      })
       setRejecting(false)
       setOfflineModal(false)
       rejectForm.resetFields()

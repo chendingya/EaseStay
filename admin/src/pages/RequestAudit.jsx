@@ -12,11 +12,13 @@ import DeleteOutlined from '@ant-design/icons/es/icons/DeleteOutlined'
 import { GlassButton, glassMessage as message } from '../components'
 import { api } from '../services'
 import { useTranslation } from 'react-i18next'
+import { useAdminPendingStore } from '../stores'
 
 export default function RequestAudit() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const refreshAdminPending = useAdminPendingStore((state) => state.refreshPending)
   const hotelIdFilter = searchParams.get('hotelId')
   
   const [tableLoading, setTableLoading] = useState(false)
@@ -80,7 +82,9 @@ export default function RequestAudit() {
     try {
       await api.put(`/api/admin/requests/${id}/review`, { action, rejectReason })
       message.success(action === 'approve' ? t('requestAudit.successApprove') : t('requestAudit.successReject'))
-      window.dispatchEvent(new Event('admin-pending-update'))
+      await refreshAdminPending().catch((error) => {
+        console.error(error)
+      })
       setRejecting(null)
       rejectForm.resetFields()
       await fetchRequests(activeTab, false)
