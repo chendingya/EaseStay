@@ -2,6 +2,7 @@ export default {
   pages: [
     'pages/index/index',
     'pages/list/index',
+    'pages/map/index',
     'pages/detail/index',
     'pages/room-detail/index',
     'pages/login/index',

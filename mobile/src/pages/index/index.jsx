@@ -597,7 +597,9 @@ export default function Index() {
            </View>
            
            <View 
-             onClick={() => setMapVisible(true)} 
+             onClick={() => Taro.navigateTo({
+               url: `/pages/map/index?city=${encodeURIComponent(city)}&checkIn=${checkIn}&checkOut=${checkOut}`
+             })} 
              style={{ 
                display: 'flex', 
                flexDirection: 'column', 
@@ -608,7 +610,7 @@ export default function Index() {
              }}
            >
               <EnvironmentOutline style={{ fontSize: 24, color: '#0086F6' }} />
-              <Text style={{ fontSize: 10, color: '#666', marginTop: 2 }}>地图模式</Text>
+              <Text style={{ fontSize: 10, color: '#666', marginTop: 2 }}>地图找房</Text>
            </View>
         </View>
 

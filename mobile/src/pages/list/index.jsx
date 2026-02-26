@@ -2,7 +2,7 @@ import { View, Text } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Dropdown, Radio, Checkbox, Button, Space, CalendarPicker, Popup, SearchBar, Cascader, Slider, Tag, Empty } from 'antd-mobile'
-import { SearchOutline, CalendarOutline } from 'antd-mobile-icons'
+import { SearchOutline, CalendarOutline, EnvironmentOutline } from 'antd-mobile-icons'
 import { api } from '../../services/request'
 import ListContainer from '../../components/OrderList'
 import PageTopBar from '../../components/PageTopBar'
@@ -315,12 +315,23 @@ export default function List() {
       <PageTopBar title="酒店列表">
         <View className="list-top-extra">
           <View className="list-search-card">
-            <View className="list-search-row" onClick={handleSearchClick}>
-              <SearchOutline className="search-icon" />
-              <Text className="search-text">
-                {city || '城市'} · {keyword || '搜索酒店'}
-              </Text>
-              <Text className="search-action">修改条件</Text>
+            <View className="list-search-row">
+              <View style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }} onClick={handleSearchClick}>
+                <SearchOutline className="search-icon" />
+                <Text className="search-text">
+                  {city || '城市'} · {keyword || '搜索酒店'}
+                </Text>
+                <Text className="search-action">修改</Text>
+              </View>
+              <View
+                onClick={() => Taro.navigateTo({
+                  url: `/pages/map/index?city=${encodeURIComponent(city)}&checkIn=${checkIn}&checkOut=${checkOut}`
+                })}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', borderLeft: '1px solid #eee', paddingLeft: 12, marginLeft: 8, gap: 2 }}
+              >
+                <EnvironmentOutline style={{ fontSize: 18, color: '#0086F6' }} />
+                <Text style={{ fontSize: 9, color: '#0086F6', fontWeight: 600 }}>地图</Text>
+              </View>
             </View>
             <View className="list-date-row" onClick={() => setCalendarVisible(true)}>
               <View className="list-date-item">

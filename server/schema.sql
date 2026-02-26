@@ -15,6 +15,8 @@ CREATE TABLE hotels (
   name_en VARCHAR(200),
   address VARCHAR(255) NOT NULL,
   city VARCHAR(100) NOT NULL,
+  lat DECIMAL(10, 7),
+  lng DECIMAL(10, 7),
   star_rating INT DEFAULT 0 CHECK (star_rating >= 0 AND star_rating <= 5),
   opening_time VARCHAR(50),
   description TEXT,
@@ -387,3 +389,6 @@ ALTER TABLE orders ADD CONSTRAINT orders_total_price_check CHECK (total_price >=
 CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_order_no_unique ON orders(order_no);
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_user_status_created_at ON orders(user_id, status, created_at DESC);
+
+ALTER TABLE hotels ADD COLUMN IF NOT EXISTS lat DECIMAL(10, 7);
+ALTER TABLE hotels ADD COLUMN IF NOT EXISTS lng DECIMAL(10, 7);
