@@ -2,7 +2,7 @@
   "login": {
     "success": "Login successful",
     "registerSuccess": "Registration successful, logged in automatically",
-    "fillUsernameFirst": "Please enter username first",
+    "fillUsernameFirst": "Please enter phone number first",
     "codeSent": "Verification code sent ({{code}})",
     "title": "Welcome to YiSu",
     "subtitle": "Sign in to manage your hotels",
@@ -11,14 +11,15 @@
       "register": "Register"
     },
     "rules": {
-      "usernameRequired": "Please enter username",
+      "usernameRequired": "Please enter phone number",
+      "phonePattern": "Please enter a valid 11-digit phone number",
       "passwordRequired": "Please enter password",
       "codeRequired": "Please enter verification code",
       "codePattern": "Code must be 6 digits",
       "roleRequired": "Please select a role"
     },
     "placeholders": {
-      "username": "Username",
+      "username": "Phone number",
       "password": "Password",
       "code": "Verification code",
       "role": "Select role"

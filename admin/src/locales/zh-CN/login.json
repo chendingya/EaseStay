@@ -2,7 +2,7 @@
   "login": {
     "success": "登录成功",
     "registerSuccess": "注册成功，已为你自动登录",
-    "fillUsernameFirst": "请先输入用户名",
+    "fillUsernameFirst": "请先输入手机号",
     "codeSent": "验证码已发送（{{code}}）",
     "title": "欢迎使用易宿",
     "subtitle": "登录后进入酒店管理后台",
@@ -11,14 +11,15 @@
       "register": "注册"
     },
     "rules": {
-      "usernameRequired": "请输入用户名",
+      "usernameRequired": "请输入手机号",
+      "phonePattern": "请输入11位手机号",
       "passwordRequired": "请输入密码",
       "codeRequired": "请输入验证码",
       "codePattern": "验证码需为6位数字",
       "roleRequired": "请选择角色"
     },
     "placeholders": {
-      "username": "请输入用户名",
+      "username": "请输入手机号",
       "password": "请输入密码",
       "code": "请输入验证码",
       "role": "请选择角色"

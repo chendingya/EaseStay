@@ -1,12 +1,13 @@
 import { ConfigProvider, Form, Input, Select, Tabs, Typography, theme } from 'antd'
 import LockOutlined from '@ant-design/icons/es/icons/LockOutlined'
 import MobileOutlined from '@ant-design/icons/es/icons/MobileOutlined'
-import UserOutlined from '@ant-design/icons/es/icons/UserOutlined'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { GlassButton, glassMessage as message } from '../components'
 import { api } from '../services'
 import './Login.css'
+
+const PHONE_REGEX = /^1\d{10}$/
 
 export default function Login({ onLoggedIn }) {
   const { token } = theme.useToken()
@@ -18,9 +19,10 @@ export default function Login({ onLoggedIn }) {
   const [form] = Form.useForm()
 
   const handleLogin = async (values) => {
+    const phone = String(values.phone || '').trim()
     try {
-      const data = await api.post('/api/auth/login', { username: values.username, password: values.password })
-      onLoggedIn({ token: data.token, role: data.userRole, username: values.username })
+      const data = await api.post('/api/auth/login', { phone, username: phone, password: values.password })
+      onLoggedIn({ token: data.token, role: data.userRole, username: phone })
       message.success(t('login.success'))
       return true
     } catch (error) {
@@ -30,14 +32,16 @@ export default function Login({ onLoggedIn }) {
   }
 
   const handleRegister = async (values) => {
+    const phone = String(values.phone || '').trim()
     try {
       await api.post('/api/auth/register', {
-        username: values.username,
+        phone,
+        username: phone,
         password: values.password,
         role: values.role,
         code: values.code
       })
-      const loginOk = await handleLogin({ username: values.username, password: values.password })
+      const loginOk = await handleLogin({ phone, password: values.password })
       if (loginOk) message.success(t('login.registerSuccess'))
       return loginOk
     } catch (error) {
@@ -47,14 +51,14 @@ export default function Login({ onLoggedIn }) {
   }
 
   const handleSendCode = async () => {
-    const username = form.getFieldValue('username')
-    if (!username) {
+    const phone = String(form.getFieldValue('phone') || '').trim()
+    if (!phone) {
       message.warning(t('login.fillUsernameFirst'))
       return
     }
     setSending(true)
     try {
-      const data = await api.post('/api/auth/sms/send', { username })
+      const data = await api.post('/api/auth/sms/send', { phone, username: phone })
       form.setFieldsValue({ code: data.code })
       message.success(t('login.codeSent', { code: data.code }))
       setSeconds(60)
@@ -127,12 +131,18 @@ export default function Login({ onLoggedIn }) {
 
             {activeTab === 'login' && (
               <>
-                <Form.Item name="username" rules={[{ required: true, message: t('login.rules.usernameRequired') }]}>
+                <Form.Item
+                  name="phone"
+                  rules={[
+                    { required: true, message: t('login.rules.usernameRequired') },
+                    { pattern: PHONE_REGEX, message: t('login.rules.phonePattern') }
+                  ]}
+                >
                   <Input
                     id="login-username-input"
                     data-testid="login-username"
                     size="large"
-                    prefix={<UserOutlined style={{ color: token.colorText }} />}
+                    prefix={<MobileOutlined style={{ color: token.colorText }} />}
                     placeholder={t('login.placeholders.username')}
                   />
                 </Form.Item>
@@ -152,12 +162,15 @@ export default function Login({ onLoggedIn }) {
             {activeTab === 'register' && (
               <>
                 <Form.Item
-                  name="username"
-                  rules={[{ required: true, message: t('login.rules.usernameRequired') }]}
+                  name="phone"
+                  rules={[
+                    { required: true, message: t('login.rules.usernameRequired') },
+                    { pattern: PHONE_REGEX, message: t('login.rules.phonePattern') }
+                  ]}
                 >
                   <Input
                     size="large"
-                    prefix={<UserOutlined style={{ color: token.colorText }} />}
+                    prefix={<MobileOutlined style={{ color: token.colorText }} />}
                     placeholder={t('login.placeholders.username')}
                   />
                 </Form.Item>

@@ -12,13 +12,14 @@ test.describe('Auth smoke', () => {
     })
 
     await page.goto('/login')
-    await page.locator('#login-username-input').fill('merchant_e2e')
+    await page.locator('#login-username-input').fill('13800000000')
     await page.locator('#login-password-input').fill('123456')
     await page.getByTestId('login-submit').click()
 
     await expect(page).toHaveURL(/\/hotels$/)
     expect(loginPayload).toEqual({
-      username: 'merchant_e2e',
+      phone: '13800000000',
+      username: '13800000000',
       password: '123456'
     })
   })

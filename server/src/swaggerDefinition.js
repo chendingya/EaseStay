@@ -18,15 +18,16 @@ module.exports = {
     schemas: {
       AuthSmsSend: {
         type: 'object',
-        required: ['username'],
         properties: {
+          phone: { type: 'string' },
           username: { type: 'string' }
         }
       },
       AuthRegister: {
         type: 'object',
-        required: ['username', 'password', 'role', 'code'],
+        required: ['password', 'role', 'code'],
         properties: {
+          phone: { type: 'string' },
           username: { type: 'string' },
           password: { type: 'string' },
           role: { type: 'string', enum: ['merchant', 'admin'] },
@@ -35,8 +36,9 @@ module.exports = {
       },
       AuthLogin: {
         type: 'object',
-        required: ['username', 'password'],
+        required: ['password'],
         properties: {
+          phone: { type: 'string' },
           username: { type: 'string' },
           password: { type: 'string' }
         }
