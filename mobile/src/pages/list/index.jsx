@@ -297,7 +297,11 @@ export default function List() {
     }
     items.push({ kind: 'divider' })
     if (recommendList.length > 0) {
-      items.push(...recommendList.map((hotel) => ({ kind: 'hotel', source: 'recommend', hotel })))
+      // 创建已存在酒店的ID集合
+      const existingHotelIds = new Set(list.map(hotel => hotel.id))
+      // 过滤掉已经在搜索结果中出现的酒店
+      const uniqueRecommendList = recommendList.filter(hotel => !existingHotelIds.has(hotel.id))
+      items.push(...uniqueRecommendList.map((hotel) => ({ kind: 'hotel', source: 'recommend', hotel })))
     } else if (recommendLoading) {
       items.push({ kind: 'recommend-loading' })
     }

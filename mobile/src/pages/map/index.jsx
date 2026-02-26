@@ -123,14 +123,17 @@ export default function MapSearch() {
   // 3. 当酒店数据准备好且地图已初始化，渲染标记
   // ───────────────────────────────────────────
   useEffect(() => {
-    if (!mapReady || !mapRef.current || hotels.length === 0) return
+    if (!mapReady || !mapRef.current) return
     renderMarkers()
-    // setFitView 自动适配所有已添加的覆盖物，避免手动构造 Bounds 触发的 API 兼容问题
-    setTimeout(() => {
-      if (mapRef.current) {
-        mapRef.current.setFitView(null, false, [60, 60, 200, 60], 16)
-      }
-    }, 100)
+    // 只有当有酒店数据时才调整视图
+    if (hotels.length > 0) {
+      // setFitView 自动适配所有已添加的覆盖物，避免手动构造 Bounds 触发的 API 兼容问题
+      setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.setFitView(null, false, [60, 60, 200, 60], 16)
+        }
+      }, 100)
+    }
   }, [hotels, mapReady])
 
   // ───────────────────────────────────────────
