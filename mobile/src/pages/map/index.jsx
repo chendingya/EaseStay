@@ -528,6 +528,8 @@ export default function MapSearch() {
             <Checkbox.Group value={selectedStars} onChange={val => setSelectedStars(val)}>
               <Space direction="vertical" block>
                 <Checkbox value="0" className="square-checkbox">未评级</Checkbox>
+                <Checkbox value="1" className="square-checkbox">一星级</Checkbox>
+                <Checkbox value="2" className="square-checkbox">二星级</Checkbox>
                 <Checkbox value="3" className="square-checkbox">三星级</Checkbox>
                 <Checkbox value="4" className="square-checkbox">四星级</Checkbox>
                 <Checkbox value="5" className="square-checkbox">五星级</Checkbox>
