@@ -1408,12 +1408,12 @@ export default function HotelEdit() {
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="city" label={t('hotelEdit.form.cityLabel')} rules={[{ required: true, message: t('hotelEdit.form.cityRequired') }]}>
-                  <Select showSearch placeholder={t('hotelEdit.form.cityPlaceholder')} options={presets.cities.map(c => ({ value: c.name || c, label: c.name || c }))} filterOption={(input, option) => option.label.toLowerCase().includes(input.toLowerCase())} allowClear onChange={handleFormChange} />
+                  <Select id="hotel-edit-city-input" data-testid="hotel-edit-city" showSearch placeholder={t('hotelEdit.form.cityPlaceholder')} options={presets.cities.map(c => ({ value: c.name || c, label: c.name || c }))} filterOption={(input, option) => option.label.toLowerCase().includes(input.toLowerCase())} allowClear onChange={handleFormChange} />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="address" label={t('hotelEdit.form.addressLabel')} rules={[{ required: true, message: t('hotelEdit.form.addressRequired') }]}>
-                  <Input placeholder={t('hotelEdit.form.addressPlaceholder')} />
+                  <Input id="hotel-edit-address-input" data-testid="hotel-edit-address" placeholder={t('hotelEdit.form.addressPlaceholder')} />
                 </Form.Item>
               </Col>
               <Col span={12}>
@@ -1425,6 +1425,8 @@ export default function HotelEdit() {
                   ]}
                 >
                   <InputNumber
+                    id="hotel-edit-lat-input"
+                    data-testid="hotel-edit-lat"
                     style={{ width: '100%' }}
                     precision={7}
                     step={0.000001}
@@ -1441,6 +1443,8 @@ export default function HotelEdit() {
                   ]}
                 >
                   <InputNumber
+                    id="hotel-edit-lng-input"
+                    data-testid="hotel-edit-lng"
                     style={{ width: '100%' }}
                     precision={7}
                     step={0.000001}
@@ -1454,7 +1458,7 @@ export default function HotelEdit() {
           <Divider />
           <Typography.Title level={5}>{t('hotelEdit.form.sectionBasic')}</Typography.Title>
           <Row gutter={16}>
-            <Col span={12}><Form.Item name="name" label={t('hotelEdit.form.nameLabel')} rules={[{ required: true, message: t('hotelEdit.form.nameRequired') }]}><Input placeholder={t('hotelEdit.form.namePlaceholder')} /></Form.Item></Col>
+            <Col span={12}><Form.Item name="name" label={t('hotelEdit.form.nameLabel')} rules={[{ required: true, message: t('hotelEdit.form.nameRequired') }]}><Input id="hotel-edit-name-input" data-testid="hotel-edit-name" placeholder={t('hotelEdit.form.namePlaceholder')} /></Form.Item></Col>
             <Col span={12}><Form.Item name="name_en" label={t('hotelEdit.form.nameEnLabel')}><Input placeholder={t('hotelEdit.form.nameEnPlaceholder')} /></Form.Item></Col>
             <Col span={12}>
               <Form.Item name="star_rating" label={t('hotelEdit.form.starLabel')}>
@@ -1552,7 +1556,7 @@ export default function HotelEdit() {
               <GlassButton onClick={() => navigate('/hotels')}>{t('hotelEdit.form.cancel')}</GlassButton>
             </Tooltip>
             <Tooltip title={t('hotelEdit.tips.tooltip.submit')}>
-              <GlassButton type="primary" loading={saving} onClick={handleSubmit}>{isEditing ? t('hotelEdit.form.submitEdit') : t('hotelEdit.form.submitNew')}</GlassButton>
+              <GlassButton data-testid="hotel-edit-submit" type="primary" loading={saving} onClick={handleSubmit}>{isEditing ? t('hotelEdit.form.submitEdit') : t('hotelEdit.form.submitNew')}</GlassButton>
             </Tooltip>
           </Space>
         </div>

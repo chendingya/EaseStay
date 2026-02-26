@@ -129,6 +129,8 @@ export default function Login({ onLoggedIn }) {
               <>
                 <Form.Item name="username" rules={[{ required: true, message: t('login.rules.usernameRequired') }]}>
                   <Input
+                    id="login-username-input"
+                    data-testid="login-username"
                     size="large"
                     prefix={<UserOutlined style={{ color: token.colorText }} />}
                     placeholder={t('login.placeholders.username')}
@@ -137,6 +139,8 @@ export default function Login({ onLoggedIn }) {
 
                 <Form.Item name="password" rules={[{ required: true, message: t('login.rules.passwordRequired') }]}>
                   <Input.Password
+                    id="login-password-input"
+                    data-testid="login-password"
                     size="large"
                     prefix={<LockOutlined style={{ color: token.colorText }} />}
                     placeholder={t('login.placeholders.password')}
@@ -204,7 +208,7 @@ export default function Login({ onLoggedIn }) {
               </>
             )}
 
-            <GlassButton type="primary" htmlType="submit" size="large" block loading={submitting} disabled={submitting}>
+            <GlassButton data-testid="login-submit" type="primary" htmlType="submit" size="large" block loading={submitting} disabled={submitting}>
               {activeTab === 'register' ? t('login.actions.registerAndLogin') : t('login.actions.login')}
             </GlassButton>
             </Form>

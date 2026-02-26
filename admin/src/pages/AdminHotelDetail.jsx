@@ -329,8 +329,8 @@ export default function AdminHotelDetail() {
             <Descriptions column={2}>
               <Descriptions.Item label={<><EnvironmentOutlined /> {t('adminHotelDetail.basic.city')}</>}>{hotel.city}</Descriptions.Item>
               <Descriptions.Item label={t('adminHotelDetail.basic.address')}>{hotel.address}</Descriptions.Item>
-              <Descriptions.Item label={t('adminHotelDetail.basic.lat')}>{formatCoordinate(hotel.lat)}</Descriptions.Item>
-              <Descriptions.Item label={t('adminHotelDetail.basic.lng')}>{formatCoordinate(hotel.lng)}</Descriptions.Item>
+              <Descriptions.Item label={t('adminHotelDetail.basic.lat')}><span data-testid="admin-hotel-detail-lat">{formatCoordinate(hotel.lat)}</span></Descriptions.Item>
+              <Descriptions.Item label={t('adminHotelDetail.basic.lng')}><span data-testid="admin-hotel-detail-lng">{formatCoordinate(hotel.lng)}</span></Descriptions.Item>
               <Descriptions.Item label={<><StarFilled style={{ color: '#faad14' }} /> {t('adminHotelDetail.basic.star')}</>}>
                 {hotel.star_rating ? t('adminHotelDetail.basic.starValue', { value: hotel.star_rating }) : t('adminHotelDetail.basic.unrated')}
               </Descriptions.Item>
