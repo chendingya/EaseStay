@@ -150,6 +150,9 @@ export default function HotelDetail() {
     offline: { color: 'default', label: t('status.offline') }
   }
   const statusInfo = statusMap[hotel.status] || { color: 'default', label: hotel.status }
+  const formatCoordinate = (value) => (
+    value === null || value === undefined || value === '' ? t('common.notFilled') : value
+  )
 
   const formatPeriodLabel = (periods) => {
     const list = Array.isArray(periods) ? periods : []
@@ -299,6 +302,8 @@ export default function HotelDetail() {
             <Descriptions column={2}>
               <Descriptions.Item label={<><EnvironmentOutlined /> {t('hotelDetail.basic.city')}</>}>{hotel.city}</Descriptions.Item>
               <Descriptions.Item label={t('hotelDetail.basic.address')}>{hotel.address}</Descriptions.Item>
+              <Descriptions.Item label={t('hotelDetail.basic.lat')}>{formatCoordinate(hotel.lat)}</Descriptions.Item>
+              <Descriptions.Item label={t('hotelDetail.basic.lng')}>{formatCoordinate(hotel.lng)}</Descriptions.Item>
               <Descriptions.Item label={<><StarFilled style={{ color: '#faad14' }} /> {t('hotelDetail.basic.star')}</>}>
                 {hotel.star_rating ? t('hotelDetail.basic.starValue', { value: hotel.star_rating }) : t('hotelDetail.basic.unrated')}
               </Descriptions.Item>

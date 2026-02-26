@@ -12,6 +12,8 @@
     "basic": {
       "address": "地址",
       "city": "城市",
+      "lat": "纬度",
+      "lng": "经度",
       "createdAt": "创建时间",
       "description": "酒店描述",
       "name": "酒店名称",

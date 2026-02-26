@@ -48,6 +48,9 @@ export default function AuditDetail() {
     promotion: t('auditDetail.requestType.promotion'),
     hotel_delete: t('auditDetail.requestType.hotelDelete')
   }
+  const formatCoordinate = (value) => (
+    value === null || value === undefined || value === '' ? t('common.notFilled') : value
+  )
 
   const fetchHotel = useCallback(async () => {
     setLoading(true)
@@ -432,6 +435,8 @@ export default function AuditDetail() {
                 {hotel.star_rating ? t('auditDetail.basic.starValue', { value: hotel.star_rating }) : t('auditDetail.basic.unrated')}
               </Descriptions.Item>
               <Descriptions.Item label={t('auditDetail.basic.address')} span={2}>{hotel.address}</Descriptions.Item>
+              <Descriptions.Item label={t('auditDetail.basic.lat')}>{formatCoordinate(hotel.lat)}</Descriptions.Item>
+              <Descriptions.Item label={t('auditDetail.basic.lng')}>{formatCoordinate(hotel.lng)}</Descriptions.Item>
               <Descriptions.Item label={<><CalendarOutlined /> {t('auditDetail.basic.openingTime')}</>}>
                 {hotel.opening_time || t('common.notFilled')}
               </Descriptions.Item>

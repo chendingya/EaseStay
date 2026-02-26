@@ -77,6 +77,15 @@ const { calculateRoomPrice } = require('./pricingService')
 
 const normalizeArray = (value) => (Array.isArray(value) ? value : [])
 const normalizeNumber = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0)
+const parseCoordinate = (value, { min, max, label }) => {
+  if (value === undefined) return { provided: false }
+  if (value === null || String(value).trim() === '') return { provided: true, value: null }
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric) || numeric < min || numeric > max) {
+    return { provided: true, invalid: true, message: `${label}取值范围应在 ${min} 到 ${max}` }
+  }
+  return { provided: true, value: numeric }
+}
 const generateOrderNo = () => `YS${Date.now()}${Math.floor(Math.random() * 900000 + 100000)}`
 const normalizeText = (value) => String(value || '').trim().toLowerCase()
 const parseCsvList = (value) => String(value || '')
@@ -875,12 +884,22 @@ const createHotel = async ({ merchantId, payload }) => {
     nearby_attractions,
     nearby_transport,
     nearby_malls,
+    lat,
+    lng,
     promotions,
     roomTypes
   } = payload || {}
 
   if (!name || !address || !city) {
     return { ok: false, status: 400, message: 'name、address、city 为必填项' }
+  }
+  const parsedLat = parseCoordinate(lat, { min: -90, max: 90, label: '纬度(lat)' })
+  if (parsedLat.invalid) {
+    return { ok: false, status: 400, message: parsedLat.message }
+  }
+  const parsedLng = parseCoordinate(lng, { min: -180, max: 180, label: '经度(lng)' })
+  if (parsedLng.invalid) {
+    return { ok: false, status: 400, message: parsedLng.message }
   }
 
   const normalizedName = String(name).trim()
@@ -915,6 +934,8 @@ const createHotel = async ({ merchantId, payload }) => {
       nearby_attractions: normalizeArray(nearby_attractions),
       nearby_transport: normalizeArray(nearby_transport),
       nearby_malls: normalizeArray(nearby_malls),
+      ...(parsedLat.provided ? { lat: parsedLat.value } : {}),
+      ...(parsedLng.provided ? { lng: parsedLng.value } : {}),
       promotions: normalizeArray(promotions),
       status: 'pending',
       reject_reason: ''
@@ -1005,9 +1026,19 @@ const updateHotel = async ({ merchantId, hotelId, payload }) => {
     nearby_attractions,
     nearby_transport,
     nearby_malls,
+    lat,
+    lng,
     promotions,
     roomTypes
   } = payload || {}
+  const parsedLat = parseCoordinate(lat, { min: -90, max: 90, label: '纬度(lat)' })
+  if (parsedLat.invalid) {
+    return { ok: false, status: 400, message: parsedLat.message }
+  }
+  const parsedLng = parseCoordinate(lng, { min: -180, max: 180, label: '经度(lng)' })
+  if (parsedLng.invalid) {
+    return { ok: false, status: 400, message: parsedLng.message }
+  }
 
   if (name !== undefined) {
     const normalizedName = String(name).trim()
@@ -1049,6 +1080,8 @@ const updateHotel = async ({ merchantId, hotelId, payload }) => {
   if (nearby_attractions !== undefined) updates.nearby_attractions = normalizeArray(nearby_attractions)
   if (nearby_transport !== undefined) updates.nearby_transport = normalizeArray(nearby_transport)
   if (nearby_malls !== undefined) updates.nearby_malls = normalizeArray(nearby_malls)
+  if (parsedLat.provided) updates.lat = parsedLat.value
+  if (parsedLng.provided) updates.lng = parsedLng.value
   if (promotions !== undefined) updates.promotions = normalizeArray(promotions)
 
   // 更新酒店
@@ -1806,6 +1839,9 @@ const listPublicHotels = async ({ query }) => {
       let score = 0
       const name = String(h?.name || '')
       const address = String(h?.address || '')
+      const hotelLat = Number(h?.lat ?? h?.latitude)
+      const hotelLng = Number(h?.lng ?? h?.longitude)
+      const hasHotelCoordinates = Number.isFinite(hotelLat) && Number.isFinite(hotelLng)
       
       // 1. 文本相关性
       if (name === keywordText) score += 100
@@ -1813,18 +1849,18 @@ const listPublicHotels = async ({ query }) => {
       else if (address.includes(keywordText)) score += 40
       
       // 2. 位置相关性 (Priority 1: Keyword Location)
-      if (targetLocation && h.latitude && h.longitude) {
-        const dist = calculateDistance(targetLocation.lat, targetLocation.lng, Number(h.latitude), Number(h.longitude))
+      if (targetLocation && hasHotelCoordinates) {
+        const dist = calculateDistance(targetLocation.lat, targetLocation.lng, hotelLat, hotelLng)
         // 距离越近分越高。假设 5km 内有加分。
         score += Math.max(0, 50 - dist * 5)
       } 
       // 3. 位置相关性 (Priority 2: User Location - 仅当 keyword 不是明确地名或者作为补充)
-      else if (userLat && userLng && h.latitude && h.longitude) {
-        const dist = calculateDistance(Number(userLat), Number(userLng), Number(h.latitude), Number(h.longitude))
+      else if (userLat && userLng && hasHotelCoordinates) {
+        const dist = calculateDistance(Number(userLat), Number(userLng), hotelLat, hotelLng)
         score += Math.max(0, 20 - dist * 2)
       }
 
-      return { ...h, _score: score, _dist: targetLocation ? calculateDistance(targetLocation.lat, targetLocation.lng, Number(h.latitude), Number(h.longitude)) : 0 }
+      return { ...h, _score: score, _dist: targetLocation && hasHotelCoordinates ? calculateDistance(targetLocation.lat, targetLocation.lng, hotelLat, hotelLng) : 0 }
     })
 
     // 过滤掉相关性太低的结果

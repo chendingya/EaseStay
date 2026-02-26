@@ -3,6 +3,8 @@
     "basic": {
       "address": "地址",
       "city": "城市",
+      "lat": "纬度",
+      "lng": "经度",
       "openingTime": "开业时间",
       "star": "星级",
       "starValue": "{{value}} 星",

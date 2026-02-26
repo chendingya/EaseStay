@@ -13,6 +13,8 @@
     "basic": {
       "city": "City",
       "address": "Address",
+      "lat": "Latitude",
+      "lng": "Longitude",
       "star": "Star Rating",
       "starValue": "{{value}} Star",
       "unrated": "Unrated",
