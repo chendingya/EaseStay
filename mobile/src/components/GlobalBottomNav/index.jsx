@@ -19,7 +19,7 @@ const navItems = [
 const INVALID_ROUTES = new Set(['/undefined', '/null', '/nan'])
 
 // 这些页面不显示底部导航栏
-const HIDDEN_ROUTES = new Set(['/pages/map/index'])
+const HIDDEN_ROUTES = new Set(['/pages/map/index', '/pages/detail/index'])
 
 const normalizePath = (rawPath) => {
   let path = String(rawPath || '')

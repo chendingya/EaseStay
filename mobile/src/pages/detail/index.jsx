@@ -104,6 +104,16 @@ export default function Detail() {
   const [roomFilters, setRoomFilters] = useState(defaultRoomFilters)
   const [draftFilters, setDraftFilters] = useState(defaultRoomFilters)
 
+  // 隐藏底部导航栏，离开时恢复
+  useEffect(() => {
+    const appContent = document.querySelector('.app-content')
+    if (appContent) {
+      const prev = appContent.style.paddingBottom
+      appContent.style.paddingBottom = '0'
+      return () => { appContent.style.paddingBottom = prev }
+    }
+  }, [])
+
   useEffect(() => {
     fetchHotelDetail()
   }, [id, checkIn, checkOut])
@@ -785,6 +795,7 @@ export default function Detail() {
       </ScrollView>
 
       <BookingBottomBar
+        bottomOffset={0}
         leftContent={(
           <View className='bottom-left'>
             <View className='bottom-action' onClick={handleCollect}>

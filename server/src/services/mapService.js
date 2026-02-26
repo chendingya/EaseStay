@@ -1,6 +1,6 @@
 const AMAP_KEY = process.env.AMAP_KEY || ''
 const supabase = require('../config/supabase')
-const { getMockByCity, getMockAddressPool } = require('../data/mockHotelLocations')
+const { getMockByCity } = require('../data/mockHotelLocations')
 const { calculateRoomPrice } = require('./pricingService')
 const { getActiveOrderQtyMap, computeRoomAvailability } = require('./roomAvailabilityService')
 
@@ -134,7 +134,7 @@ async function getHotelLocations(city, targetCoords, filters = {}) {
   // ── 1. 查 DB 获取真实酒店数据 ──────────────────────────────
   let dbQuery = supabase
     .from('hotels')
-    .select('id, name, name_en, address, city, star_rating, images, opening_time, description, facilities, nearby_attractions, nearby_transport, nearby_malls, promotions')
+    .select('id, name, name_en, address, city, lat, lng, star_rating, images, opening_time, description, facilities, nearby_attractions, nearby_transport, nearby_malls, promotions')
     .eq('status', 'approved')
     .ilike('city', `%${city}%`)
     .limit(200)
@@ -193,31 +193,29 @@ async function getHotelLocations(city, targetCoords, filters = {}) {
     }
   }
 
-  // ── 3. 用 mock 地址池为每个 DB 酒店分配真实坐标 ────────────
-  // DB 中的地址为测试填写（不真实），改用 mock 地址池轮流分配
-  // 展示地址也替换为 mock 真实地址，保留酒店其他真实信息
-  const addressPool = getMockAddressPool(city)
+  // ── 3. 使用 DB 真实地址与坐标 ────────────────────────────
   const dbHotels = error || !hotels ? [] : hotels
   let results = []
 
-  if (dbHotels.length > 0 && addressPool.length > 0) {
-    results = dbHotels.map((hotel, idx) => {
-      const mockAddr = addressPool[idx % addressPool.length]
-      const item = {
-        ...hotel,
-        // 用 mock 真实地址替换 DB 测试地址
-        address: mockAddr.address,
-        lowestPrice: priceMap[hotel.id] ?? null,
-        lng: mockAddr.lng,
-        lat: mockAddr.lat,
-      }
-      if (targetCoords) {
-        item.distanceKm = parseFloat(
-          haversineKm(targetCoords.lat, targetCoords.lng, mockAddr.lat, mockAddr.lng).toFixed(2)
-        )
-      }
-      return item
-    })
+  if (dbHotels.length > 0) {
+    results = dbHotels
+      .filter(hotel => hotel.lat != null && hotel.lng != null)
+      .map(hotel => {
+        const lat = parseFloat(hotel.lat)
+        const lng = parseFloat(hotel.lng)
+        const item = {
+          ...hotel,
+          lat,
+          lng,
+          lowestPrice: priceMap[hotel.id] ?? null,
+        }
+        if (targetCoords) {
+          item.distanceKm = parseFloat(
+            haversineKm(targetCoords.lat, targetCoords.lng, lat, lng).toFixed(2)
+          )
+        }
+        return item
+      })
   }
 
   // ── 4. DB 无数据时降级到完整 mock ──────────────────────────

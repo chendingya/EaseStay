@@ -15,6 +15,13 @@
 - 路由聚合层：认证、酒店、申请、订单、通知、地图
 - 业务服务层：状态流转、库存计算、审核规则、通知触发
 
+### 2.3 地图找房架构（2026-02 落地）
+- **前端**：`mobile/src/pages/map` 动态加载高德地图 H5 SDK（AMap v2.0），以价格气泡覆盖物展示酒店位置，支持 POI 搜索、筛选、气泡与卡片列表联动
+- **后端接口**：`GET /api/map/hotel-locations` 聚合 DB 酒店坐标 + 动态价格计算
+- **价格一致性**：直接复用 `roomAvailabilityService` + `pricingService`，避免引用 `hotelService`（防止循环依赖）
+- **坐标来源**：DB `hotels.lat/lng`（商户地图选址时写入），无坐标酒店不上图；DB 无数据时降级 Mock
+- **高德 KEY**：服务端 `AMAP_KEY` 环境变量（POI/geocode/regeocode）；前端使用 Web SDK KEY；未配置时均有模拟数据兜底
+
 ### 2.3 数据层
 - PostgreSQL：业务主数据（用户、酒店、房型、订单、申请、通知）
 - 外部地图服务：POI 检索与地址解析
@@ -87,6 +94,7 @@ graph TD
         RequestService[申请审核]
         OrderService[订单]
         NotifyService[通知]
+        MapService[地图找房]
     end
 
     subgraph Data
@@ -102,11 +110,14 @@ graph TD
     APIGateway --> RequestService
     APIGateway --> OrderService
     APIGateway --> NotifyService
+    APIGateway --> MapService
     HotelService --> DB
     RequestService --> DB
     OrderService --> DB
     NotifyService --> DB
     HotelService --> MapAPI
+    MapService --> DB
+    MapService --> MapAPI
 ```
 
 ## 5. 非功能性要求

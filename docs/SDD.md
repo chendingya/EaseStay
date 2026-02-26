@@ -66,6 +66,8 @@
 | name_en | String | 酒店名称（英文） |
 | address | String | 地址 |
 | city | String | 城市 |
+| lat | Number | 纬度（地图找房定位，商户选址时写入） |
+| lng | Number | 经度（地图找房定位，商户选址时写入） |
 | star_rating | Number | 星级 1-5 |
 | opening_time | Date | 开业时间 |
 | description | String | 描述 |
@@ -580,17 +582,63 @@ Query：unreadOnly（可选）
 响应：全部已读
 
 ### 4.9 地图服务 API
+
+#### GET /api/map/hotel-locations
+地图找房核心接口，返回当前城市所有已上架酒店的坐标与最低可售价格（无需鉴权）。
+
+Query：
+
+| 参数 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| city | String | 是 | 城市名（模糊匹配） |
+| targetLng | Number | 否 | 目标地点经度，填写后返回 distanceKm |
+| targetLat | Number | 否 | 目标地点纬度 |
+| sort | String | 否 | 排序：recommend / price_asc / price_desc / star |
+| stars | String | 否 | 星级多选，逗号分隔，如 `4,5` |
+| tags | String | 否 | 设施标签多选，逗号分隔（URL 编码） |
+| minPrice | Number | 否 | 最低价格过滤 |
+| maxPrice | Number | 否 | 最高价格过滤 |
+
+响应：
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "易宿酒店",
+      "name_en": "EaseStay Hotel",
+      "address": "示例路 1 号",
+      "lat": 31.2304,
+      "lng": 121.4737,
+      "star_rating": 4,
+      "images": ["https://img/1.jpg"],
+      "lowestPrice": 269.1,
+      "distanceKm": 1.23
+    }
+  ]
+}
+```
+
+说明：
+- `lowestPrice` 使用与详情页完全一致的算法：`roomAvailabilityService.getActiveOrderQtyMap` 动态计算已用库存 → `pricingService.calculateRoomPrice` 计算折后价 → 取各房型最小值
+- 库存耗尽或无活跃房型的酒店 `lowestPrice` 为 `null`，前端不渲染价格气泡
+- `distanceKm` 使用 Haversine 球面距离公式，仅在传入 `targetLng/targetLat` 时返回
+- DB 无数据时自动降级为内置 Mock 数据（`server/src/data/mockHotelLocations.js`）
+
 #### GET /api/map/search
-Query：keyword、city
-响应：POI 列表
+Query：keywords、city
+响应：高德 POI 列表（最多 10 条），每项含 `name`、`address`、`location`（lng,lat）、`cityname`、`adname`
+
+配置 `AMAP_KEY` 环境变量后对接真实高德接口；未配置时返回模拟占位数据。
 
 #### GET /api/map/geocode
 Query：address、city
-响应：经纬度
+响应：经纬度（高德 geocode 原始结构）
 
 #### GET /api/map/regeocode
-Query：location
-响应：地址信息
+Query：location（格式：`lng,lat`）
+响应：地址信息（高德 regeocode 原始结构）
 
 ### 4.10 用户与商户管理
 #### GET /api/user/me
@@ -754,7 +802,16 @@ Query：`keyword`（可选），`page`、`pageSize`（分页模式可选）
 - /api/presets、/api/admin/presets 分别提供公开与管理端入口
 
 ### 10.6 地图服务
-- mapController 提供 POI 搜索、地理编码与逆地理编码
+- `mapController` 提供 POI 搜索、地理编码、逆地理编码与地图找房（`hotel-locations`）接口
+- `mapService.getHotelLocations`：地图找房核心逻辑
+  - 从 DB 查询 `approved` 状态酒店（含 `lat`/`lng`/`address`），按城市模糊匹配
+  - 调用 `roomAvailabilityService.getActiveOrderQtyMap` + `pricingService.calculateRoomPrice` 计算各酒店最低可售价（与详情页算法完全对齐）
+  - 支持星级、设施标签、价格区间过滤与多维度排序（推荐/价格升降/星级/距离）
+  - 传入 `targetCoords` 时使用 Haversine 公式计算距目标点距离
+  - DB 无结果时降级到 `mockHotelLocations.js` 内置 Mock 数据（覆盖上海/南京/扬州/杭州各 10 家）
+- `mapService.geocode` / `regeocode`：地址与坐标互转，内置内存缓存（`geocodeCache: Map`）
+- 所有地图服务接口在未配置 `AMAP_KEY` 时返回模拟占位数据，保证开发环境可用
+- 循环依赖注意：`hotelService` 顶部引用 `mapService`，故 `mapService` 不能反向引用 `hotelService`；价格计算逻辑已内联实现，直接引用 `pricingService` 与 `roomAvailabilityService`
 
 ### 10.7 状态与健康检查
 - statusController 输出状态页与健康检查接口
@@ -762,7 +819,9 @@ Query：`keyword`（可选），`page`、`pageSize`（分页模式可选）
 ## 11. 移动端模块实现（mobile）
 ### 11.1 公共导航与页面壳
 - `PageTopBar`：统一顶部栏（返回、居中标题、右侧图标操作），用于订单页、支付页、收藏页、登录注册页
-- `GlobalBottomNav`：全局底部导航，按当前路由高亮首页/订单/收藏/我的
+- `GlobalBottomNav`：全局底部导航，按当前路由高亮首页/订单/收藏/我的；`HIDDEN_ROUTES`（`/pages/map/index`、`/pages/detail/index`）中的页面不渲染导航组件
+- 地图页与详情页均通过 `useEffect` 将 `.app-content` 的 `paddingBottom` 置 `0` 消除全局底部间距，组件卸载时在清理函数中恢复原值
+- 详情页 `BookingBottomBar` 对应将 `bottomOffset` 设为 `0`（默认 58 是为底部导航预留的偏移量）
 
 ### 11.2 订单页与支付页
 - `pages/orders`：顶部栏 + 状态分段 + 订单列表，支持筛选弹层（关键词、金额排序、时间排序）
@@ -784,14 +843,31 @@ Query：`keyword`（可选），`page`、`pageSize`（分页模式可选）
 - `components/OrderList`：新增 `room` 类型与嵌入式渲染能力，支持在详情页滚动容器中展示房型列表
 - `pages/room-detail`：房型详情页（房型参数、优惠有效期、入住离店展示、直接下单跳转支付）
 
-### 11.5 移动端通知与错误提示
+### 11.5 地图找房页（mobile/src/pages/map）
+- 仅支持 H5 环境，动态加载高德地图 SDK（AMap v2.0，插件：Geocoder、PlaceSearch）
+- **数据流**：城市/POI/筛选条件任一变化 → 请求 `GET /api/map/hotel-locations` → 更新 `hotels` 状态 → `renderMarkers` 重新绘制气泡 → `setFitView` 适配视野
+- **气泡交互**：点击气泡调用 `selectHotel(id)`；`activeId` 变化时 `refreshBubbles` 仅重绘气泡样式，避免重建所有 Marker；激活气泡 `zIndex` 提升至 300，字号放大
+- **底部卡片列表**：横向 `overflow-x: auto` 卡片列表，`activeId` 对应卡片自动 `scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })`
+- **POI 搜索**：输入框防抖 400ms → 调用 `GET /api/map/search` → 展示建议列表；选择后在地图上添加 POI 图钉标记，并重新拉取酒店数据（传入 `targetLng/targetLat`）；地图提供"回到目的地"按钮
+- **筛选**：使用 `antd-mobile Dropdown` 挂载四个区域（排序、星级、标签、价格区间），关闭后触发重新拉取
+- **导航栏隐藏**：`useEffect` 将 `.app-content` `paddingBottom` 置 0；`GlobalBottomNav` 的 `HIDDEN_ROUTES` 包含 `/pages/map/index` 使导航组件不渲染
+- **路由接入**：页面在 `app.config.js` 的 `pages` 列表中注册为 `pages/map/index`；通过 `Taro.navigateTo` 跳转，携带 `city/checkIn/checkOut` 参数
+
+### 11.6 移动端通知与错误提示
 - `components/GlassToast` + `services/glassToast`：新增全局毛玻璃通知通道，默认在页面顶部展示成功/失败/警告/信息提示，支持入场/退场动效与自动消失。
 - `app.js`：在应用壳挂载 `GlassToastHost`，保证任意页面可直接调用 `glassToast.success/error/warning/info`。
 - `services/request.js`：请求失败统一由请求层提示；异常对象增加 `__toastShown` 标记，防止同一错误在上层页面重复弹出。
 - `pages/login`、`pages/register`：捕获异常时先判断 `error.__toastShown`，仅在未提示时补充兜底提示（修复“验证码不存在或已过期”双提示问题）。
 - H5 与非 H5 兼容：H5 使用自定义 `GlassToast`；非 H5 环境回退到 `Taro.showToast`，保证端能力兼容。
 
-## 12. Admin 国际化实现细节（2026-02）
+## 12. 地图找房模块实现约束（2026-02）
+- **价格一致性**：`/api/map/hotel-locations` 返回的 `lowestPrice` 与酒店详情页展示价格采用完全相同的计算路径（`getActiveOrderQtyMap` + `computeRoomAvailability` + `calculateRoomPrice`），不使用 `room_types.used_stock` 静态字段
+- **循环依赖规避**：`hotelService` 顶部引用了 `mapService`，若 `mapService` 反向引用 `hotelService.getLowestPrices` 会在 Node.js require 阶段产生循环依赖，导致函数为 `undefined`；当前方案为在 `mapService` 内内联相同计算逻辑，直接引用 `pricingService` 与 `roomAvailabilityService`
+- **坐标来源**：地图找房优先使用 DB `hotels.lat / hotels.lng` 字段（商户地图选址时写入）；无坐标的酒店在地图上不显示；不再通过高德 geocode 批量转换地址，减少外部 API 调用
+- **Mock 降级**：城市查询返回 0 条 DB 结果时，使用 `server/src/data/mockHotelLocations.js` 内置数据（上海/南京/扬州/杭州各 10 家模拟酒店，含完整坐标与模拟房价），供演示使用
+- **高德 KEY 配置**：服务端通过 `AMAP_KEY` 环境变量接入高德服务（POI 搜索/geocode/regeocode）；前端地图渲染使用 Web KEY（`mobile/src/pages/map/index.jsx`）；开发环境未配置服务端 KEY 时各地图函数返回模拟占位响应，保证可运行
+
+## 13. Admin 国际化实现细节（2026-02）
 ### 12.1 目录与资源组织
 - 语言目录：`admin/src/locales/zh-CN`、`admin/src/locales/en-US`
 - 资源格式：`{namespace}.json`
