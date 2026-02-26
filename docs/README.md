@@ -26,6 +26,7 @@
 - Mobile 组件架构与状态管理文档：[mobile-component-architecture.md](./mobile/mobile-component-architecture.md)
 
 ## 最近更新（2026-02）
+- Admin 状态管理升级：新增 `stores/`（`sessionStore`/`notificationStore`/`adminPendingStore`），全局认证、未读数、待审数由 Zustand 承载，移除 `admin-pending-update` 事件链路
 - Mobile 文档体系补齐：新增《Mobile 数据流图文档》《Mobile 业务流程图文档》《Mobile 组件架构与状态管理文档》
 - Server 文档体系补齐：新增《Server 数据流图文档》《Server 业务流程图文档》《Server 架构与 API 接口文档》
 - Admin 文档体系补齐：新增《Admin 数据流图文档》《Admin 业务流程图文档》《Admin 组件架构图文档》《Admin 状态管理与 API 接口文档》

@@ -134,7 +134,7 @@ flowchart TD
     Offline --> Notify
     Restore --> Notify
 
-    Notify --> UpdatePending["window.dispatchEvent('admin-pending-update')<br/>刷新顶部待审数量"]
+    Notify --> UpdatePending["调用 useAdminPendingStore.refreshPending()<br/>刷新顶部待审数量"]
     UpdatePending --> ReturnList["返回审核列表"]
 
     style Approve fill:#f6ffed,stroke:#52c41a
@@ -415,7 +415,7 @@ flowchart TD
     Start([App.jsx 挂载]) --> CheckRole{角色是 admin？}
 
     CheckRole -->|否| Skip[不执行]
-    CheckRole -->|是| InitFetch["首次拉取<br/>fetchAdminPending()"]
+    CheckRole -->|是| InitFetch["首次拉取<br/>refreshPending()"]
 
     InitFetch --> ParallelReq["并发请求"]
     ParallelReq --> FetchHotels["GET /api/admin/hotels?status=pending"]
@@ -429,9 +429,9 @@ flowchart TD
     ShowBadge --> Timer["setInterval 30秒"]
     Timer --> ParallelReq
 
-    ShowBadge --> ListenEvent["监听 window event<br/>'admin-pending-update'"]
-    ListenEvent --> ParallelReq
+    ShowBadge --> TriggerRefresh["AuditDetail / RequestAudit 操作成功后<br/>调用 refreshPending()"]
+    TriggerRefresh --> ParallelReq
 
     style Timer fill:#e6f7ff,stroke:#1890ff
-    style ListenEvent fill:#fffbe6,stroke:#faad14
+    style TriggerRefresh fill:#fffbe6,stroke:#faad14
 ```

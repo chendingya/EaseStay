@@ -212,10 +212,16 @@ graph TB
     GlassCSS --> GlassMessage
 ```
 
-## 5. 服务层架构
+## 5. 状态与服务层架构
 
 ```mermaid
 graph TB
+    subgraph StateLayer["stores/（Zustand）"]
+        SessionStore["sessionStore<br/>token/role/username<br/>persist + legacy localStorage sync"]
+        NotificationStore["notificationStore<br/>unreadCount + refresh/mark/delete"]
+        PendingStore["adminPendingStore<br/>pendingHotels/pendingRequests"]
+    end
+
     subgraph Barrel["services/index.js（统一出口）"]
         direction LR
         export_request["export { request, api }"]
@@ -224,6 +230,7 @@ graph TB
 
     subgraph RequestModule["services/request.js"]
         AxiosInstance["axios 实例<br/>baseURL / timeout / 拦截器"]
+        AuthRead["鉴权读取<br/>优先 sessionStore，回退 localStorage"]
         ApiObject["api 对象<br/>get / post / put / patch / delete<br/>请求去重 / 自动 unwrap"]
     end
 
@@ -232,23 +239,31 @@ graph TB
         GetUnread["getUnreadCount()"]
         MarkRead["markAsRead(id?)"]
         DeleteNotif["deleteNotification(id)"]
-        OnChange["onUnreadCountChange(cb)"]
+        OnChange["onUnreadCountChange(cb)<br/>兼容层保留"]
         TypeConfig["NotificationTypeConfig"]
         FormatTime["formatNotificationTime()"]
     end
+
+    SessionStore --> AuthRead
+    NotificationStore -->|"调用"| NotifModule
+    PendingStore -->|"调用"| ApiObject
 
     Barrel --> RequestModule
     Barrel --> NotifModule
 
     subgraph Consumers["消费方"]
-        AllPages["所有页面组件"]
-        AppJSX["App.jsx"]
-        MessagesPage["Messages.jsx"]
+        AppJSX["App.jsx<br/>读取三类全局状态"]
+        MessagesPage["Messages.jsx<br/>消息列表 + 操作"]
+        AuditPages["AuditDetail/RequestAudit<br/>触发待审数刷新"]
+        RolePages["Dashboard/Hotels<br/>读取 role"]
     end
 
-    AllPages -->|"import { api }"| Barrel
-    AppJSX -->|"onUnreadCountChange"| Barrel
-    MessagesPage -->|"getNotifications / markAsRead"| Barrel
+    AppJSX --> StateLayer
+    MessagesPage --> NotificationStore
+    AuditPages --> PendingStore
+    RolePages --> SessionStore
+    AppJSX -->|"api 调用"| Barrel
+    MessagesPage -->|"通知列表查询"| Barrel
 ```
 
 ## 6. Hooks 架构
@@ -328,7 +343,7 @@ graph TB
 ```
 admin/src/
 ├── main.jsx                    # 入口：i18n 初始化 → ReactDOM.render
-├── App.jsx                     # 根组件：路由/认证/布局/i18n 按需加载
+├── App.jsx                     # 根组件：路由/布局/i18n + Zustand 全局状态消费
 ├── App.css                     # 全局样式
 ├── index.css                   # CSS Reset
 │
@@ -337,8 +352,14 @@ admin/src/
 │
 ├── services/
 │   ├── index.js                # 服务统一出口（barrel）
-│   ├── request.js              # axios 封装 + 请求去重 api 对象
-│   └── notificationService.js  # 通知 CRUD + 发布订阅
+│   ├── request.js              # axios 封装 + 请求去重 api 对象（store token 优先）
+│   └── notificationService.js  # 通知 CRUD + 兼容监听
+│
+├── stores/
+│   ├── index.js                # store 统一出口
+│   ├── sessionStore.js         # 认证态持久化 + 旧键兼容
+│   ├── notificationStore.js    # 未读数/已读/删除动作
+│   └── adminPendingStore.js    # 管理员待审统计
 │
 ├── hooks/
 │   └── useRemoteTableQuery.js  # 远程表格搜索防抖 + 分页
