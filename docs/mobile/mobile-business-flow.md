@@ -51,13 +51,13 @@ graph TB
 
 ```mermaid
 stateDiagram-v2
-    [*] --> pending_payment: 创建订单<br/>POST /api/hotels/:id/orders
+    [*] --> pending_payment 创建订单<br/>POST /api/hotels/:id/orders
 
-    pending_payment --> confirmed: 支付成功<br/>POST /orders/:id/pay
-    pending_payment --> cancelled: 用户取消<br/>POST /orders/:id/cancel
+    pending_payment --> confirmed 支付成功<br/>POST /orders/:id/pay
+    pending_payment --> cancelled 用户取消<br/>POST /orders/:id/cancel
 
-    confirmed --> finished: 确认使用<br/>POST /orders/:id/use
-    confirmed --> cancelled: 用户取消<br/>POST /orders/:id/cancel
+    confirmed --> finished 确认使用<br/>POST /orders/:id/use
+    confirmed --> cancelled 用户取消<br/>POST /orders/:id/cancel
 
     finished --> [*]
     cancelled --> [*]
