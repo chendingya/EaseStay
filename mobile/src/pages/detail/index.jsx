@@ -147,7 +147,8 @@ export default function Detail() {
 
   const fetchHotelDetail = async () => {
     try {
-      setLoading(true)
+      // 仅首次加载（hotel 为空）时展示骨架屏；切换日期时保留旧数据静默刷新
+      if (!hotel) setLoading(true)
       const query = new URLSearchParams()
       if (checkIn) query.append('checkIn', checkIn)
       if (checkOut) query.append('checkOut', checkOut)
@@ -456,9 +457,40 @@ export default function Detail() {
 
   if (loading) {
     return (
-      <View className="detail-page">
-        <View className="loading-container">
-          <Text className="loading-text">加载中...</Text>
+      <View className="detail-page detail-skeleton-page">
+        <PageTopBar title="" transparent fixed />
+        {/* Hero 骨架 */}
+        <View className="sk-hero" />
+
+        {/* 酒店信息骨架 */}
+        <View className="sk-card">
+          <View className="sk-line sk-line-title" />
+          <View className="sk-line sk-line-sub" />
+          <View className="sk-line sk-line-addr" />
+          <View className="sk-tags-row">
+            {[1,2,3,4].map(i => <View key={i} className="sk-tag" />)}
+          </View>
+          <View className="sk-line sk-line-rating" />
+        </View>
+
+        {/* 入住日期骨架 */}
+        <View className="sk-card sk-checkin">
+          <View className="sk-line sk-line-date" />
+        </View>
+
+        {/* 房型列表骨架 */}
+        <View className="sk-card">
+          <View className="sk-line sk-line-section-title" />
+          {[1,2].map(i => (
+            <View key={i} className="sk-room-card">
+              <View className="sk-room-img" />
+              <View className="sk-room-body">
+                <View className="sk-line sk-line-room-name" />
+                <View className="sk-line sk-line-room-meta" />
+                <View className="sk-line sk-line-room-price" />
+              </View>
+            </View>
+          ))}
         </View>
       </View>
     )

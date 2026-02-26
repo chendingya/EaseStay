@@ -15,7 +15,7 @@
 - 路由聚合层：认证、酒店、申请、订单、通知、地图
 - 业务服务层：状态流转、库存计算、审核规则、通知触发
 
-### 2.3 地图找房架构（2026-02 落地）
+### 2.3 地图找房架构
 - **前端**：`mobile/src/pages/map` 动态加载高德地图 H5 SDK（AMap v2.0），以价格气泡覆盖物展示酒店位置，支持 POI 搜索、筛选、气泡与卡片列表联动
 - **后端接口**：`GET /api/map/hotel-locations` 聚合 DB 酒店坐标 + 动态价格计算
 - **价格一致性**：直接复用 `roomAvailabilityService` + `pricingService`，避免引用 `hotelService`（防止循环依赖）
