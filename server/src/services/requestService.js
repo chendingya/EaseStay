@@ -5,6 +5,13 @@ const { applyPromotionsToRooms } = require('./hotelService')
 const allowedRequestTypes = ['facility', 'room_type', 'promotion', 'hotel_delete']
 
 const normalizeArray = (val) => Array.isArray(val) ? val.filter((item) => item !== undefined && item !== null) : []
+const normalizeNumber = (value) => Number.isFinite(Number(value)) ? Number(value) : 0
+const normalizePromotionPeriods = (periods) => normalizeArray(periods)
+  .map((period) => ({
+    start: period?.start,
+    end: period?.end
+  }))
+  .filter((period) => period.start && period.end)
 
 const createRequest = async ({ merchantId, hotelId, type, name, data }) => {
   if (!type) {
@@ -58,6 +65,15 @@ const createRequest = async ({ merchantId, hotelId, type, name, data }) => {
     }
     finalName = hotel.name
     finalData = { ...(data || {}), hotelName: hotel.name }
+  }
+
+  if (type === 'promotion') {
+    finalData = {
+      ...finalData,
+      type: String(finalData?.type || '').trim(),
+      value: normalizeNumber(finalData?.value),
+      periods: normalizePromotionPeriods(finalData?.periods)
+    }
   }
 
   const { data: request, error } = await supabase
@@ -323,7 +339,8 @@ const reviewRequest = async ({ requestId, action, rejectReason }) => {
         const newPromotions = [...promotions, {
           type: request.data?.type || '',
           title: request.name,
-          value: request.data?.value || 0
+          value: normalizeNumber(request.data?.value),
+          periods: normalizePromotionPeriods(request.data?.periods)
         }]
         await supabase
           .from('hotels')

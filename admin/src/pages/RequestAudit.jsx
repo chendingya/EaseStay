@@ -13,6 +13,7 @@ import { GlassButton, glassMessage as message } from '../components'
 import { api } from '../services'
 import { useTranslation } from 'react-i18next'
 import { useAdminPendingStore } from '../stores'
+import dayjs from 'dayjs'
 
 export default function RequestAudit() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -106,6 +107,8 @@ export default function RequestAudit() {
   const renderDataDetail = (record) => {
     if (!record) return null
     const { type, name, data } = record
+    const promoValue = Number(data?.value)
+    const hasPromoValue = Number.isFinite(promoValue) && promoValue !== 0
 
     if (type === 'facility') {
       return (
@@ -127,11 +130,26 @@ export default function RequestAudit() {
     }
 
     if (type === 'promotion') {
+      const promoPeriods = (Array.isArray(data?.periods) ? data.periods : [])
+        .map((period) => ({ start: period?.start, end: period?.end }))
+        .filter((period) => period.start && period.end)
+      const periodText = promoPeriods.length
+        ? promoPeriods
+          .map((period) => `${dayjs(period.start).format('YYYY-MM-DD HH:mm')} ~ ${dayjs(period.end).format('YYYY-MM-DD HH:mm')}`)
+          .join('；')
+        : t('requestAudit.detail.periodLongTerm')
       return (
         <Descriptions column={1} bordered size="small">
           <Descriptions.Item label={t('requestAudit.detail.promoTitle')}>{name}</Descriptions.Item>
           <Descriptions.Item label={t('requestAudit.detail.promoType')}>{data?.type || t('requestAudit.detail.promoDefault')}</Descriptions.Item>
-          <Descriptions.Item label={t('requestAudit.detail.discount')}>{data?.value ? t('requestAudit.detail.discountRate', { value: data.value }) : t('common.none')}</Descriptions.Item>
+          <Descriptions.Item label={t('requestAudit.detail.discount')}>
+            {!hasPromoValue
+              ? t('common.none')
+              : (promoValue < 0 || promoValue > 10)
+                ? t('requestAudit.detail.discountAmount', { count: Math.abs(promoValue) })
+                : t('requestAudit.detail.discountRate', { count: promoValue })}
+          </Descriptions.Item>
+          <Descriptions.Item label={t('requestAudit.detail.period')}>{periodText}</Descriptions.Item>
         </Descriptions>
       )
     }

@@ -1,5 +1,8 @@
 # 易宿酒店预订平台（EaseStay）
 
+## 项目简介
+易宿酒店预订平台（EaseStay）是一个面向用户、商户、管理员三角色的全流程酒店业务系统，覆盖“发布-审核-搜索-下单-支付-通知”闭环。项目由移动端、管理端与服务端组成：移动端用于搜索与预订，管理端用于酒店与审核管理，服务端集中承载状态机与业务规则。技术栈采用 Taro + React（mobile）、React + Vite + Ant Design（admin）、Node.js + Express + Supabase（server）。同时通过路由懒加载、查询抽象、实时库存计算与 Vitest/Playwright 自动化测试，保障性能、可维护性与交付稳定性。
+
 ## 启动方式
 - 使用 PowerShell 执行根目录脚本（会自动启动三端并打开页面）：
   - `./start.ps1`

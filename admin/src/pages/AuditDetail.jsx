@@ -381,15 +381,29 @@ export default function AuditDetail() {
       {pendingRequests.length > 0 && (
         <Alert
           type="warning"
-          showIcon
-          icon={<ExclamationCircleOutlined />}
           title={
-            <Space>
-              <span>{t('auditDetail.pendingRequests', { count: pendingRequests.length })}<Badge count={pendingRequests.length} style={{ backgroundColor: '#faad14' }} /></span>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                flexWrap: 'wrap'
+              }}
+            >
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                <ExclamationCircleOutlined style={{ color: '#faad14', fontSize: 20, lineHeight: 1 }} />
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <Typography.Text strong style={{ margin: 0, lineHeight: '22px' }}>
+                    {t('auditDetail.pendingRequests')}
+                  </Typography.Text>
+                  <Badge count={pendingRequests.length} style={{ backgroundColor: '#faad14' }} />
+                </span>
+              </div>
               <GlassButton size="small" onClick={() => navigate(`/requests?hotelId=${id}`)}>
                 {t('auditDetail.goAudit')}
               </GlassButton>
-            </Space>
+            </div>
           }
           description={
             <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>

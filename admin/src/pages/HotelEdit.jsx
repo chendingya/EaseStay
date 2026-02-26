@@ -593,8 +593,25 @@ function RoomTypeManager({ value = [], onChange, pendingRequests = [], approvedR
 function PromotionManager({ value = [], onChange, pendingRequests = [], approvedRequests = [], onRequestNew, onReuseApproved, presetPromotionTypes = [] }) {
   const { t } = useTranslation()
   const [showPresets, setShowPresets] = useState(false)
-  const [customPromo, setCustomPromo] = useState({ type: '', title: '', value: 0 })
+  const [customPromo, setCustomPromo] = useState({ type: '', title: '', value: 0, periods: [] })
   const [showCustomInput, setShowCustomInput] = useState(false)
+
+  const normalizePeriods = (periods) => {
+    return (Array.isArray(periods) ? periods : [])
+      .map((period) => ({
+        start: period?.start,
+        end: period?.end
+      }))
+      .filter((period) => period.start && period.end)
+  }
+
+  const getPeriodLabel = (periods) => {
+    const list = normalizePeriods(periods)
+    if (!list.length) return ''
+    return list
+      .map((period) => `${dayjs(period.start).format('YYYY-MM-DD HH:mm')} ~ ${dayjs(period.end).format('YYYY-MM-DD HH:mm')}`)
+      .join('；')
+  }
 
   const getUnitLabel = (promoValue) => {
     const val = Number(promoValue) || 0
@@ -626,8 +643,11 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
 
   const handleRequestNew = () => {
     if (!customPromo.title.trim()) { message.error(t('hotelEdit.promotion.titleRequired')); return }
-    onRequestNew?.(customPromo)
-    setCustomPromo({ type: '', title: '', value: 0 })
+    onRequestNew?.({
+      ...customPromo,
+      periods: normalizePeriods(customPromo.periods)
+    })
+    setCustomPromo({ type: '', title: '', value: 0, periods: [] })
     setShowCustomInput(false)
     message.success(t('hotelEdit.promotion.requestSuccess'))
   }
@@ -704,14 +724,18 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
               const exists = value.some((promo) => promo && promo.title === req.name && promo.type === (req.data?.type || ''))
               const type = req.data?.type || ''
               const valueText = req.data?.value ?? 0
+              const periodText = getPeriodLabel(req.data?.periods)
               return (
                 <div key={`${req.id || req.name}-${idx}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                  <div style={{ fontSize: 13 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', fontSize: 13, gap: 2 }}>
                     {type && <Tag color={exists ? 'default' : 'green'} style={{ marginRight: 8 }}>{type}</Tag>}
-                    <span>{req.name}</span>
-                    <span style={{ color: '#f5222d', marginLeft: 8 }}>
-                      {valueText < 0 ? t('hotelEdit.promotion.valueAmount', { value: Math.abs(valueText) }) : (valueText > 10 ? t('hotelEdit.promotion.valueAmount', { value: valueText }) : t('hotelEdit.promotion.valueDiscount', { value: valueText }))}
-                    </span>
+                    <div>
+                      <span>{req.name}</span>
+                      <span style={{ color: '#f5222d', marginLeft: 8 }}>
+                        {valueText < 0 ? t('hotelEdit.promotion.valueAmount', { value: Math.abs(valueText) }) : (valueText > 10 ? t('hotelEdit.promotion.valueAmount', { value: valueText }) : t('hotelEdit.promotion.valueDiscount', { value: valueText }))}
+                      </span>
+                    </div>
+                    {periodText && <Typography.Text type="secondary" style={{ fontSize: 12 }}>{periodText}</Typography.Text>}
                   </div>
                   <GlassButton size="small" onClick={() => onReuseApproved?.(req, exists ? 'remove' : 'add')}>
                     {exists ? t('hotelEdit.promotion.approvedRemove') : t('hotelEdit.promotion.approvedAdd')}
@@ -727,9 +751,17 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
         <Card size="small" style={{ borderRadius: 12, border: '1px solid #ffe58f', background: '#fffbe6' }} styles={{ body: { padding: 12 } }}>
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('hotelEdit.promotion.pendingTitle')}</Typography.Text>
           <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {pendingRequests.map((req, idx) => (
-              <Tag key={idx} color="orange" style={{ margin: 0 }}>{req.title} {t('hotelEdit.promotion.pendingStatus')}</Tag>
-            ))}
+            {pendingRequests.map((req, idx) => {
+              const periodText = getPeriodLabel(req.periods || req.data?.periods)
+              return (
+                <Tag key={idx} color="orange" style={{ margin: 0 }}>
+                  {req.title || req.name}
+                  {periodText ? ` · ${periodText}` : ''}
+                  {' '}
+                  {t('hotelEdit.promotion.pendingStatus')}
+                </Tag>
+              )
+            })}
           </div>
         </Card>
       )}
@@ -763,7 +795,24 @@ function PromotionManager({ value = [], onChange, pendingRequests = [], approved
                 style={{ width: '100%' }}
               />
             </Col>
-            <Col flex="200px">
+            <Col flex="340px">
+              <DatePicker.RangePicker
+                showTime
+                style={{ width: '100%' }}
+                value={
+                  Array.isArray(customPromo.periods) && customPromo.periods[0]
+                    ? [dayjs(customPromo.periods[0].start), dayjs(customPromo.periods[0].end)]
+                    : null
+                }
+                onChange={(dates) => {
+                  const periods = dates && dates.length === 2
+                    ? [{ start: dates[0].toISOString(), end: dates[1].toISOString() }]
+                    : []
+                  setCustomPromo({ ...customPromo, periods })
+                }}
+              />
+            </Col>
+            <Col flex="220px">
               <Space>
                 <GlassButton type="primary" onClick={handleRequestNew}>{t('hotelEdit.promotion.submit')}</GlassButton>
                 <GlassButton onClick={() => setShowCustomInput(false)}>{t('hotelEdit.promotion.cancel')}</GlassButton>
@@ -1230,6 +1279,14 @@ export default function HotelEdit() {
   }, [watchedValues])
 
   const handleFormChange = () => setPreviewData(form.getFieldsValue())
+  const normalizePromotionPeriods = (periods) => {
+    return (Array.isArray(periods) ? periods : [])
+      .map((period) => ({
+        start: period?.start,
+        end: period?.end
+      }))
+      .filter((period) => period.start && period.end)
+  }
   
   // 提交设施申请到后端
   const handleRequestFacility = async (name) => {
@@ -1277,14 +1334,15 @@ export default function HotelEdit() {
   
   // 提交优惠申请到后端
   const handleRequestPromotion = async (promo) => {
+    const normalizedPeriods = normalizePromotionPeriods(promo.periods)
     try {
       await api.post('/api/requests', {
         hotelId: id ? parseInt(id) : null,
         type: 'promotion',
         name: promo.title,
-        data: { type: promo.type, value: promo.value }
+        data: { type: promo.type, value: promo.value, periods: normalizedPeriods }
       })
-      setPendingPromotions([...pendingPromotions, { ...promo, status: 'pending' }])
+      setPendingPromotions([...pendingPromotions, { ...promo, periods: normalizedPeriods, status: 'pending' }])
       message.success(t('hotelEdit.request.promotionSuccess'))
     } catch (error) {
       console.error(error)
@@ -1341,6 +1399,7 @@ export default function HotelEdit() {
   const handleReusePromotion = (req, action) => {
     const current = form.getFieldValue('promotions') || []
     const type = req.data?.type || ''
+    const periods = normalizePromotionPeriods(req.data?.periods)
     const exists = current.some((promo) => promo && promo.title === req.name && promo.type === type)
     if (action === 'remove') {
       if (exists) {
@@ -1353,7 +1412,7 @@ export default function HotelEdit() {
     }
     if (!exists) {
       form.setFieldsValue({
-        promotions: [...current, { type, title: req.name, value: req.data?.value || 0 }]
+        promotions: [...current, { type, title: req.name, value: req.data?.value || 0, periods }]
       })
       handleFormChange()
     }

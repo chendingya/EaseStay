@@ -778,8 +778,9 @@ const getHotelOrderStats = async ({ merchantId, hotelId }) => {
 const getMerchantOverview = async ({ merchantId }) => {
   const { data: hotels, error } = await supabase
     .from('hotels')
-    .select('id, name, status')
+    .select('id, name, status, created_at')
     .eq('merchant_id', merchantId)
+    .order('created_at', { ascending: false })
 
   if (error) {
     return { ok: false, status: 500, message: '获取酒店统计失败：' + error.message }
@@ -798,10 +799,20 @@ const getMerchantOverview = async ({ merchantId }) => {
   }
 
   const totals = { totalRooms: 0, usedRooms: 0, availableRooms: 0, offlineRooms: 0, roomTypeCount: 0 }
-  const hotelStatsMap = {}
+  const hotelStatsMap = new Map()
 
   ;(hotels || []).forEach((hotel) => {
-    hotelStatsMap[hotel.id] = { hotelId: hotel.id, name: hotel.name, status: hotel.status, totalRooms: 0, usedRooms: 0, availableRooms: 0, offlineRooms: 0, roomTypeCount: 0 }
+    hotelStatsMap.set(hotel.id, {
+      hotelId: hotel.id,
+      name: hotel.name,
+      status: hotel.status,
+      createdAt: hotel.created_at,
+      totalRooms: 0,
+      usedRooms: 0,
+      availableRooms: 0,
+      offlineRooms: 0,
+      roomTypeCount: 0
+    })
   })
 
   ;(roomTypes || []).forEach((room) => {
@@ -815,20 +826,22 @@ const getMerchantOverview = async ({ merchantId }) => {
     totals.availableRooms += available
     totals.roomTypeCount += 1
 
-    if (hotelStatsMap[room.hotel_id]) {
-      hotelStatsMap[room.hotel_id].totalRooms += stock
-      hotelStatsMap[room.hotel_id].usedRooms += used
-      hotelStatsMap[room.hotel_id].offlineRooms += offline
-      hotelStatsMap[room.hotel_id].availableRooms += available
-      hotelStatsMap[room.hotel_id].roomTypeCount += 1
+    const hotelStats = hotelStatsMap.get(room.hotel_id)
+    if (hotelStats) {
+      hotelStats.totalRooms += stock
+      hotelStats.usedRooms += used
+      hotelStats.offlineRooms += offline
+      hotelStats.availableRooms += available
+      hotelStats.roomTypeCount += 1
     }
   })
 
-  const hotelStats = Object.values(hotelStatsMap).map((item) => {
-    const activeRooms = Math.max(item.totalRooms - item.offlineRooms, 0)
-    const occupancyRate = activeRooms ? roundToTwo((item.usedRooms / activeRooms) * 100) : 0
-    const availableRate = activeRooms ? roundToTwo((item.availableRooms / activeRooms) * 100) : 0
-    const offlineRate = item.totalRooms ? roundToTwo((item.offlineRooms / item.totalRooms) * 100) : 0
+  const hotelStats = (hotels || []).map((hotel) => {
+    const item = hotelStatsMap.get(hotel.id)
+    const activeRooms = Math.max((item?.totalRooms || 0) - (item?.offlineRooms || 0), 0)
+    const occupancyRate = activeRooms ? roundToTwo(((item?.usedRooms || 0) / activeRooms) * 100) : 0
+    const availableRate = activeRooms ? roundToTwo(((item?.availableRooms || 0) / activeRooms) * 100) : 0
+    const offlineRate = (item?.totalRooms || 0) ? roundToTwo(((item?.offlineRooms || 0) / (item?.totalRooms || 0)) * 100) : 0
     return { ...item, occupancyRate, availableRate, offlineRate }
   })
 

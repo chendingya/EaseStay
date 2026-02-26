@@ -31,19 +31,19 @@ stateDiagram-v2
 ## 2. 订单状态流转
 
 ```mermaid
+
 stateDiagram-v2
-    [*] --> pending_payment: POST /api/hotels/:id/orders<br/>创建订单
+    [*] --> pending_payment: 创建订单 (POST /api/hotels/{id}/orders)
 
-    pending_payment --> confirmed: POST /api/user/orders/:id/pay<br/>模拟支付成功
-    pending_payment --> cancelled: POST /api/user/orders/:id/cancel<br/>用户取消
+    pending_payment --> confirmed: 模拟支付成功 (POST /api/user/orders/{id}/pay)
+    confirmed --> cancelled: 用户取消 (POST /api/user/orders/{id}/cancel)
+    confirmed --> finished: 用户确认使用 (POST /api/user/orders/{id}/use)
 
-    confirmed --> finished: POST /api/user/orders/:id/use<br/>用户确认使用
-    confirmed --> cancelled: POST /api/user/orders/:id/cancel<br/>用户取消
-
-    note right of pending_payment: 占用库存<br/>paid_at = null
-    note right of confirmed: 支付完成<br/>paid_at = NOW()
-    note right of finished: 已核销使用
+    note right of pending_payment: 占用库存\npaid_at = null
+    note right of confirmed: 占用库存\npaid_at = NOW()
+    note right of finished: 已核销使用\n未到 check_out 仍占库存
     note right of cancelled: 不占用库存
+
 ```
 
 ## 3. 商户创建酒店完整流程

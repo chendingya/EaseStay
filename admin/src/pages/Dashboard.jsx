@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import PercentageOutlined from '@ant-design/icons/es/icons/PercentageOutlined'
 import EditOutlined from '@ant-design/icons/es/icons/EditOutlined'
 import ShopOutlined from '@ant-design/icons/es/icons/ShopOutlined'
-import { GlassButton } from '../components'
+import { GlassButton, TableFilterBar } from '../components'
 import { api } from '../services'
 import { useTranslation } from 'react-i18next'
 import { useSessionStore } from '../stores'
@@ -81,6 +81,8 @@ export default function Dashboard() {
   const [batchModalType, setBatchModalType] = useState(null)
   const [overview, setOverview] = useState(() => (role === 'merchant' ? readOverviewCache() : null))
   const [overviewLoading, setOverviewLoading] = useState(false)
+  const [distributionSearch, setDistributionSearch] = useState('')
+  const [distributionStatus, setDistributionStatus] = useState('all')
 
   const fetchOverview = useCallback(async () => {
     if (role !== 'merchant') return
@@ -225,6 +227,20 @@ export default function Dashboard() {
     [t]
   )
 
+  const filteredOverviewHotelStats = useMemo(() => {
+    const keyword = distributionSearch.trim().toLowerCase()
+    return overviewHotelStats.filter((item) => {
+      const matchKeyword = !keyword || String(item?.name || '').toLowerCase().includes(keyword)
+      const matchStatus = distributionStatus === 'all' || item?.status === distributionStatus
+      return matchKeyword && matchStatus
+    })
+  }, [distributionSearch, distributionStatus, overviewHotelStats])
+
+  const handleResetDistributionFilters = () => {
+    setDistributionSearch('')
+    setDistributionStatus('all')
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 24 }}>
       {role === 'merchant' && (
@@ -307,9 +323,34 @@ export default function Dashboard() {
 
       {role === 'merchant' && (
         <Card title={t('dashboard.distribution.title')} loading={showOverviewLoading}>
+          <TableFilterBar
+            searchPlaceholder={t('dashboard.distribution.filterSearchPlaceholder')}
+            searchValue={distributionSearch}
+            onSearchChange={setDistributionSearch}
+            filterItems={[
+              {
+                key: 'distribution-status',
+                value: distributionStatus,
+                onChange: setDistributionStatus,
+                options: [
+                  { value: 'all', label: t('dashboard.distribution.filterAllStatus') },
+                  { value: 'pending', label: t('status.pending') },
+                  { value: 'approved', label: t('status.approved') },
+                  { value: 'rejected', label: t('status.rejected') },
+                  { value: 'offline', label: t('status.offline') }
+                ]
+              }
+            ]}
+            summaryNode={<Typography.Text type="secondary">{t('dashboard.distribution.filteredCount', { count: filteredOverviewHotelStats.length })}</Typography.Text>}
+            onReset={handleResetDistributionFilters}
+            onRefresh={fetchOverview}
+            refreshLoading={overviewLoading}
+            resetText={t('common.reset')}
+            refreshText={t('common.refresh')}
+          />
           <Table
             columns={overviewColumns}
-            dataSource={overviewHotelStats}
+            dataSource={filteredOverviewHotelStats}
             rowKey="hotelId"
             pagination={{ pageSize: 6 }}
             size="small"

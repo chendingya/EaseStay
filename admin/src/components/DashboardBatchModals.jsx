@@ -1,7 +1,7 @@
 import { DatePicker, Form, InputNumber, Modal, Radio, Select, Space, Table, Typography } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { GlassButton, glassMessage as message } from './index.js'
+import { GlassButton, TableFilterBar, glassMessage as message } from './index.js'
 import { api } from '../services'
 
 export default function DashboardBatchModals({ mode, role, hotels, hotelsLoading = false, onClose }) {
@@ -12,6 +12,8 @@ export default function DashboardBatchModals({ mode, role, hotels, hotelsLoading
   const [batchLoading, setBatchLoading] = useState(false)
   const [roomTypeStats, setRoomTypeStats] = useState([])
   const [statsLoading, setStatsLoading] = useState(false)
+  const [discountHotelSearch, setDiscountHotelSearch] = useState('')
+  const [discountCityFilter, setDiscountCityFilter] = useState('all')
 
   const isDiscountModalOpen = mode === 'discount'
   const isRoomModalOpen = mode === 'room'
@@ -47,6 +49,30 @@ export default function DashboardBatchModals({ mode, role, hotels, hotelsLoading
   }, [isDiscountModalOpen, isRoomModalOpen, discountScope, selectedHotels, hotels, fetchRoomTypeStats])
 
   const getRoomStats = (name) => roomTypeStats.find((item) => item.name === name)
+  const approvedHotels = useMemo(
+    () => hotels.filter((hotel) => hotel.status === 'approved'),
+    [hotels]
+  )
+
+  const discountCityOptions = useMemo(() => {
+    const cities = [...new Set(approvedHotels.map((hotel) => hotel.city).filter(Boolean))]
+    return [
+      { value: 'all', label: t('dashboard.batchDiscount.filterAllCities') },
+      ...cities.map((city) => ({ value: city, label: city }))
+    ]
+  }, [approvedHotels, t])
+
+  const filteredDiscountHotels = useMemo(() => {
+    const keyword = discountHotelSearch.trim().toLowerCase()
+    return approvedHotels.filter((hotel) => {
+      const matchKeyword = !keyword ||
+        String(hotel.name || '').toLowerCase().includes(keyword) ||
+        String(hotel.name_en || '').toLowerCase().includes(keyword) ||
+        String(hotel.address || '').toLowerCase().includes(keyword)
+      const matchCity = discountCityFilter === 'all' || hotel.city === discountCityFilter
+      return matchKeyword && matchCity
+    })
+  }, [approvedHotels, discountCityFilter, discountHotelSearch])
 
   const hotelColumns = useMemo(() => ([
     { title: t('dashboard.hotelTable.name'), dataIndex: 'name', key: 'name' },
@@ -61,8 +87,14 @@ export default function DashboardBatchModals({ mode, role, hotels, hotelsLoading
 
   const rowSelection = useMemo(() => ({
     selectedRowKeys: selectedHotels,
+    preserveSelectedRowKeys: true,
     onChange: (keys) => setSelectedHotels(keys)
   }), [selectedHotels])
+
+  const handleResetDiscountFilters = () => {
+    setDiscountHotelSearch('')
+    setDiscountCityFilter('all')
+  }
 
   const handleBatchDiscount = async () => {
     try {
@@ -171,10 +203,30 @@ export default function DashboardBatchModals({ mode, role, hotels, hotelsLoading
           <Form.Item noStyle shouldUpdate={(prev, cur) => prev.scope !== cur.scope}>
             {({ getFieldValue }) => getFieldValue('scope') === 'selected' && (
               <Form.Item label={t('dashboard.batchDiscount.hotelSelectLabel')}>
+                <TableFilterBar
+                  searchPlaceholder={t('dashboard.batchDiscount.filterSearchPlaceholder')}
+                  searchValue={discountHotelSearch}
+                  onSearchChange={setDiscountHotelSearch}
+                  filterItems={[
+                    {
+                      key: 'city',
+                      value: discountCityFilter,
+                      onChange: setDiscountCityFilter,
+                      options: discountCityOptions
+                    }
+                  ]}
+                  summaryNode={
+                    <Typography.Text type="secondary">
+                      {t('dashboard.batchDiscount.selectedHotelsText', { count: selectedHotels.length })}
+                    </Typography.Text>
+                  }
+                  onReset={handleResetDiscountFilters}
+                  resetText={t('common.reset')}
+                />
                 <Table
                   rowSelection={rowSelection}
                   columns={hotelColumns}
-                  dataSource={hotels.filter((hotel) => hotel.status === 'approved')}
+                  dataSource={filteredDiscountHotels}
                   rowKey="id"
                   loading={hotelsLoading}
                   size="small"

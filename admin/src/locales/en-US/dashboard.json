@@ -24,6 +24,9 @@
     },
     "distribution": {
       "title": "Room Type Distribution",
+      "filterSearchPlaceholder": "Search hotel name",
+      "filterAllStatus": "All status",
+      "filteredCount": "{{count}} hotels",
       "columns": {
         "hotel": "Hotel",
         "roomTypes": "Room Types",
@@ -50,6 +53,9 @@
       "actionSet": "Set discount",
       "actionCancel": "Cancel discount",
       "hotelSelectLabel": "Select hotels",
+      "selectedHotelsText": "{{count}} hotels selected",
+      "filterSearchPlaceholder": "Search hotel name",
+      "filterAllCities": "All cities",
       "roomTypeLabel": "Room Type",
       "roomTypeRequired": "Please select room type",
       "roomTypePlaceholderLoading": "Loading room types...",

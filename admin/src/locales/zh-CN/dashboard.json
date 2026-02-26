@@ -24,6 +24,9 @@
     },
     "distribution": {
       "title": "房型分布",
+      "filterSearchPlaceholder": "搜索酒店名称",
+      "filterAllStatus": "全部状态",
+      "filteredCount": "共 {{count}} 家酒店",
       "columns": {
         "hotel": "酒店",
         "roomTypes": "房型数",
@@ -50,6 +53,9 @@
       "actionSet": "设置折扣",
       "actionCancel": "取消折扣",
       "hotelSelectLabel": "选择酒店",
+      "selectedHotelsText": "已选择 {{count}} 家酒店",
+      "filterSearchPlaceholder": "搜索酒店名称",
+      "filterAllCities": "全部城市",
       "roomTypeLabel": "房型",
       "roomTypeRequired": "请选择房型",
       "roomTypePlaceholderLoading": "正在加载房型...",
