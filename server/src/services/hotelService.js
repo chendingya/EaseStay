@@ -2257,7 +2257,7 @@ const createPublicOrder = async ({ hotelId, userId, payload }) => {
     return { ok: false, status: 400, message: '房型已下架' }
   }
   if (available < normalizedQuantity) {
-    return { ok: false, status: 400, message: '房型库存不足' }
+    return { ok: false, status: 409, message: '房型库存不足' }
   }
 
   const pricing = calculateRoomPrice({
@@ -2289,40 +2289,61 @@ const createPublicOrder = async ({ hotelId, userId, payload }) => {
     ? Math.round((totalPrice / normalizedQuantity / nights) * 100) / 100
     : pricePerNight
 
-  const insertPayload = {
-    hotel_id: hotelId,
-    merchant_id: hotel.merchant_id,
-    user_id: userId,
-    room_type_id: room.id,
-    room_type_name: room.name,
-    quantity: normalizedQuantity,
-    price_per_night: avgPricePerNight,
-    nights,
-    total_price: totalPrice,
-    status: 'pending_payment',
-    check_in: checkInValue,
-    check_out: checkOutValue,
-    order_no: generateOrderNo()
+  let createResult = null
+  let createError = null
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data, error } = await supabase.rpc('create_order_atomic', {
+      p_hotel_id: hotelId,
+      p_merchant_id: hotel.merchant_id,
+      p_user_id: userId,
+      p_room_type_id: room.id,
+      p_room_type_name: room.name,
+      p_quantity: normalizedQuantity,
+      p_price_per_night: avgPricePerNight,
+      p_nights: nights,
+      p_total_price: totalPrice,
+      p_check_in: checkInValue,
+      p_check_out: checkOutValue,
+      p_order_no: generateOrderNo(),
+      p_discount_count: discountCount
+    })
+
+    if (error) {
+      createError = error
+      break
+    }
+
+    const normalizedResult = Array.isArray(data) ? data[0] : data
+    if (normalizedResult?.ok || normalizedResult?.code !== 'ORDER_NO_CONFLICT') {
+      createResult = normalizedResult
+      break
+    }
   }
 
-  const { data: order, error: orderError } = await supabase
-    .from('orders')
-    .insert(insertPayload)
-    .select()
-    .single()
-
-  if (orderError) {
-    return { ok: false, status: 500, message: '创建订单失败：' + orderError.message }
+  if (createError) {
+    return { ok: false, status: 500, message: '创建订单失败：' + createError.message }
   }
 
-  // 如果使用了折扣配额，更新配额
-  if (discountCount > 0) {
-    const newQuota = Math.max(0, discountQuota - discountCount)
-    await supabase
-      .from('room_types')
-      .update({ discount_quota: newQuota })
-      .eq('id', room.id)
+  if (!createResult?.ok) {
+    const code = createResult?.code
+    const message = createResult?.message || '创建订单失败'
+    const statusByCode = {
+      ROOM_NOT_FOUND: 404,
+      ROOM_INACTIVE: 400,
+      INVALID_QUANTITY: 400,
+      INVALID_DATE_RANGE: 400,
+      INSUFFICIENT_STOCK: 409,
+      INSUFFICIENT_DISCOUNT_QUOTA: 409,
+      ORDER_NO_CONFLICT: 409
+    }
+    return {
+      ok: false,
+      status: statusByCode[code] || 500,
+      message
+    }
   }
+
+  const order = createResult.order
 
   const hotelName = String(hotel?.name || '').trim()
   const hotelNameEn = String(hotel?.name_en || '').trim()

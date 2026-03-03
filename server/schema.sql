@@ -395,3 +395,122 @@ CREATE INDEX IF NOT EXISTS idx_orders_user_status_created_at ON orders(user_id, 
 
 ALTER TABLE hotels ADD COLUMN IF NOT EXISTS lat DECIMAL(10, 7);
 ALTER TABLE hotels ADD COLUMN IF NOT EXISTS lng DECIMAL(10, 7);
+
+-- 原子下单：在数据库事务内完成“锁房型 -> 校验库存 -> 写订单 -> 扣减折扣配额”
+CREATE OR REPLACE FUNCTION public.create_order_atomic(
+  p_hotel_id INT,
+  p_merchant_id INT,
+  p_user_id INT,
+  p_room_type_id INT,
+  p_room_type_name TEXT,
+  p_quantity INT,
+  p_price_per_night NUMERIC,
+  p_nights INT,
+  p_total_price NUMERIC,
+  p_check_in DATE,
+  p_check_out DATE,
+  p_order_no TEXT,
+  p_discount_count INT DEFAULT 0
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_room room_types%ROWTYPE;
+  v_used INT := 0;
+  v_order orders%ROWTYPE;
+  v_discount_count INT := GREATEST(COALESCE(p_discount_count, 0), 0);
+BEGIN
+  IF p_quantity IS NULL OR p_quantity <= 0 THEN
+    RETURN jsonb_build_object('ok', false, 'code', 'INVALID_QUANTITY', 'message', '数量必须大于 0');
+  END IF;
+
+  IF p_check_in IS NULL OR p_check_out IS NULL OR p_check_out <= p_check_in THEN
+    RETURN jsonb_build_object('ok', false, 'code', 'INVALID_DATE_RANGE', 'message', '离店日期需晚于入住日期');
+  END IF;
+
+  SELECT *
+  INTO v_room
+  FROM room_types
+  WHERE id = p_room_type_id
+    AND hotel_id = p_hotel_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'code', 'ROOM_NOT_FOUND', 'message', '房型不存在');
+  END IF;
+
+  IF COALESCE(v_room.is_active, TRUE) = FALSE THEN
+    RETURN jsonb_build_object('ok', false, 'code', 'ROOM_INACTIVE', 'message', '房型已下架');
+  END IF;
+
+  SELECT COALESCE(SUM(quantity), 0)
+  INTO v_used
+  FROM orders
+  WHERE room_type_id = p_room_type_id
+    AND status IN ('pending_payment', 'confirmed', 'finished')
+    AND check_in < p_check_out
+    AND check_out > p_check_in;
+
+  IF v_used + p_quantity > COALESCE(v_room.stock, 0) THEN
+    RETURN jsonb_build_object(
+      'ok', false,
+      'code', 'INSUFFICIENT_STOCK',
+      'message', '房型库存不足',
+      'available', GREATEST(COALESCE(v_room.stock, 0) - v_used, 0)
+    );
+  END IF;
+
+  IF v_discount_count > 0 THEN
+    UPDATE room_types
+    SET discount_quota = COALESCE(discount_quota, 0) - v_discount_count
+    WHERE id = v_room.id
+      AND COALESCE(discount_quota, 0) >= v_discount_count;
+
+    IF NOT FOUND THEN
+      RETURN jsonb_build_object(
+        'ok', false,
+        'code', 'INSUFFICIENT_DISCOUNT_QUOTA',
+        'message', '优惠配额不足，请刷新后重试'
+      );
+    END IF;
+  END IF;
+
+  INSERT INTO orders (
+    order_no,
+    hotel_id,
+    merchant_id,
+    user_id,
+    room_type_id,
+    room_type_name,
+    quantity,
+    price_per_night,
+    nights,
+    total_price,
+    status,
+    check_in,
+    check_out
+  )
+  VALUES (
+    p_order_no,
+    p_hotel_id,
+    p_merchant_id,
+    p_user_id,
+    p_room_type_id,
+    p_room_type_name,
+    p_quantity,
+    p_price_per_night,
+    p_nights,
+    p_total_price,
+    'pending_payment',
+    p_check_in,
+    p_check_out
+  )
+  RETURNING * INTO v_order;
+
+  RETURN jsonb_build_object('ok', true, 'code', 'OK', 'order', to_jsonb(v_order));
+EXCEPTION
+  WHEN unique_violation THEN
+    RETURN jsonb_build_object('ok', false, 'code', 'ORDER_NO_CONFLICT', 'message', '订单号冲突，请重试');
+END;
+$$;
