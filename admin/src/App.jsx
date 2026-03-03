@@ -1,5 +1,5 @@
 import './App.css'
-import { Layout, Menu, Space, Typography, Tag, Button, Breadcrumb, Badge, Tooltip, Result, Select, ConfigProvider } from 'antd'
+import { Layout, Menu, Space, Typography, Tag, Button, Breadcrumb, Badge, Spin,  Tooltip, Result, Select, ConfigProvider } from 'antd'
 import HomeOutlined from '@ant-design/icons/es/icons/HomeOutlined'
 import SettingOutlined from '@ant-design/icons/es/icons/SettingOutlined'
 import UserOutlined from '@ant-design/icons/es/icons/UserOutlined'
@@ -38,7 +38,9 @@ const OrderStats = lazy(() => import('./pages/OrderStats.jsx'))
 
 function LazyRoute({ children, routeNamespacesReady = true }) {
   if (!routeNamespacesReady) return null
-  return <Suspense fallback={null}>{children}</Suspense>
+  return <Suspense fallback={<Spin size="large" style={{ display: 'block', margin: '100px auto' }} />}>
+    {children}
+  </Suspense>
 }
 
 function scheduleIdleTask(task, { timeout = 1200, fallbackDelay = 250 } = {}) {
